@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+
+  <!-- Rounded Background -->
+  <rect width="200" height="200" rx="38" ry="38" fill="url(#gradient)"></rect>
+
+  <defs>
+    <linearGradient id="gradient" gradientTransform="rotate(603 0.5 0.8)">
+      <stop offset="20%" stop-color="#0a4fec"></stop>
+      <stop offset="100%" stop-color="#1aadaf"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- ⚡︎ emoji-like lightning bolt -->
+  <path d="M120 15 L60 115 H105 L75 185 L160 90 H105 Z" fill="#57c6ff" stroke="#123456" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"></path>
+
+</svg>

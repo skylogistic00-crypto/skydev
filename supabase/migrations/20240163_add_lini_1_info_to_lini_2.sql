@@ -1,0 +1,4 @@
+ALTER TABLE barang_lini_2 
+ADD COLUMN IF NOT EXISTS tanggal_masuk_lini_1 DATE,
+ADD COLUMN IF NOT EXISTS total_biaya DECIMAL(15, 2),
+ADD COLUMN IF NOT EXISTS lama_simpan INTEGER;

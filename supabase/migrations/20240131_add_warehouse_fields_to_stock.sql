@@ -1,0 +1,10 @@
+ALTER TABLE stock
+ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES zones(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS rack_id UUID REFERENCES racks(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS lot_id UUID REFERENCES lots(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_stock_warehouse ON stock(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_stock_zone ON stock(zone_id);
+CREATE INDEX IF NOT EXISTS idx_stock_rack ON stock(rack_id);
+CREATE INDEX IF NOT EXISTS idx_stock_lot ON stock(lot_id);

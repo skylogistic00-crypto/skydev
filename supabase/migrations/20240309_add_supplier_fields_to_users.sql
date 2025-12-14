@@ -1,0 +1,8 @@
+-- Add supplier-specific fields to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_person TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pkp_status TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_holder TEXT;

@@ -1,0 +1,1 @@
+ALTER TABLE suppliers ALTER COLUMN category TYPE TEXT;

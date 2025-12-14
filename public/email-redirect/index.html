@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecting...</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding-top: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Redirecting...</h2>
+
+    <script>
+      console.log("Email redirect loaded");
+
+      // ⛔ CRITICAL: Hapus SEMUA session Supabase sebelum redirect
+      // Supabase menyimpan token dengan format: sb-{project-ref}-auth-token
+      Object.keys(window.localStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          window.localStorage.removeItem(key);
+          console.log("🗑️ Removed:", key);
+        }
+      });
+
+      window.sessionStorage.clear();
+
+      const search = window.location.search || "";
+      const hash = window.location.hash || "";
+
+      // Redirect ke halaman React yang aman
+      const finalUrl = "/auth/confirm" + search + hash;
+
+      console.log("Final redirect:", finalUrl);
+
+      window.location.replace(finalUrl);
+    </script>
+  </body>
+</html>
