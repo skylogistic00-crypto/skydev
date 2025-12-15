@@ -4114,30 +4114,8 @@ export default function TransaksiKeuanganForm() {
       case "Transfer_Bank":
       case "Transfer-Bank":
       case "TransferBank": {
-        // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        // Save to journal_entries table
-        const { error } = await supabase.from("journal_entries").insert({
-          journal_ref: journalRef,
-          debit_account: mainDebitLine?.account_code || "",
-          credit_account: mainCreditLine?.account_code || "",
-          account_code: mainDebitLine?.account_code || "",
-          account_name: mainDebitLine?.account_name || "",
-          account_type: mainDebitLine?.account_type || "",
-          debit: mainDebitLine?.amount || 0,
-          credit: mainCreditLine?.amount || 0,
-          description: previewMemo,
-          tanggal: previewTanggal,
-          kategori: kategori,
-          jenis_transaksi: jenisTransaksi,
-          bukti_url: uploadedBuktiUrl,
-        });
-
-        if (error) throw new Error(`Transfer Bank: ${error.message}`);
-        console.log("✅ ROUTER: Transfer Bank saved to journal_entries");
+        // Transfer Bank: Use default journal_entries insert (sync_journal_to_gl trigger)
+        console.log("✅ ROUTER: Transfer Bank - using default journal_entries insert");
         break;
       }
 
