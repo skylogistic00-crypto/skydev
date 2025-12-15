@@ -3106,6 +3106,30 @@ export type Database = {
           },
         ]
       }
+      edge_function_logs: {
+        Row: {
+          created_at: string | null
+          function_name: string | null
+          id: string
+          message: string | null
+          ref_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          message?: string | null
+          ref_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          message?: string | null
+          ref_id?: string | null
+        }
+        Relationships: []
+      }
       email_verifications: {
         Row: {
           created_at: string | null
@@ -4392,6 +4416,13 @@ export type Database = {
             foreignKeyName: "fk_gl_journal"
             columns: ["journal_id"]
             isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "fk_gl_journal"
+            columns: ["journal_id"]
+            isOneToOne: false
             referencedRelation: "view_general_ledger"
             referencedColumns: ["journal_id"]
           },
@@ -4422,6 +4453,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
           },
           {
             foreignKeyName: "general_ledger_journal_entry_id_fkey"
@@ -4723,6 +4761,36 @@ export type Database = {
           },
         ]
       }
+      inventory_cost_layers: {
+        Row: {
+          cost_per_unit: number | null
+          created_at: string | null
+          id: string
+          qty_remaining: number | null
+          sku: string | null
+          source_ref: string | null
+          source_type: string | null
+        }
+        Insert: {
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id: string
+          qty_remaining?: number | null
+          sku?: string | null
+          source_ref?: string | null
+          source_type?: string | null
+        }
+        Update: {
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id?: string
+          qty_remaining?: number | null
+          sku?: string | null
+          source_ref?: string | null
+          source_type?: string | null
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           akun_persediaan: string | null
@@ -4829,6 +4897,86 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements_accounting: {
+        Row: {
+          created_at: string | null
+          id: string
+          journal_entry_id: string | null
+          movement_type: string | null
+          qty: number | null
+          value: number | null
+          wms_transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          movement_type?: string | null
+          qty?: number | null
+          value?: number | null
+          wms_transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          movement_type?: string | null
+          qty?: number | null
+          value?: number | null
+          wms_transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "view_general_ledger"
+            referencedColumns: ["journal_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_flow_report"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "vw_journal_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_wms_transaction_id_fkey"
+            columns: ["wms_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["wms_transaction_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_wms_transaction_id_fkey"
+            columns: ["wms_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wms_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -4980,7 +5128,9 @@ export type Database = {
           sales_transactions_id: string | null
           service_type: string | null
           source_id: string | null
+          source_ref: string | null
           source_table: string | null
+          source_type: string | null
           stock_adjustment_id: string | null
           stock_movement_id: string | null
           sumber_penerimaan: string | null
@@ -5039,7 +5189,9 @@ export type Database = {
           sales_transactions_id?: string | null
           service_type?: string | null
           source_id?: string | null
+          source_ref?: string | null
           source_table?: string | null
+          source_type?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
           sumber_penerimaan?: string | null
@@ -5098,7 +5250,9 @@ export type Database = {
           sales_transactions_id?: string | null
           service_type?: string | null
           source_id?: string | null
+          source_ref?: string | null
           source_table?: string | null
+          source_type?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
           sumber_penerimaan?: string | null
@@ -5194,6 +5348,13 @@ export type Database = {
             foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
             referencedRelation: "view_general_ledger"
             referencedColumns: ["journal_id"]
           },
@@ -5257,6 +5418,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
           },
           {
             foreignKeyName: "journal_entry_lines_journal_id_fkey"
@@ -6033,6 +6201,33 @@ export type Database = {
           price?: number
           updated_at?: string | null
           visits_per_month?: number | null
+        }
+        Relationships: []
+      }
+      monthly_inventory_closing: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          locked: boolean
+          notes: string | null
+          period: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          locked?: boolean
+          notes?: string | null
+          period: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          locked?: boolean
+          notes?: string | null
+          period?: string
         }
         Relationships: []
       }
@@ -8417,6 +8612,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_reconciliation: {
+        Row: {
+          accounting_qty: number | null
+          created_at: string | null
+          difference: number | null
+          id: string
+          period: string | null
+          sku: string | null
+          valuation_difference: number | null
+          wms_qty: number | null
+        }
+        Insert: {
+          accounting_qty?: number | null
+          created_at?: string | null
+          difference?: number | null
+          id?: string
+          period?: string | null
+          sku?: string | null
+          valuation_difference?: number | null
+          wms_qty?: number | null
+        }
+        Update: {
+          accounting_qty?: number | null
+          created_at?: string | null
+          difference?: number | null
+          id?: string
+          period?: string | null
+          sku?: string | null
+          valuation_difference?: number | null
+          wms_qty?: number | null
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -10199,6 +10427,123 @@ export type Database = {
         }
         Relationships: []
       }
+      wms_accounting_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          journal_entry_id: string | null
+          status: string | null
+          wms_transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id: string
+          journal_entry_id?: string | null
+          status?: string | null
+          wms_transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          status?: string | null
+          wms_transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      wms_cancel_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          processed: boolean | null
+          reason: string | null
+          wms_transaction_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          processed?: boolean | null
+          reason?: string | null
+          wms_transaction_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          processed?: boolean | null
+          reason?: string | null
+          wms_transaction_id?: string
+        }
+        Relationships: []
+      }
+      wms_transactions: {
+        Row: {
+          created_at: string | null
+          direction: string | null
+          id: string
+          item_name: string | null
+          processed: boolean | null
+          processed_at: string | null
+          qty: number | null
+          reversed: boolean | null
+          sku: string | null
+          source_module: string | null
+          source_type: string | null
+          status: string | null
+          transaction_date: string | null
+          transaction_type: string | null
+          uom: string | null
+          warehouse_id: string | null
+          wms_direction: string | null
+          wms_module: string | null
+          wms_reference: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          item_name?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          qty?: number | null
+          reversed?: boolean | null
+          sku?: string | null
+          source_module?: string | null
+          source_type?: string | null
+          status?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          uom?: string | null
+          warehouse_id?: string | null
+          wms_direction?: string | null
+          wms_module?: string | null
+          wms_reference?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          item_name?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          qty?: number | null
+          reversed?: boolean | null
+          sku?: string | null
+          source_module?: string | null
+          source_type?: string | null
+          status?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          uom?: string | null
+          warehouse_id?: string | null
+          wms_direction?: string | null
+          wms_module?: string | null
+          wms_reference?: string | null
+        }
+        Relationships: []
+      }
       zones: {
         Row: {
           code: string
@@ -10286,6 +10631,36 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: []
+      }
+      v_wms_reversal_audit: {
+        Row: {
+          account_code: string | null
+          credit: number | null
+          debit: number | null
+          entry_date: string | null
+          is_fatal: boolean | null
+          is_period_locked: boolean | null
+          journal_entry_id: string | null
+          movement_type: string | null
+          movement_value: number | null
+          processed: boolean | null
+          qty: number | null
+          reference_type: string | null
+          reversed: boolean | null
+          sku: string | null
+          transaction_date: string | null
+          wms_reference: string | null
+          wms_transaction_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_code"]
+          },
+        ]
       }
       view_general_ledger: {
         Row: {
@@ -10846,6 +11221,10 @@ export type Database = {
       generate_booking_reference: { Args: never; Returns: string }
       generate_contract_number: { Args: never; Returns: string }
       generate_journal: {
+        Args: { p_disbursement_id: string }
+        Returns: undefined
+      }
+      generate_journal_disabled: {
         Args: { disbursement_id: string }
         Returns: undefined
       }

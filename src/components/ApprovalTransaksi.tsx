@@ -373,6 +373,7 @@ export default function ApprovalTransaksi({
     const debitAccount = transaction.coa_expense_code || "6-1100";
     const creditAccount = transaction.coa_cash_code || "1-1100";
 
+   {/*
     const { error: journalError } = await supabase
       .from("journal_entries")
       .insert({
@@ -386,9 +387,10 @@ export default function ApprovalTransaksi({
         kategori: transaction.category,
         jenis_transaksi: "Pengeluaran Kas",
       });
+      
 
     if (journalError) throw journalError;
-
+*/}
     // Update cash_disbursement status
     const { error: updateError } = await supabase
       .from("cash_disbursement")

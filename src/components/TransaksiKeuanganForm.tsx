@@ -4658,7 +4658,7 @@ export default function TransaksiKeuanganForm() {
   };
 
   // Checkout all items in cart
-  console.log("🔥🔥 CHECKOUT EXECUTED AT:", new Date().toISOString());
+  //console.log("🔥🔥 CHECKOUT EXECUTED AT:", new Date().toISOString());
   const handleCheckoutCart = async () => {
     const selectedItems = cart.filter((item) => item.selected);
 
@@ -4930,6 +4930,27 @@ export default function TransaksiKeuanganForm() {
             batchCoaCashAccountName = coaCash.account_name;
             batchCoaCashAccountType = coaCash.account_type;
             console.log("✅ Batch Resolved COA Cash:", coaCash);
+          } else {
+            // Fallback: Use default Kas account (1-1100) when no cash account is specified
+            console.warn("⚠️ No cash account code found, using default Kas account 1-1100");
+            const { data: defaultCash, error: defaultCashErr } = await supabase
+              .from("chart_of_accounts")
+              .select("id, account_code, account_name, account_type")
+              .eq("account_code", "1-1100")
+              .single();
+            
+            if (!defaultCashErr && defaultCash) {
+              batchCoaCashId = defaultCash.id;
+              batchCoaCashAccountCode = defaultCash.account_code;
+              batchCoaCashAccountName = defaultCash.account_name;
+              batchCoaCashAccountType = defaultCash.account_type;
+              console.log("✅ Using default COA Cash:", defaultCash);
+            } else {
+              console.error("❌ Default Kas account 1-1100 not found in chart_of_accounts");
+              throw new Error(
+                "Akun Kas default (1-1100) tidak ditemukan. Silakan pastikan Chart of Accounts sudah dikonfigurasi dengan benar.",
+              );
+            }
           }
 
           // Resolve Expense COA ID
