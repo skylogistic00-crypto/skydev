@@ -268,6 +268,7 @@ export default function ApprovalTransaksi({
             transaction.transaction_type === "Barang"
               ? "Pembelian Barang"
               : "Pembelian Jasa",
+          approval_status: "approved",
         });
 
       if (journalError) throw journalError;
@@ -306,6 +307,7 @@ export default function ApprovalTransaksi({
         tanggal: transaction.tanggal,
         kategori: transaction.service_category,
         jenis_transaksi: "Pengeluaran Kas",
+        approval_status: "approved",
       });
 
     if (journalError) throw journalError;
@@ -343,6 +345,7 @@ export default function ApprovalTransaksi({
         tanggal: transaction.transaction_date,
         kategori: transaction.category,
         jenis_transaksi: "Penerimaan Kas",
+        approval_status: "approved",
       });
 
     if (journalError) throw journalError;
@@ -373,7 +376,6 @@ export default function ApprovalTransaksi({
     const debitAccount = transaction.coa_expense_code || "6-1100";
     const creditAccount = transaction.coa_cash_code || "1-1100";
 
-   {/*
     const { error: journalError } = await supabase
       .from("journal_entries")
       .insert({
@@ -386,11 +388,11 @@ export default function ApprovalTransaksi({
         tanggal: transaction.transaction_date,
         kategori: transaction.category,
         jenis_transaksi: "Pengeluaran Kas",
+        approval_status: "approved",
       });
-      
 
     if (journalError) throw journalError;
-*/}
+
     // Update cash_disbursement status
     const { error: updateError } = await supabase
       .from("cash_disbursement")
@@ -398,6 +400,7 @@ export default function ApprovalTransaksi({
         approval_status: "approved",
         approved_by: userId,
         approved_at: new Date().toISOString(),
+        journal_ref: journalRef,
       })
       .eq("id", transaction.id);
 

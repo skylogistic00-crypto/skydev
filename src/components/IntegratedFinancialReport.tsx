@@ -824,7 +824,7 @@ export default function IntegratedFinancialReport() {
                       <TableHead>Section</TableHead>
                       <TableHead>Account Header</TableHead>
                       <TableHead>Account Code</TableHead>
-                      <TableHead>Account Name</TableHead>
+                      <TableHead>Account Name1</TableHead>
                       <TableHead className="text-right">Debit Total</TableHead>
                       <TableHead className="text-right">Credit Total</TableHead>
                       <TableHead className="text-right">Amount</TableHead>

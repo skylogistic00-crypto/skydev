@@ -19,6 +19,7 @@ import BarangLini from "@/components/BarangLini";
 import BarangKeluar from "@/components/BarangKeluar";
 import AirWaybill from "@/components/AirWaybill";
 import TransaksiKeuanganForm from "@/components/TransaksiKeuanganForm";
+import BankMutationForm from "@/components/BankMutationForm";
 import AdminSetup from "@/components/AdminSetup";
 import COAManagement from "@/components/COAManagement";
 import BarangLamaReport from "@/components/BarangLamaReport";
@@ -464,6 +465,24 @@ function AppRoutesContent() {
             ]}
           >
             <TransaksiKeuanganForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mutasi-bank"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "super_admin",
+              "accounting_manager",
+              "accounting_staff",
+            ]}
+          >
+            <div className="min-h-screen bg-slate-50">
+              <Header />
+              <Navigation />
+              <BankMutationForm />
+            </div>
           </ProtectedRoute>
         }
       />

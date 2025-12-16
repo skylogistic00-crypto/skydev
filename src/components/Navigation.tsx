@@ -197,6 +197,13 @@ export default function Navigation() {
       roles: ["super_admin", "accounting_manager", "accounting_staff"],
     },
     {
+      path: "/mutasi-bank",
+      label: "Mutasi Bank",
+      icon: DollarSign,
+      color: "cyan",
+      roles: ["super_admin", "accounting_manager", "accounting_staff"],
+    },
+    {
       path: "/employee-advance",
       label: "Uang Muka Karyawan",
       icon: DollarSign,

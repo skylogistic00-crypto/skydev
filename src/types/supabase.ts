@@ -882,9 +882,11 @@ export type Database = {
       bank_mutasi_mapping: {
         Row: {
           akun: string | null
+          bank_name: string | null
           coa_account_code: string | null
           created_at: string | null
           dk: string | null
+          file_type: string | null
           id: string
           is_active: boolean | null
           kategori: string | null
@@ -896,9 +898,11 @@ export type Database = {
         }
         Insert: {
           akun?: string | null
+          bank_name?: string | null
           coa_account_code?: string | null
           created_at?: string | null
           dk?: string | null
+          file_type?: string | null
           id?: string
           is_active?: boolean | null
           kategori?: string | null
@@ -910,9 +914,11 @@ export type Database = {
         }
         Update: {
           akun?: string | null
+          bank_name?: string | null
           coa_account_code?: string | null
           created_at?: string | null
           dk?: string | null
+          file_type?: string | null
           id?: string
           is_active?: boolean | null
           kategori?: string | null
@@ -924,76 +930,238 @@ export type Database = {
         }
         Relationships: []
       }
-      bank_mutations: {
+      bank_mutation_approvals: {
         Row: {
-          amount: number
-          bank_account_number: string | null
-          bank_coa_code: string | null
-          bank_coa_id: string | null
-          bank_name: string
-          bank_reference_id: string
-          channel: Database["public"]["Enums"]["mutation_channel"] | null
+          approval_status: string
+          approver_id: string
+          comments: string | null
           created_at: string | null
-          description: string | null
           id: string
-          matched: boolean | null
-          matched_at: string | null
-          matched_by: string | null
-          matched_transaction_id: string | null
-          matched_transaction_type: string | null
-          processed: boolean | null
-          raw_payload: Json | null
-          transaction_date: string
-          type: Database["public"]["Enums"]["mutation_type"]
+          upload_id: string
         }
         Insert: {
-          amount: number
-          bank_account_number?: string | null
-          bank_coa_code?: string | null
-          bank_coa_id?: string | null
-          bank_name: string
-          bank_reference_id: string
-          channel?: Database["public"]["Enums"]["mutation_channel"] | null
+          approval_status: string
+          approver_id: string
+          comments?: string | null
           created_at?: string | null
-          description?: string | null
           id?: string
-          matched?: boolean | null
-          matched_at?: string | null
-          matched_by?: string | null
-          matched_transaction_id?: string | null
-          matched_transaction_type?: string | null
-          processed?: boolean | null
-          raw_payload?: Json | null
-          transaction_date: string
-          type: Database["public"]["Enums"]["mutation_type"]
+          upload_id: string
         }
         Update: {
-          amount?: number
-          bank_account_number?: string | null
-          bank_coa_code?: string | null
-          bank_coa_id?: string | null
-          bank_name?: string
-          bank_reference_id?: string
-          channel?: Database["public"]["Enums"]["mutation_channel"] | null
+          approval_status?: string
+          approver_id?: string
+          comments?: string | null
           created_at?: string | null
-          description?: string | null
           id?: string
-          matched?: boolean | null
-          matched_at?: string | null
-          matched_by?: string | null
-          matched_transaction_id?: string | null
-          matched_transaction_type?: string | null
-          processed?: boolean | null
-          raw_payload?: Json | null
-          transaction_date?: string
-          type?: Database["public"]["Enums"]["mutation_type"]
+          upload_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "bank_mutations_bank_coa_id_fkey"
-            columns: ["bank_coa_id"]
+            foreignKeyName: "bank_mutation_approvals_upload_id_fkey"
+            columns: ["upload_id"]
             isOneToOne: false
-            referencedRelation: "chart_of_accounts"
+            referencedRelation: "bank_mutation_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_mutation_uploads: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bank_name: string | null
+          created_at: string | null
+          duplicate_records: number | null
+          error_records: number | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number
+          file_type: string | null
+          id: string
+          metadata: Json | null
+          mime_type: string
+          original_filename: string
+          processed_records: number | null
+          processing_error: string | null
+          rejection_reason: string | null
+          status: string | null
+          total_records: number | null
+          updated_at: string | null
+          upload_status: string | null
+          user_id: string
+        }
+        Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          duplicate_records?: number | null
+          error_records?: number | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number
+          file_type?: string | null
+          id?: string
+          metadata?: Json | null
+          mime_type?: string
+          original_filename: string
+          processed_records?: number | null
+          processing_error?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          total_records?: number | null
+          updated_at?: string | null
+          upload_status?: string | null
+          user_id: string
+        }
+        Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          duplicate_records?: number | null
+          error_records?: number | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number
+          file_type?: string | null
+          id?: string
+          metadata?: Json | null
+          mime_type?: string
+          original_filename?: string
+          processed_records?: number | null
+          processing_error?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          total_records?: number | null
+          updated_at?: string | null
+          upload_status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bank_mutations: {
+        Row: {
+          akun: string | null
+          amount: number
+          approval_status: string | null
+          bank_account_number: string | null
+          bank_name: string
+          bank_reference_id: string | null
+          created_at: string | null
+          credit: string | null
+          debit: string | null
+          description: string | null
+          duplicate_of: string | null
+          id: string
+          is_duplicate: boolean | null
+          journal_entry_id: string | null
+          kas_bank: string | null
+          matched: string | null
+          matched_at: string | null
+          matched_transaction_id: string | null
+          mutation_date: string | null
+          ocr_confidence: number | null
+          ocr_data: Json | null
+          posted_at: string | null
+          processed: string | null
+          raw_data: Json | null
+          raw_payload: string | null
+          source: string | null
+          status: string | null
+          transaction_date: string
+          transaction_type: string
+          type: string | null
+          updated_at: string | null
+          upload_id: string
+          user_id: string
+        }
+        Insert: {
+          akun?: string | null
+          amount?: number
+          approval_status?: string | null
+          bank_account_number?: string | null
+          bank_name: string
+          bank_reference_id?: string | null
+          created_at?: string | null
+          credit?: string | null
+          debit?: string | null
+          description?: string | null
+          duplicate_of?: string | null
+          id?: string
+          is_duplicate?: boolean | null
+          journal_entry_id?: string | null
+          kas_bank?: string | null
+          matched?: string | null
+          matched_at?: string | null
+          matched_transaction_id?: string | null
+          mutation_date?: string | null
+          ocr_confidence?: number | null
+          ocr_data?: Json | null
+          posted_at?: string | null
+          processed?: string | null
+          raw_data?: Json | null
+          raw_payload?: string | null
+          source?: string | null
+          status?: string | null
+          transaction_date: string
+          transaction_type: string
+          type?: string | null
+          updated_at?: string | null
+          upload_id: string
+          user_id: string
+        }
+        Update: {
+          akun?: string | null
+          amount?: number
+          approval_status?: string | null
+          bank_account_number?: string | null
+          bank_name?: string
+          bank_reference_id?: string | null
+          created_at?: string | null
+          credit?: string | null
+          debit?: string | null
+          description?: string | null
+          duplicate_of?: string | null
+          id?: string
+          is_duplicate?: boolean | null
+          journal_entry_id?: string | null
+          kas_bank?: string | null
+          matched?: string | null
+          matched_at?: string | null
+          matched_transaction_id?: string | null
+          mutation_date?: string | null
+          ocr_confidence?: number | null
+          ocr_data?: Json | null
+          posted_at?: string | null
+          processed?: string | null
+          raw_data?: Json | null
+          raw_payload?: string | null
+          source?: string | null
+          status?: string | null
+          transaction_date?: string
+          transaction_type?: string
+          type?: string | null
+          updated_at?: string | null
+          upload_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_mutations_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_mutations_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "bank_mutation_uploads"
             referencedColumns: ["id"]
           },
         ]
@@ -1591,8 +1759,10 @@ export type Database = {
           ocr_id: string | null
           payee_name: string
           payment_method: string
+          reference_number: number | null
           rejection_reason: string | null
           status: string | null
+          tanggal: string | null
           tax_amount: number | null
           tax_code: string | null
           tax_type: string | null
@@ -1633,8 +1803,10 @@ export type Database = {
           ocr_id?: string | null
           payee_name: string
           payment_method: string
+          reference_number?: number | null
           rejection_reason?: string | null
           status?: string | null
+          tanggal?: string | null
           tax_amount?: number | null
           tax_code?: string | null
           tax_type?: string | null
@@ -1675,8 +1847,10 @@ export type Database = {
           ocr_id?: string | null
           payee_name?: string
           payment_method?: string
+          reference_number?: number | null
           rejection_reason?: string | null
           status?: string | null
+          tanggal?: string | null
           tax_amount?: number | null
           tax_code?: string | null
           tax_type?: string | null
@@ -5090,9 +5264,15 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           account_type: string | null
+          approval_log: Json | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           attachment_url: string | null
+          bank_mutation_id: string | null
           bukti_url: string | null
           code_booking: string | null
+          confidence_score: number | null
           created_at: string | null
           created_by: string | null
           credit: number | null
@@ -5127,8 +5307,10 @@ export type Database = {
           reference_type: string | null
           sales_transactions_id: string | null
           service_type: string | null
+          source_file: string | null
           source_id: string | null
           source_ref: string | null
+          source_reference: string | null
           source_table: string | null
           source_type: string | null
           stock_adjustment_id: string | null
@@ -5151,9 +5333,15 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
+          approval_log?: Json | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           attachment_url?: string | null
+          bank_mutation_id?: string | null
           bukti_url?: string | null
           code_booking?: string | null
+          confidence_score?: number | null
           created_at?: string | null
           created_by?: string | null
           credit?: number | null
@@ -5188,8 +5376,10 @@ export type Database = {
           reference_type?: string | null
           sales_transactions_id?: string | null
           service_type?: string | null
+          source_file?: string | null
           source_id?: string | null
           source_ref?: string | null
+          source_reference?: string | null
           source_table?: string | null
           source_type?: string | null
           stock_adjustment_id?: string | null
@@ -5212,9 +5402,15 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
+          approval_log?: Json | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           attachment_url?: string | null
+          bank_mutation_id?: string | null
           bukti_url?: string | null
           code_booking?: string | null
+          confidence_score?: number | null
           created_at?: string | null
           created_by?: string | null
           credit?: number | null
@@ -5249,8 +5445,10 @@ export type Database = {
           reference_type?: string | null
           sales_transactions_id?: string | null
           service_type?: string | null
+          source_file?: string | null
           source_id?: string | null
           source_ref?: string | null
+          source_reference?: string | null
           source_table?: string | null
           source_type?: string | null
           stock_adjustment_id?: string | null
@@ -10632,6 +10830,75 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_receipts: {
+        Row: {
+          amount: number | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bukti: string | null
+          category: string | null
+          coa_cash_code: string | null
+          coa_contra_code: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          journal_ref: string | null
+          ocr_data: Json | null
+          payment_method: string | null
+          reference_number: string | null
+          source_destination: string | null
+          tanggal: string | null
+          transaction_date: string | null
+          transaction_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bukti?: string | null
+          category?: string | null
+          coa_cash_code?: string | null
+          coa_contra_code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          journal_ref?: string | null
+          ocr_data?: Json | null
+          payment_method?: string | null
+          reference_number?: string | null
+          source_destination?: string | null
+          tanggal?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bukti?: string | null
+          category?: string | null
+          coa_cash_code?: string | null
+          coa_contra_code?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          journal_ref?: string | null
+          ocr_data?: Json | null
+          payment_method?: string | null
+          reference_number?: string | null
+          source_destination?: string | null
+          tanggal?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       v_wms_reversal_audit: {
         Row: {
           account_code: string | null
@@ -11575,6 +11842,10 @@ export type Database = {
       post_cash_disbursement_to_journal: {
         Args: { p_disbursement_id: string }
         Returns: string
+      }
+      post_journal_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
       }
       post_journal_cash_disbursement: { Args: { p_id: string }; Returns: Json }
       post_journal_to_general_ledger: {

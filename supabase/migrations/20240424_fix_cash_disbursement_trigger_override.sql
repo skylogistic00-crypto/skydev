@@ -1,12 +1,11 @@
--- Add new fields to cash_disbursement table
-ALTER TABLE cash_disbursement ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(15,2) DEFAULT 0;
-ALTER TABLE cash_disbursement ADD COLUMN IF NOT EXISTS cash_account_id UUID;
-ALTER TABLE cash_disbursement ADD COLUMN IF NOT EXISTS bank_account_id UUID;
-ALTER TABLE cash_disbursement ADD COLUMN IF NOT EXISTS account_code TEXT;
-ALTER TABLE cash_disbursement ADD COLUMN IF NOT EXISTS account_name TEXT;
+-- Fix trigger that overrides account_code set by frontend
+-- This trigger was overriding the manually selected account codes
 
--- Create trigger function to auto-map COA based on category
--- UPDATED: Only auto-map if account_code is NOT already set by frontend
+DROP TRIGGER IF EXISTS auto_map_coa_trigger ON cash_disbursement;
+DROP TRIGGER IF EXISTS auto_map_coa ON cash_disbursement;
+DROP FUNCTION IF EXISTS auto_map_coa_cash_disbursement() CASCADE;
+
+-- Create updated trigger function that respects frontend-set account_code
 CREATE OR REPLACE FUNCTION auto_map_coa_cash_disbursement()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -63,15 +62,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger
-DROP TRIGGER IF EXISTS auto_map_coa ON cash_disbursement;
-CREATE TRIGGER auto_map_coa
-BEFORE INSERT OR UPDATE ON cash_disbursement
-FOR EACH ROW
-EXECUTE FUNCTION auto_map_coa_cash_disbursement();
-
-COMMENT ON COLUMN cash_disbursement.tax_amount IS 'Tax amount for the disbursement';
-COMMENT ON COLUMN cash_disbursement.cash_account_id IS 'Reference to cash account if payment is cash';
-COMMENT ON COLUMN cash_disbursement.bank_account_id IS 'Reference to bank account if payment is transfer';
-COMMENT ON COLUMN cash_disbursement.account_code IS 'Auto-mapped COA account code';
-COMMENT ON COLUMN cash_disbursement.account_name IS 'Auto-mapped COA account name';
+-- Recreate trigger
+CREATE TRIGGER auto_map_coa_trigger
+  BEFORE INSERT OR UPDATE ON cash_disbursement
+  FOR EACH ROW
+  EXECUTE FUNCTION auto_map_coa_cash_disbursement();
