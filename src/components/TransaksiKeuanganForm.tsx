@@ -8994,16 +8994,13 @@ export default function TransaksiKeuanganForm() {
                       <div className="max-h-64 overflow-auto">
                         {coa
                           .filter((acc) => {
-                            // Level 3 accounts with parent_code = "3-1000" or "3-2000"
-                            if (acc.level !== 3) return false;
-                            if (acc.parent_code !== "3-1000" && acc.parent_code !== "3-2000") return false;
-                            
-                            // Search filter
+                            // Level 3 accounts with parent_code = "3-1000"
+                            const isLevel3 = acc.level === 3;
+                            const isParent3_1000 = acc.parent_code === "3-1000";
                             const searchMatch = `${acc.account_code} ${acc.account_name}`
                               .toLowerCase()
                               .includes(bankSearch.toLowerCase());
-                            
-                            return searchMatch;
+                            return isLevel3 && isParent3_1000 && searchMatch;
                           })
                           .map((acc) => (
                             <div
