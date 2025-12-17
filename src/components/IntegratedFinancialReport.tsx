@@ -946,7 +946,7 @@ export default function IntegratedFinancialReport() {
                             rows.push(
                               <TableRow key={`${ref}-debit`}>
                                 <TableCell className="text-sm">
-                                  {debitEntry.tanggal ? new Date(debitEntry.tanggal).toLocaleDateString('id-ID') : '-'}
+                                  {debitEntry.tanggal ? new Date(debitEntry.tanggal).toLocaleDateString('id-ID') : (debitEntry.transaction_date ? new Date(debitEntry.transaction_date).toLocaleDateString('id-ID') : '-')}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {debitEntry.jenis_transaksi || '-'}
@@ -987,7 +987,7 @@ export default function IntegratedFinancialReport() {
                             rows.push(
                               <TableRow key={`${ref}-credit`}>
                                 <TableCell className="text-sm">
-                                  {creditEntry.tanggal ? new Date(creditEntry.tanggal).toLocaleDateString('id-ID') : '-'}
+                                  {creditEntry.tanggal ? new Date(creditEntry.tanggal).toLocaleDateString('id-ID') : (creditEntry.transaction_date ? new Date(creditEntry.transaction_date).toLocaleDateString('id-ID') : '-')}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {creditEntry.jenis_transaksi || '-'}

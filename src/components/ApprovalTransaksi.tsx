@@ -382,6 +382,7 @@ export default function ApprovalTransaksi({
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
         approval_status: "approved",
+        bukti_url: transaction.bukti || null,
       });
 
     if (debitError) throw debitError;
@@ -404,6 +405,7 @@ export default function ApprovalTransaksi({
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
         approval_status: "approved",
+        bukti_url: transaction.bukti || null,
       });
 
     if (creditError) throw creditError;
@@ -523,6 +525,7 @@ export default function ApprovalTransaksi({
       .from("journal_entries")
       .insert({
         journal_ref: journalRef,
+        transaction_date: transaction.transaction_date,
         account_code: expenseAccountCode,
         account_name: expenseAccountName,
         account_type: "Expense",
@@ -531,10 +534,11 @@ export default function ApprovalTransaksi({
         debit_account: expenseAccountCode,
         credit_account: cashAccountCode,
         description: transaction.description || "Pengeluaran Kas",
-        tanggal: transaction.transaction_date,
+        source_type: "cash_disbursement",
         kategori: transaction.category,
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
+        bukti_url: transaction.bukti || null,
         approval_status: "approved",
       });
 
@@ -545,6 +549,7 @@ export default function ApprovalTransaksi({
       .from("journal_entries")
       .insert({
         journal_ref: journalRef,
+        transaction_date: transaction.transaction_date,
         account_code: cashAccountCode,
         account_name: cashAccountName,
         account_type: "Asset",
@@ -553,10 +558,11 @@ export default function ApprovalTransaksi({
         debit_account: expenseAccountCode,
         credit_account: cashAccountCode,
         description: transaction.description || "Pengeluaran Kas",
-        tanggal: transaction.transaction_date,
+        source_type: "cash_disbursement",
         kategori: transaction.category,
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
+        bukti_url: transaction.bukti || null,
         approval_status: "approved",
       });
 

@@ -35,17 +35,18 @@ BEGIN
   
   -- Create debit entry (expense account)
   INSERT INTO journal_entries (
-    tanggal,
+    transaction_date,
     journal_ref,
     account_code,
     account_name,
     debit,
     credit,
-    keterangan,
+    description,
     reference_type,
     reference_id,
     created_by,
-    status
+    status,
+    bukti_url
   )
   VALUES (
     v_disbursement.transaction_date,
@@ -58,7 +59,8 @@ BEGIN
     'cash_disbursement',
     p_disbursement_id,
     v_disbursement.created_by,
-    'posted'
+    'posted',
+    v_disbursement.bukti
   );
   v_entry_count := v_entry_count + 1;
   
@@ -84,17 +86,18 @@ BEGIN
   END IF;
   
   INSERT INTO journal_entries (
-    tanggal,
+    transaction_date,
     journal_ref,
     account_code,
     account_name,
     debit,
     credit,
-    keterangan,
+    description,
     reference_type,
     reference_id,
     created_by,
-    status
+    status,
+    bukti_url
   )
   VALUES (
     v_disbursement.transaction_date,
@@ -107,24 +110,26 @@ BEGIN
     'cash_disbursement',
     p_disbursement_id,
     v_disbursement.created_by,
-    'posted'
+    'posted',
+    v_disbursement.bukti
   );
   v_entry_count := v_entry_count + 1;
   
   -- If there's tax amount, create tax entry
   IF v_disbursement.tax_amount > 0 THEN
     INSERT INTO journal_entries (
-      tanggal,
+      transaction_date,
       journal_ref,
       account_code,
       account_name,
       debit,
       credit,
-      keterangan,
+      description,
       reference_type,
       reference_id,
       created_by,
-      status
+      status,
+      bukti_url
     )
     VALUES (
       v_disbursement.transaction_date,
@@ -137,7 +142,8 @@ BEGIN
       'cash_disbursement',
       p_disbursement_id,
       v_disbursement.created_by,
-      'posted'
+      'posted',
+      v_disbursement.bukti
     );
     v_entry_count := v_entry_count + 1;
   END IF;
