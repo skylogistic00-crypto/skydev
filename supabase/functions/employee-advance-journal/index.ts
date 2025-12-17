@@ -1,5 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "@shared/cors.ts";
+import { createSupabaseClient } from "@shared/supabase-client.ts";
 import { getAccountCOA, getAccountCOAByCode } from "@shared/coa-helper.ts";
 
 interface AdvanceJournalRequest {
@@ -11,6 +11,7 @@ interface AdvanceJournalRequest {
   amount: number;
   date: string;
   description?: string;
+  bukti_url?: string;
   // Accept either account_id or account_code
   expense_account_id?: string;
   expense_account_code?: string;
@@ -18,24 +19,20 @@ interface AdvanceJournalRequest {
   coa_account_code?: string;
   cash_account_id?: string;
   cash_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { 
+      headers: corsHeaders, 
+      status: 200 
+    });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseClient = createSupabaseClient();
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -53,30 +50,37 @@ Deno.serve(async (req) => {
 
     const payload: AdvanceJournalRequest = await req.json();
 
-    // Resolve COA for employee advance account
+    // Resolve COA for employee advance account (default to 1-1500)
     let advanceCOA = null;
     if (payload.coa_account_id) {
       advanceCOA = await getAccountCOA(supabaseClient, payload.coa_account_id);
     } else if (payload.coa_account_code) {
       advanceCOA = await getAccountCOAByCode(supabaseClient, payload.coa_account_code);
+    } else {
+      // Default to 1-1500 Uang Muka Karyawan
+      advanceCOA = await getAccountCOAByCode(supabaseClient, "1-1500");
     }
 
     if (!advanceCOA) {
-      throw new Error("Employee advance COA account not found");
+      throw new Error("Employee advance COA account not found (1-1500)");
     }
 
-    // Resolve COA for cash account (default to 1-1001 Kas)
+    // Resolve COA for cash account (default to 1-1220 Bank Mandiri)
     let cashCOA = null;
-    if (payload.cash_account_id) {
+    if (payload.credit_account_id) {
+      cashCOA = await getAccountCOA(supabaseClient, payload.credit_account_id);
+    } else if (payload.credit_account_code) {
+      cashCOA = await getAccountCOAByCode(supabaseClient, payload.credit_account_code);
+    } else if (payload.cash_account_id) {
       cashCOA = await getAccountCOA(supabaseClient, payload.cash_account_id);
     } else if (payload.cash_account_code) {
       cashCOA = await getAccountCOAByCode(supabaseClient, payload.cash_account_code);
     } else {
-      cashCOA = await getAccountCOAByCode(supabaseClient, "1-1001");
+      cashCOA = await getAccountCOAByCode(supabaseClient, "1-1220");
     }
 
     if (!cashCOA) {
-      throw new Error("Cash COA account not found");
+      throw new Error("Cash COA account not found (1-1220)");
     }
 
     let journalEntries: Array<{
@@ -186,52 +190,47 @@ Deno.serve(async (req) => {
     const totalDebit = journalEntries.reduce((sum, e) => sum + e.debit, 0);
     const totalCredit = journalEntries.reduce((sum, e) => sum + e.credit, 0);
 
-    // Create journal entry header
-    const journalEntryId = crypto.randomUUID();
-    const { error: journalError } = await supabaseClient
-      .from("journal_entries")
-      .insert({
-        id: journalEntryId,
-        journal_ref: journalRef,
-        entry_date: payload.date,
-        transaction_date: payload.date,
-        description: journalDescription,
-        total_debit: totalDebit,
-        total_credit: totalCredit,
-        reference_type: `employee_advance_${payload.type}`,
-        reference_id: payload.advance_id || payload.settlement_id || payload.return_id,
-        status: "posted",
-        created_by: user.id,
-      });
-
-    if (journalError) {
-      console.error("Journal entry error:", journalError);
-      throw new Error(`Failed to create journal entry: ${journalError.message}`);
-    }
-
-    // Insert journal entry lines with full COA details
-    const journalLines = journalEntries.map((entry) => ({
-      journal_entry_id: journalEntryId,
+    // Insert 2 separate rows in journal_entries (like cash_disbursement)
+    const debitEntry = journalEntries.find(e => e.debit > 0);
+    const creditEntry = journalEntries.find(e => e.credit > 0);
+    
+    // For advance type, credit_account should be the bank account (credit side)
+    // For settlement/return, credit_account should be the actual credit side
+    const debitAccountCode = debitEntry?.account_code;
+    const creditAccountCode = payload.type === "advance" ? cashCOA.account_code : creditEntry?.account_code;
+    
+    const journalInserts = journalEntries.map((entry) => ({
+      journal_ref: journalRef,
+      entry_date: payload.date,
+      transaction_date: payload.date,
+      description: entry.description,
       account_id: entry.account_id,
       account_code: entry.account_code,
       account_name: entry.account_name,
       debit: entry.debit,
       credit: entry.credit,
-      description: entry.description,
+      debit_account: debitAccountCode,
+      credit_account: creditAccountCode,
+      reference_type: `employee_advance_${payload.type}`,
+      reference_id: payload.advance_id || payload.settlement_id || payload.return_id,
+      bukti_url: payload.bukti_url,
+      status: "posted",
+      created_by: user.id,
     }));
 
-    const { error: linesError } = await supabaseClient
-      .from("journal_entry_lines")
-      .insert(journalLines);
+    console.log("Inserting journal entries:", JSON.stringify(journalInserts, null, 2));
 
-    if (linesError) {
-      console.error("Journal lines error:", linesError);
-      throw new Error(`Failed to create journal lines: ${linesError.message}`);
+    const { error: journalError } = await supabaseClient
+      .from("journal_entries")
+      .insert(journalInserts);
+
+    if (journalError) {
+      console.error("Journal entry error:", journalError);
+      throw new Error(`Failed to create journal entries: ${journalError.message}`);
     }
 
     // Insert to general ledger with full COA details
     const glEntries = journalEntries.map((entry) => ({
-      journal_entry_id: journalEntryId,
       account_id: entry.account_id,
       account_code: entry.account_code,
       account_name: entry.account_name,
@@ -250,23 +249,22 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create general ledger entries: ${glError.message}`);
     }
 
-    // Update the settlement or return record with journal_entry_id
+    // Update the settlement or return record with journal_ref
     if (payload.type === "settlement" && payload.settlement_id) {
       await supabaseClient
         .from("employee_advance_settlements")
-        .update({ journal_entry_id: journalEntryId })
+        .update({ journal_ref: journalRef })
         .eq("id", payload.settlement_id);
     } else if (payload.type === "return" && payload.return_id) {
       await supabaseClient
         .from("employee_advance_returns")
-        .update({ journal_entry_id: journalEntryId })
+        .update({ journal_ref: journalRef })
         .eq("id", payload.return_id);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        journal_entry_id: journalEntryId,
         journal_ref: journalRef,
         message: `Journal entry created for ${payload.type}`,
         entries: journalEntries.map(e => ({

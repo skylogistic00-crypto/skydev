@@ -1983,6 +1983,7 @@ export type Database = {
           account_code: string
           account_name: string
           account_type: string
+          allow_manual_posting: string | null
           created_at: string | null
           credit: number | null
           debit: number | null
@@ -2006,6 +2007,7 @@ export type Database = {
           account_code: string
           account_name: string
           account_type: string
+          allow_manual_posting?: string | null
           created_at?: string | null
           credit?: number | null
           debit?: number | null
@@ -2029,6 +2031,7 @@ export type Database = {
           account_code?: string
           account_name?: string
           account_type?: string
+          allow_manual_posting?: string | null
           created_at?: string | null
           credit?: number | null
           debit?: number | null
@@ -3391,33 +3394,6 @@ export type Database = {
         }
         Relationships: []
       }
-      employee_advance: {
-        Row: {
-          balance: number | null
-          created_at: string | null
-          employee_id: string
-          employee_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          balance?: number | null
-          created_at?: string | null
-          employee_id: string
-          employee_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Update: {
-          balance?: number | null
-          created_at?: string | null
-          employee_id?: string
-          employee_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       employee_advance_movements: {
         Row: {
           amount: number
@@ -3458,6 +3434,7 @@ export type Database = {
         Row: {
           advance_id: string | null
           amount: number
+          bukti_url: string | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -3469,6 +3446,7 @@ export type Database = {
         Insert: {
           advance_id?: string | null
           amount: number
+          bukti_url?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -3480,6 +3458,7 @@ export type Database = {
         Update: {
           advance_id?: string | null
           amount?: number
+          bukti_url?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -3509,6 +3488,7 @@ export type Database = {
         Row: {
           advance_id: string | null
           amount: number
+          bukti_url: string | null
           category: string | null
           created_at: string | null
           created_by: string | null
@@ -3529,6 +3509,7 @@ export type Database = {
         Insert: {
           advance_id?: string | null
           amount: number
+          bukti_url?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3549,6 +3530,7 @@ export type Database = {
         Update: {
           advance_id?: string | null
           amount?: number
+          bukti_url?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3588,6 +3570,7 @@ export type Database = {
           advance_date: string
           advance_number: string
           amount: number
+          bukti_url: string | null
           coa_account_code: string
           created_at: string | null
           created_by: string | null
@@ -3603,6 +3586,7 @@ export type Database = {
           advance_date?: string
           advance_number: string
           amount: number
+          bukti_url?: string | null
           coa_account_code: string
           created_at?: string | null
           created_by?: string | null
@@ -3618,6 +3602,7 @@ export type Database = {
           advance_date?: string
           advance_number?: string
           amount?: number
+          bukti_url?: string | null
           coa_account_code?: string
           created_at?: string | null
           created_by?: string | null
@@ -3630,13 +3615,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "employee_advances_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "employee_advances_employee_id_fkey"
             columns: ["employee_id"]
@@ -4675,13 +4653,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "general_ledger_account_code_fkey"
-            columns: ["account_code"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts_backup"
-            referencedColumns: ["account_code"]
-          },
-          {
             foreignKeyName: "general_ledger_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -5373,6 +5344,7 @@ export type Database = {
           source_reference: string | null
           source_table: string | null
           source_type: string | null
+          status: string | null
           stock_adjustment_id: string | null
           stock_movement_id: string | null
           sumber_penerimaan: string | null
@@ -5442,6 +5414,7 @@ export type Database = {
           source_reference?: string | null
           source_table?: string | null
           source_type?: string | null
+          status?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
           sumber_penerimaan?: string | null
@@ -5511,6 +5484,7 @@ export type Database = {
           source_reference?: string | null
           source_table?: string | null
           source_type?: string | null
+          status?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
           sumber_penerimaan?: string | null
@@ -5642,7 +5616,8 @@ export type Database = {
           debit: number | null
           description: string | null
           id: string
-          journal_id: string
+          journal_entry_id: string | null
+          journal_id: string | null
           note: string | null
         }
         Insert: {
@@ -5654,7 +5629,8 @@ export type Database = {
           debit?: number | null
           description?: string | null
           id?: string
-          journal_id: string
+          journal_entry_id?: string | null
+          journal_id?: string | null
           note?: string | null
         }
         Update: {
@@ -5666,7 +5642,8 @@ export type Database = {
           debit?: number | null
           description?: string | null
           id?: string
-          journal_id?: string
+          journal_entry_id?: string | null
+          journal_id?: string | null
           note?: string | null
         }
         Relationships: [
@@ -11265,18 +11242,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      vw_employee_advance_summary: {
-        Row: {
-          current_balance: number | null
-          employee_id: string | null
-          employee_name: string | null
-          movement_count: number | null
-          total_kasbon: number | null
-          total_pemakaian: number | null
-          total_pengembalian: number | null
-        }
-        Relationships: []
       }
       vw_journal_summary: {
         Row: {

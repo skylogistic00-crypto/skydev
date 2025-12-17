@@ -2112,8 +2112,8 @@ export default function TransaksiKeuanganForm() {
         .eq("is_active", true)
         .eq("is_postable", true) // 🔒 CRITICAL: Hanya leaf accounts yang bisa di-posting
         .eq("is_header", false)
-        .like("account_code", "1-12%") // 🔒 Hanya akun bank (1-12xx)
-        .neq("account_code", "1-1200") // 🔒 EXCLUDE parent "Bank" account
+        .or("account_code.like.1-12%,account_code.like.1-15%") // 🔒 Akun bank (1-12xx) dan Uang Muka (1-15xx)
+        .not("account_code", "in", "(1-1200,1-1500)") // 🔒 EXCLUDE parent accounts
         .order("account_code");
       if (supabaseError) throw supabaseError;
       console.log("Banks loaded (leaf only, is_postable=true):", data);

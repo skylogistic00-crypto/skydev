@@ -276,7 +276,7 @@ export default function IntegratedFinancialReport() {
       const { data: journalData, error: journalError } = await supabase
         .from("journal_entries")
         .select("*")
-        .order("journal_ref", { ascending: false })
+        .order("created_at", { ascending: false })
         .order("entry_date", { ascending: false });
 
       if (journalError) {
@@ -308,15 +308,49 @@ export default function IntegratedFinancialReport() {
         coaData?.map((coa) => [coa.account_code, coa.account_name]) || [],
       );
 
-      // Enrich journal entries with account names
+      // Enrich journal entries with account names and jenis_transaksi
       const enrichedEntries =
-        journalData?.map((entry) => ({
-          ...entry,
-          debit_account_name:
-            coaMap.get(entry.debit_account) || entry.debit_account,
-          credit_account_name:
-            coaMap.get(entry.credit_account) || entry.credit_account,
-        })) || [];
+        journalData?.map((entry) => {
+          // Determine jenis_transaksi based on reference_type
+          let jenisTransaksi = '-';
+          
+          // Debug log
+          console.log('Entry reference_type:', entry.reference_type);
+          
+          // Check for employee advance types (check exact match first)
+          if (entry.reference_type === 'employee_advance_advance') {
+            jenisTransaksi = 'Uang Muka';
+          } else if (entry.reference_type === 'employee_advance_settlement') {
+            jenisTransaksi = 'Penyelesaian Uang Muka';
+          } else if (entry.reference_type === 'employee_advance_return') {
+            jenisTransaksi = 'Pengembalian Uang Muka';
+          }
+          // Check for other transaction types
+          else if (entry.reference_type?.includes('cash_disbursement')) {
+            jenisTransaksi = 'Pengeluaran Kas';
+          } else if (entry.reference_type?.includes('cash_receipt')) {
+            jenisTransaksi = 'Penerimaan Kas';
+          } else if (entry.reference_type?.includes('bank_mutation')) {
+            jenisTransaksi = 'Mutasi Bank';
+          } else if (entry.reference_type?.includes('purchase')) {
+            jenisTransaksi = 'Pembelian';
+          } else if (entry.reference_type?.includes('sales')) {
+            jenisTransaksi = 'Penjualan';
+          } else if (entry.reference_type?.includes('general_journal')) {
+            jenisTransaksi = 'Jurnal Umum';
+          }
+          
+          console.log('Mapped jenis_transaksi:', jenisTransaksi);
+          
+          return {
+            ...entry,
+            debit_account_name:
+              coaMap.get(entry.debit_account) || entry.debit_account,
+            credit_account_name:
+              coaMap.get(entry.credit_account) || entry.credit_account,
+            jenis_transaksi: jenisTransaksi,
+          };
+        }) || [];
 
       setJournalEntries(enrichedEntries);
     } catch (err) {

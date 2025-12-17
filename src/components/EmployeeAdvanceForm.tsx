@@ -64,6 +64,9 @@ export default function EmployeeAdvanceForm() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [selectedAdvance, setSelectedAdvance] = useState<Advance | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [kasAccounts, setKasAccounts] = useState<any[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
 
   // Form states
   const [advanceForm, setAdvanceForm] = useState({
@@ -72,6 +75,10 @@ export default function EmployeeAdvanceForm() {
     amount: 0,
     advance_date: new Date().toISOString().split("T")[0],
     notes: "",
+    payment_method: "Kas",
+    bank_account_id: "",
+    kas_account_id: "",
+    bukti_url: "",
   });
 
   const [settlementForm, setSettlementForm] = useState({
@@ -85,19 +92,26 @@ export default function EmployeeAdvanceForm() {
     description: "",
     receipt_number: "",
     settlement_date: new Date().toISOString().split("T")[0],
+    bukti_url: "",
   });
 
   const [returnForm, setReturnForm] = useState({
     advance_id: "",
     amount: 0,
     return_date: new Date().toISOString().split("T")[0],
-    payment_method: "Cash",
+    payment_method: "Kas",
+    bank_account_id: "",
+    kas_account_id: "",
     notes: "",
+    bukti_url: "",
   });
 
   useEffect(() => {
     fetchEmployees();
     fetchAdvances();
+    fetchBankAccounts();
+    fetchKasAccounts();
+    fetchExpenseAccounts();
   }, []);
 
   const fetchEmployees = async () => {
@@ -116,7 +130,7 @@ export default function EmployeeAdvanceForm() {
 
   const fetchAdvances = async () => {
     const { data, error } = await supabase
-      .from("vw_employee_advance_summary")
+      .from("employee_advances")
       .select("*")
       .order("advance_date", { ascending: false });
 
@@ -125,7 +139,59 @@ export default function EmployeeAdvanceForm() {
       return;
     }
 
+    console.log("Fetched advances:", data);
     setAdvances(data || []);
+  };
+
+  const fetchBankAccounts = async () => {
+    const { data, error } = await supabase
+      .from("chart_of_accounts")
+      .select("id, account_code, account_name")
+      .like("account_code", "1-12%")
+      .eq("is_postable", true)
+      .eq("is_active", true)
+      .order("account_code");
+
+    if (error) {
+      console.error("Error fetching bank accounts:", error);
+      return;
+    }
+
+    setBankAccounts(data || []);
+  };
+
+  const fetchKasAccounts = async () => {
+    const { data, error } = await supabase
+      .from("chart_of_accounts")
+      .select("id, account_code, account_name")
+      .like("account_code", "1-11%")
+      .eq("is_postable", true)
+      .eq("is_active", true)
+      .order("account_code");
+
+    if (error) {
+      console.error("Error fetching kas accounts:", error);
+      return;
+    }
+
+    setKasAccounts(data || []);
+  };
+
+  const fetchExpenseAccounts = async () => {
+    const { data, error } = await supabase
+      .from("chart_of_accounts")
+      .select("id, account_code, account_name")
+      .like("account_code", "6-%")
+      .eq("is_postable", true)
+      .eq("is_active", true)
+      .order("account_code");
+
+    if (error) {
+      console.error("Error fetching expense accounts:", error);
+      return;
+    }
+
+    setExpenseAccounts(data || []);
   };
 
   const handleCreateAdvance = async (e: React.FormEvent) => {
@@ -133,16 +199,23 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
+      // Generate unique advance number to avoid conflicts
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
+      
       // Insert advance record
       const { data: advanceData, error: advanceError } = await supabase
         .from("employee_advances")
         .insert({
           employee_id: advanceForm.employee_id,
           employee_name: advanceForm.employee_name,
+          advance_number: tempAdvanceNumber,
           amount: advanceForm.amount,
           remaining_balance: advanceForm.amount,
           advance_date: advanceForm.advance_date,
           notes: advanceForm.notes,
+          bukti_url: advanceForm.bukti_url,
           created_by: user?.id,
         })
         .select()
@@ -151,6 +224,17 @@ export default function EmployeeAdvanceForm() {
       if (advanceError) throw advanceError;
 
       // Create journal entry
+      // Fallback accounts for employee advance
+      const debitAccountCode = advanceData.coa_account_code || "1-1500"; // Uang Muka Karyawan
+      
+      // Get credit account from selected bank or kas
+      let creditAccountId = null;
+      if (advanceForm.payment_method === "Bank" && advanceForm.bank_account_id) {
+        creditAccountId = advanceForm.bank_account_id;
+      } else if (advanceForm.payment_method === "Kas" && advanceForm.kas_account_id) {
+        creditAccountId = advanceForm.kas_account_id;
+      }
+      
       const { error: journalError } = await supabase.functions.invoke(
         "supabase-functions-employee-advance-journal",
         {
@@ -160,7 +244,9 @@ export default function EmployeeAdvanceForm() {
             employee_name: advanceForm.employee_name,
             amount: advanceForm.amount,
             date: advanceForm.advance_date,
-            coa_account_code: advanceData.coa_account_code,
+            coa_account_code: debitAccountCode,
+            credit_account_id: creditAccountId,
+            bukti_url: advanceForm.bukti_url,
           },
         }
       );
@@ -179,6 +265,10 @@ export default function EmployeeAdvanceForm() {
         amount: 0,
         advance_date: new Date().toISOString().split("T")[0],
         notes: "",
+        payment_method: "Kas",
+        bank_account_id: "",
+        kas_account_id: "",
+        bukti_url: "",
       });
 
       fetchAdvances();
@@ -213,6 +303,7 @@ export default function EmployeeAdvanceForm() {
           description: settlementForm.description,
           receipt_number: settlementForm.receipt_number,
           settlement_date: settlementForm.settlement_date,
+          bukti_url: settlementForm.bukti_url,
           created_by: user?.id,
         })
         .select()
@@ -234,6 +325,7 @@ export default function EmployeeAdvanceForm() {
             description: settlementForm.description,
             expense_account_code: settlementForm.expense_account_code,
             coa_account_code: selectedAdvance?.coa_account_code,
+            bukti_url: settlementForm.bukti_url,
           },
         }
       );
@@ -257,6 +349,7 @@ export default function EmployeeAdvanceForm() {
         description: "",
         receipt_number: "",
         settlement_date: new Date().toISOString().split("T")[0],
+        bukti_url: "",
       });
 
       fetchAdvances();
@@ -286,6 +379,7 @@ export default function EmployeeAdvanceForm() {
           return_date: returnForm.return_date,
           payment_method: returnForm.payment_method,
           notes: returnForm.notes,
+          bukti_url: returnForm.bukti_url,
           created_by: user?.id,
         })
         .select()
@@ -305,6 +399,7 @@ export default function EmployeeAdvanceForm() {
             amount: returnForm.amount,
             date: returnForm.return_date,
             coa_account_code: selectedAdvance?.coa_account_code,
+            bukti_url: returnForm.bukti_url,
           },
         }
       );
@@ -321,8 +416,11 @@ export default function EmployeeAdvanceForm() {
         advance_id: "",
         amount: 0,
         return_date: new Date().toISOString().split("T")[0],
-        payment_method: "Cash",
+        payment_method: "Kas",
+        bank_account_id: "",
+        kas_account_id: "",
         notes: "",
+        bukti_url: "",
       });
 
       fetchAdvances();
@@ -466,6 +564,133 @@ export default function EmployeeAdvanceForm() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Metode Pembayaran *</Label>
+                    <Select
+                      value={advanceForm.payment_method}
+                      onValueChange={(value) =>
+                        setAdvanceForm({
+                          ...advanceForm,
+                          payment_method: value,
+                          bank_account_id: "",
+                          kas_account_id: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih metode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Kas">Kas</SelectItem>
+                        <SelectItem value="Bank">Bank</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {advanceForm.payment_method === "Bank" && (
+                    <div className="space-y-2">
+                      <Label>Bank *</Label>
+                      <Select
+                        value={advanceForm.bank_account_id}
+                        onValueChange={(value) =>
+                          setAdvanceForm({
+                            ...advanceForm,
+                            bank_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih bank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((bank) => (
+                            <SelectItem key={bank.id} value={bank.id}>
+                              {bank.account_code} - {bank.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {advanceForm.payment_method === "Kas" && (
+                    <div className="space-y-2">
+                      <Label>Kas *</Label>
+                      <Select
+                        value={advanceForm.kas_account_id}
+                        onValueChange={(value) =>
+                          setAdvanceForm({
+                            ...advanceForm,
+                            kas_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih kas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kasAccounts.map((kas) => (
+                            <SelectItem key={kas.id} value={kas.id}>
+                              {kas.account_code} - {kas.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bukti Foto Transaksi */}
+                <div className="space-y-2">
+                  <Label htmlFor="bukti-foto-advance">Bukti Foto Transaksi</Label>
+                  <Input
+                    id="bukti-foto-advance"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      try {
+                        const fileExt = file.name.split(".").pop();
+                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                        const filePath = `transaksi-bukti/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from("documents")
+                          .upload(filePath, file);
+
+                        if (uploadError) throw uploadError;
+
+                        const {
+                          data: { publicUrl },
+                        } = supabase.storage.from("documents").getPublicUrl(filePath);
+
+                        setAdvanceForm({
+                          ...advanceForm,
+                          bukti_url: publicUrl,
+                        });
+
+                        toast({
+                          title: "✅ Bukti berhasil diupload",
+                          description: "File bukti transaksi telah tersimpan",
+                        });
+                      } catch (error) {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "❌ Upload gagal",
+                          description: "Gagal mengupload bukti transaksi",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  />
+                  {advanceForm.bukti_url && (
+                    <p className="text-sm text-green-600">✓ File berhasil diupload</p>
+                  )}
+                </div>
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-semibold text-blue-900 mb-2">
                     📝 Jurnal yang akan dibuat:
@@ -477,8 +702,15 @@ export default function EmployeeAdvanceForm() {
                       {advanceForm.amount.toLocaleString()})
                     </p>
                     <p>
-                      <strong>Credit:</strong> Kas (Rp{" "}
-                      {advanceForm.amount.toLocaleString()})
+                      <strong>Credit:</strong>{" "}
+                      {advanceForm.payment_method === "Bank"
+                        ? bankAccounts.find(
+                            (b) => b.id === advanceForm.bank_account_id
+                          )?.account_name || "Bank"
+                        : kasAccounts.find(
+                            (k) => k.id === advanceForm.kas_account_id
+                          )?.account_name || "Kas"}{" "}
+                      (Rp {advanceForm.amount.toLocaleString()})
                     </p>
                   </div>
                 </div>
@@ -598,48 +830,35 @@ export default function EmployeeAdvanceForm() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Kategori Beban *</Label>
-                    <Select
-                      value={settlementForm.category}
-                      onValueChange={(value) =>
-                        setSettlementForm({
-                          ...settlementForm,
-                          category: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Beban Operasional">
-                          Beban Operasional
+                <div className="space-y-2">
+                  <Label>Akun Beban *</Label>
+                  <Select
+                    value={settlementForm.expense_account_code}
+                    onValueChange={(value) => {
+                      const selectedAccount = expenseAccounts.find(
+                        (acc) => acc.account_code === value
+                      );
+                      setSettlementForm({
+                        ...settlementForm,
+                        expense_account_code: value,
+                        category: selectedAccount?.account_name || "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="-- pilih akun beban --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {expenseAccounts.map((account) => (
+                        <SelectItem
+                          key={account.id}
+                          value={account.account_code}
+                        >
+                          {account.account_code} — {account.account_name}
                         </SelectItem>
-                        <SelectItem value="Beban Penjualan">
-                          Beban Penjualan
-                        </SelectItem>
-                        <SelectItem value="Beban Administrasi">
-                          Beban Administrasi
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Akun Beban *</Label>
-                    <Input
-                      placeholder="6-2011"
-                      value={settlementForm.expense_account_code}
-                      onChange={(e) =>
-                        setSettlementForm({
-                          ...settlementForm,
-                          expense_account_code: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -651,12 +870,10 @@ export default function EmployeeAdvanceForm() {
                       value={settlementForm.amount || ""}
                       onChange={(e) => {
                         const amount = parseFloat(e.target.value) || 0;
-                        const ppn = amount * 0.1;
                         setSettlementForm({
                           ...settlementForm,
                           amount,
-                          ppn,
-                          total: amount + ppn,
+                          total: amount + settlementForm.ppn,
                         });
                       }}
                     />
@@ -667,8 +884,14 @@ export default function EmployeeAdvanceForm() {
                     <Input
                       type="number"
                       value={settlementForm.ppn}
-                      readOnly
-                      className="bg-slate-50"
+                      onChange={(e) => {
+                        const ppn = parseFloat(e.target.value) || 0;
+                        setSettlementForm({
+                          ...settlementForm,
+                          ppn,
+                          total: settlementForm.amount + ppn,
+                        });
+                      }}
                     />
                   </div>
 
@@ -709,6 +932,56 @@ export default function EmployeeAdvanceForm() {
                       })
                     }
                   />
+                </div>
+
+                {/* Bukti Foto Transaksi */}
+                <div className="space-y-2">
+                  <Label htmlFor="bukti-foto-settlement">Bukti Foto Transaksi</Label>
+                  <Input
+                    id="bukti-foto-settlement"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      try {
+                        const fileExt = file.name.split(".").pop();
+                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                        const filePath = `transaksi-bukti/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from("documents")
+                          .upload(filePath, file);
+
+                        if (uploadError) throw uploadError;
+
+                        const {
+                          data: { publicUrl },
+                        } = supabase.storage.from("documents").getPublicUrl(filePath);
+
+                        setSettlementForm({
+                          ...settlementForm,
+                          bukti_url: publicUrl,
+                        });
+
+                        toast({
+                          title: "✅ Bukti berhasil diupload",
+                          description: "File bukti transaksi telah tersimpan",
+                        });
+                      } catch (error) {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "❌ Upload gagal",
+                          description: "Gagal mengupload bukti transaksi",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  />
+                  {settlementForm.bukti_url && (
+                    <p className="text-sm text-green-600">✓ File berhasil diupload</p>
+                  )}
                 </div>
 
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -813,36 +1086,95 @@ export default function EmployeeAdvanceForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Metode Pembayaran</Label>
-                    <Select
-                      value={returnForm.payment_method}
-                      onValueChange={(value) =>
-                        setReturnForm({ ...returnForm, payment_method: value })
+                    <Label>Tanggal</Label>
+                    <Input
+                      type="date"
+                      value={returnForm.return_date}
+                      onChange={(e) =>
+                        setReturnForm({
+                          ...returnForm,
+                          return_date: e.target.value,
+                        })
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Transfer">Transfer</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tanggal</Label>
-                  <Input
-                    type="date"
-                    value={returnForm.return_date}
-                    onChange={(e) =>
-                      setReturnForm({
-                        ...returnForm,
-                        return_date: e.target.value,
-                      })
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Metode Pembayaran *</Label>
+                    <Select
+                      value={returnForm.payment_method}
+                      onValueChange={(value) =>
+                        setReturnForm({
+                          ...returnForm,
+                          payment_method: value,
+                          bank_account_id: "",
+                          kas_account_id: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih metode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Kas">Kas</SelectItem>
+                        <SelectItem value="Bank">Bank</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {returnForm.payment_method === "Bank" && (
+                    <div className="space-y-2">
+                      <Label>Bank *</Label>
+                      <Select
+                        value={returnForm.bank_account_id}
+                        onValueChange={(value) =>
+                          setReturnForm({
+                            ...returnForm,
+                            bank_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih bank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((bank) => (
+                            <SelectItem key={bank.id} value={bank.id}>
+                              {bank.account_code} - {bank.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {returnForm.payment_method === "Kas" && (
+                    <div className="space-y-2">
+                      <Label>Kas *</Label>
+                      <Select
+                        value={returnForm.kas_account_id}
+                        onValueChange={(value) =>
+                          setReturnForm({
+                            ...returnForm,
+                            kas_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih kas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kasAccounts.map((kas) => (
+                            <SelectItem key={kas.id} value={kas.id}>
+                              {kas.account_code} - {kas.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -856,14 +1188,71 @@ export default function EmployeeAdvanceForm() {
                   />
                 </div>
 
+                {/* Bukti Foto Transaksi */}
+                <div className="space-y-2">
+                  <Label htmlFor="bukti-foto-return">Bukti Foto Transaksi</Label>
+                  <Input
+                    id="bukti-foto-return"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      try {
+                        const fileExt = file.name.split(".").pop();
+                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                        const filePath = `transaksi-bukti/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from("documents")
+                          .upload(filePath, file);
+
+                        if (uploadError) throw uploadError;
+
+                        const {
+                          data: { publicUrl },
+                        } = supabase.storage.from("documents").getPublicUrl(filePath);
+
+                        setReturnForm({
+                          ...returnForm,
+                          bukti_url: publicUrl,
+                        });
+
+                        toast({
+                          title: "✅ Bukti berhasil diupload",
+                          description: "File bukti transaksi telah tersimpan",
+                        });
+                      } catch (error) {
+                        console.error("Upload error:", error);
+                        toast({
+                          title: "❌ Upload gagal",
+                          description: "Gagal mengupload bukti transaksi",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  />
+                  {returnForm.bukti_url && (
+                    <p className="text-sm text-green-600">✓ File berhasil diupload</p>
+                  )}
+                </div>
+
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <h4 className="font-semibold text-purple-900 mb-2">
                     📝 Jurnal yang akan dibuat:
                   </h4>
                   <div className="text-sm text-purple-800 space-y-1">
                     <p>
-                      <strong>Debit:</strong> Kas (Rp{" "}
-                      {returnForm.amount.toLocaleString()})
+                      <strong>Debit:</strong>{" "}
+                      {returnForm.payment_method === "Bank"
+                        ? bankAccounts.find(
+                            (b) => b.id === returnForm.bank_account_id
+                          )?.account_name || "Bank"
+                        : kasAccounts.find(
+                            (k) => k.id === returnForm.kas_account_id
+                          )?.account_name || "Kas"}{" "}
+                      (Rp {returnForm.amount.toLocaleString()})
                     </p>
                     <p>
                       <strong>Credit:</strong> Uang Muka Karyawan -{" "}
