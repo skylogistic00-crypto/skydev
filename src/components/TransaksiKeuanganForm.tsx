@@ -9599,77 +9599,24 @@ export default function TransaksiKeuanganForm() {
                   {paymentType === "Bank" && (
                     <div className="space-y-2">
                       <Label htmlFor="bank">Bank *</Label>
-                      <Popover
-                        open={bankPopoverOpen}
-                        onOpenChange={setBankPopoverOpen}
+                      <Select
+                        value={selectedBank}
+                        onValueChange={(value) => setSelectedBank(value)}
                       >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                          >
-                            {selectedBank || "-- pilih atau ketik bank --"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-2">
-                          <Input
-                            placeholder="Cari atau ketik bank baru..."
-                            value={bankSearch}
-                            onChange={(e) => setBankSearch(e.target.value)}
-                            className="mb-2"
-                          />
-                          <div className="max-h-64 overflow-auto">
-                            {banks
-                              .filter((bank) =>
-                                `${bank.account_code} ${bank.account_name}`
-                                  .toLowerCase()
-                                  .includes(bankSearch.toLowerCase()),
-                              )
-                              .map((item) => (
-                                <div
-                                  key={item.account_code}
-                                  className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer rounded"
-                                  onClick={() => {
-                                    setSelectedBank(
-                                      `${item.account_code} — ${item.account_name}`,
-                                    );
-                                    setBankPopoverOpen(false);
-                                    setBankSearch("");
-                                  }}
-                                >
-                                  <span className="text-sm">
-                                    {item.account_code} — {item.account_name}
-                                  </span>
-                                  {selectedBank ===
-                                    `${item.account_code} — ${item.account_name}` && (
-                                    <Check className="h-4 w-4 text-blue-600" />
-                                  )}
-                                </div>
-                              ))}
-                            {bankSearch &&
-                              !banks.some((item) =>
-                                `${item.account_code} ${item.account_name}`
-                                  .toLowerCase()
-                                  .includes(bankSearch.toLowerCase()),
-                              ) && (
-                                <div
-                                  className="p-2 hover:bg-gray-100 cursor-pointer rounded border-t"
-                                  onClick={() => {
-                                    setSelectedBank(bankSearch);
-                                    setBankPopoverOpen(false);
-                                    setBankSearch("");
-                                  }}
-                                >
-                                  <span className="text-sm text-blue-600">
-                                    + Tambah manual: "{bankSearch}"
-                                  </span>
-                                </div>
-                              )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                        <SelectTrigger id="bank">
+                          <SelectValue placeholder="-- pilih atau ketik bank --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {banks.map((item) => (
+                            <SelectItem
+                              key={item.account_code}
+                              value={`${item.account_code} — ${item.account_name}`}
+                            >
+                              {item.account_code} — {item.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 

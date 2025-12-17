@@ -46,6 +46,7 @@ interface COAAccount {
   balance?: number;
   description?: string;
   is_active: boolean;
+  parent_code?: string;
 }
 
 interface COAMapping {
@@ -79,6 +80,7 @@ export default function COAManagement() {
     normal_balance: "Debit",
     description: "",
     is_active: true,
+    parent_code: "",
   });
 
   const [mappingForm, setMappingForm] = useState<COAMapping>({
@@ -607,6 +609,36 @@ export default function COAManagement() {
                                 <SelectItem value="4">
                                   Level 4 (Sub Detail)
                                 </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="parent_code">Akun Parent</Label>
+                            <Select
+                              value={coaForm.parent_code || "none"}
+                              onValueChange={(value) =>
+                                setCoaForm({
+                                  ...coaForm,
+                                  parent_code: value === "none" ? undefined : value,
+                                })
+                              }
+                            >
+                              <SelectTrigger id="parent_code">
+                                <SelectValue placeholder="Pilih akun parent (opsional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Tidak ada parent</SelectItem>
+                                {coaAccounts
+                                  .filter((acc) => acc.is_header && acc.account_code)
+                                  .map((acc) => (
+                                    <SelectItem
+                                      key={acc.account_code}
+                                      value={acc.account_code || "none"}
+                                    >
+                                      {acc.account_code} - {acc.account_name}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           </div>

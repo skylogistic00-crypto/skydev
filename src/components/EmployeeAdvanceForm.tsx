@@ -39,6 +39,7 @@ import {
   Upload,
   ScanLine,
 } from "lucide-react";
+import OCRScanner from "@/components/OCRScanner";
 
 interface Employee {
   id: string;
@@ -548,6 +549,24 @@ export default function EmployeeAdvanceForm() {
                     </p>
                   </div>
                 )}
+
+                {/* OCR Scanner */}
+                <OCRScanner
+                  onResult={(result) => {
+                    setSettlementForm({
+                      ...settlementForm,
+                      merchant: result.toko || settlementForm.merchant,
+                      receipt_number: result.nomorNota || settlementForm.receipt_number,
+                      amount: result.nominal || settlementForm.amount,
+                      description: result.deskripsi || settlementForm.description,
+                    });
+                    toast({
+                      title: "✅ Data terisi otomatis",
+                      description: "Silakan periksa dan sesuaikan jika perlu",
+                    });
+                  }}
+                  showPreview={true}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
