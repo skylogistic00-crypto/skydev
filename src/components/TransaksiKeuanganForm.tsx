@@ -2216,9 +2216,8 @@ export default function TransaksiKeuanganForm() {
         return;
       }
 
-      // Pastikan account_type lowercase & normal_balance uppercase
-      const accountTypeLower = newCOA.account_type.toLowerCase();
-      const normalBalanceUpper = newCOA.normal_balance.toUpperCase();
+      // Pastikan normal_balance format: 'Debit' atau 'Kredit' (capital first letter only)
+      const normalBalanceFormatted = newCOA.normal_balance === 'DEBIT' ? 'Debit' : 'Kredit';
 
       // Insert new COA
       const { data, error } = await supabase
@@ -2226,8 +2225,8 @@ export default function TransaksiKeuanganForm() {
         .insert({
           account_code: newCOA.account_code,
           account_name: newCOA.account_name,
-          account_type: accountTypeLower,
-          normal_balance: normalBalanceUpper,
+          account_type: newCOA.account_type,
+          normal_balance: normalBalanceFormatted,
           description: newCOA.description || null,
           allow_manual_posting: true,
           is_active: true,
@@ -13398,7 +13397,7 @@ export default function TransaksiKeuanganForm() {
                   setNewCOA({ 
                     ...newCOA, 
                     account_type: value,
-                    normal_balance: value === "expense" || value === "asset" ? "DEBIT" : "CREDIT"
+                    normal_balance: value === "Aset" || value === "Beban Pokok Penjualan" || value === "Beban Operasional" ? "DEBIT" : "CREDIT"
                   });
                 }}
               >
@@ -13406,11 +13405,12 @@ export default function TransaksiKeuanganForm() {
                   <SelectValue placeholder="Pilih tipe akun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="expense">Expense (Beban)</SelectItem>
-                  <SelectItem value="revenue">Revenue (Pendapatan)</SelectItem>
-                  <SelectItem value="asset">Asset (Aset)</SelectItem>
-                  <SelectItem value="liability">Liability (Kewajiban)</SelectItem>
-                  <SelectItem value="equity">Equity (Modal)</SelectItem>
+                  <SelectItem value="Aset">Aset</SelectItem>
+                  <SelectItem value="Kewajiban">Kewajiban</SelectItem>
+                  <SelectItem value="Ekuitas">Ekuitas</SelectItem>
+                  <SelectItem value="Pendapatan">Pendapatan</SelectItem>
+                  <SelectItem value="Beban Pokok Penjualan">Beban Pokok Penjualan</SelectItem>
+                  <SelectItem value="Beban Operasional">Beban Operasional</SelectItem>
                 </SelectContent>
               </Select>
             </div>
