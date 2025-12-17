@@ -3476,6 +3476,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_advance_returns_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "vw_employee_advance_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_advance_returns_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -3557,6 +3564,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_advance_settlements_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "vw_employee_advance_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_advance_settlements_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -3574,10 +3588,14 @@ export type Database = {
           coa_account_code: string
           created_at: string | null
           created_by: string | null
+          disbursement_account_id: string | null
+          disbursement_date: string | null
+          disbursement_method: string | null
           employee_id: string | null
           employee_name: string
           id: string
           notes: string | null
+          reference_number: string | null
           remaining_balance: number
           status: string
           updated_at: string | null
@@ -3590,10 +3608,14 @@ export type Database = {
           coa_account_code: string
           created_at?: string | null
           created_by?: string | null
+          disbursement_account_id?: string | null
+          disbursement_date?: string | null
+          disbursement_method?: string | null
           employee_id?: string | null
           employee_name: string
           id?: string
           notes?: string | null
+          reference_number?: string | null
           remaining_balance: number
           status?: string
           updated_at?: string | null
@@ -3606,10 +3628,14 @@ export type Database = {
           coa_account_code?: string
           created_at?: string | null
           created_by?: string | null
+          disbursement_account_id?: string | null
+          disbursement_date?: string | null
+          disbursement_method?: string | null
           employee_id?: string | null
           employee_name?: string
           id?: string
           notes?: string | null
+          reference_number?: string | null
           remaining_balance?: number
           status?: string
           updated_at?: string | null
@@ -3620,6 +3646,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bank_account_id"
+            columns: ["disbursement_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -11239,6 +11272,45 @@ export type Database = {
             columns: ["payment_term_id"]
             isOneToOne: false
             referencedRelation: "payment_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_employee_advance_summary: {
+        Row: {
+          advance_amount: number | null
+          advance_date: string | null
+          advance_number: string | null
+          coa_account_code: string | null
+          created_at: string | null
+          disbursement_account_id: string | null
+          disbursement_date: string | null
+          disbursement_method: string | null
+          employee_id: string | null
+          employee_name: string | null
+          id: string | null
+          reference_number: string | null
+          remaining_balance: number | null
+          return_count: number | null
+          settlement_count: number | null
+          status: string | null
+          total_returned: number | null
+          total_settled: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_advances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bank_account_id"
+            columns: ["disbursement_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
           },
         ]

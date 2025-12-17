@@ -51,10 +51,13 @@ interface Advance {
   advance_number: string;
   employee_name: string;
   advance_date: string;
-  amount: number;
+  advance_amount: number;
   remaining_balance: number;
   status: string;
   coa_account_code: string;
+  disbursement_method?: string;
+  disbursement_date?: string;
+  reference_number?: string;
 }
 
 export default function EmployeeAdvanceForm() {
@@ -75,9 +78,10 @@ export default function EmployeeAdvanceForm() {
     amount: 0,
     advance_date: new Date().toISOString().split("T")[0],
     notes: "",
-    payment_method: "Kas",
-    bank_account_id: "",
-    kas_account_id: "",
+    disbursement_method: "Kas",
+    disbursement_account_id: "",
+    disbursement_date: new Date().toISOString().split("T")[0],
+    reference_number: "",
     bukti_url: "",
   });
 
@@ -216,6 +220,10 @@ export default function EmployeeAdvanceForm() {
           advance_date: advanceForm.advance_date,
           notes: advanceForm.notes,
           bukti_url: advanceForm.bukti_url,
+          disbursement_method: advanceForm.disbursement_method,
+          disbursement_account_id: advanceForm.disbursement_account_id,
+          disbursement_date: advanceForm.disbursement_date,
+          reference_number: advanceForm.reference_number,
           created_by: user?.id,
         })
         .select()
@@ -566,15 +574,14 @@ export default function EmployeeAdvanceForm() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Metode Pembayaran *</Label>
+                    <Label>Metode Pencairan *</Label>
                     <Select
-                      value={advanceForm.payment_method}
+                      value={advanceForm.disbursement_method}
                       onValueChange={(value) =>
                         setAdvanceForm({
                           ...advanceForm,
-                          payment_method: value,
-                          bank_account_id: "",
-                          kas_account_id: "",
+                          disbursement_method: value,
+                          disbursement_account_id: "",
                         })
                       }
                     >
@@ -588,20 +595,20 @@ export default function EmployeeAdvanceForm() {
                     </Select>
                   </div>
 
-                  {advanceForm.payment_method === "Bank" && (
+                  {advanceForm.disbursement_method === "Bank" && (
                     <div className="space-y-2">
-                      <Label>Bank *</Label>
+                      <Label>Rekening Bank *</Label>
                       <Select
-                        value={advanceForm.bank_account_id}
+                        value={advanceForm.disbursement_account_id}
                         onValueChange={(value) =>
                           setAdvanceForm({
                             ...advanceForm,
-                            bank_account_id: value,
+                            disbursement_account_id: value,
                           })
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Pilih bank" />
+                          <SelectValue placeholder="Pilih rekening bank" />
                         </SelectTrigger>
                         <SelectContent>
                           {bankAccounts.map((bank) => (
@@ -614,15 +621,15 @@ export default function EmployeeAdvanceForm() {
                     </div>
                   )}
 
-                  {advanceForm.payment_method === "Kas" && (
+                  {advanceForm.disbursement_method === "Kas" && (
                     <div className="space-y-2">
                       <Label>Kas *</Label>
                       <Select
-                        value={advanceForm.kas_account_id}
+                        value={advanceForm.disbursement_account_id}
                         onValueChange={(value) =>
                           setAdvanceForm({
                             ...advanceForm,
-                            kas_account_id: value,
+                            disbursement_account_id: value,
                           })
                         }
                       >
@@ -639,6 +646,37 @@ export default function EmployeeAdvanceForm() {
                       </Select>
                     </div>
                   )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tanggal Pencairan *</Label>
+                    <Input
+                      type="date"
+                      value={advanceForm.disbursement_date}
+                      onChange={(e) =>
+                        setAdvanceForm({
+                          ...advanceForm,
+                          disbursement_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>No. Bukti / Reference</Label>
+                    <Input
+                      type="text"
+                      placeholder="Nomor bukti atau referensi"
+                      value={advanceForm.reference_number}
+                      onChange={(e) =>
+                        setAdvanceForm({
+                          ...advanceForm,
+                          reference_number: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
                 {/* Bukti Foto Transaksi */}
@@ -1298,6 +1336,9 @@ export default function EmployeeAdvanceForm() {
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Jumlah</TableHead>
                     <TableHead>Sisa Saldo</TableHead>
+                    <TableHead>Metode Pencairan</TableHead>
+                    <TableHead>Tgl Pencairan</TableHead>
+                    <TableHead>No. Bukti</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Akun COA</TableHead>
                   </TableRow>
@@ -1313,10 +1354,17 @@ export default function EmployeeAdvanceForm() {
                         {new Date(adv.advance_date).toLocaleDateString("id-ID")}
                       </TableCell>
                       <TableCell>
-                        Rp {adv.amount.toLocaleString()}
+                        Rp {adv.advance_amount.toLocaleString()}
                       </TableCell>
                       <TableCell className="font-bold">
                         Rp {adv.remaining_balance.toLocaleString()}
+                      </TableCell>
+                      <TableCell>{adv.disbursement_method || "-"}</TableCell>
+                      <TableCell>
+                        {adv.disbursement_date ? new Date(adv.disbursement_date).toLocaleDateString("id-ID") : "-"}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {adv.reference_number || "-"}
                       </TableCell>
                       <TableCell>{getStatusBadge(adv.status)}</TableCell>
                       <TableCell className="font-mono text-xs">
