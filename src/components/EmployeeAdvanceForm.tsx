@@ -38,7 +38,15 @@ import {
   Plus,
   Upload,
   ScanLine,
+  Send,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import OCRScanner from "@/components/OCRScanner";
 
 interface Employee {
@@ -49,15 +57,17 @@ interface Employee {
 interface Advance {
   id: string;
   advance_number: string;
+  employee_id: string;
   employee_name: string;
   advance_date: string;
-  advance_amount: number;
+  amount: number;
   remaining_balance: number;
   status: string;
   coa_account_code: string;
   disbursement_method?: string;
   disbursement_date?: string;
   reference_number?: string;
+  disbursement_account_id?: string;
 }
 
 export default function EmployeeAdvanceForm() {
@@ -70,6 +80,14 @@ export default function EmployeeAdvanceForm() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [kasAccounts, setKasAccounts] = useState<any[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
+  const [showDisburseDialog, setShowDisburseDialog] = useState(false);
+  const [selectedAdvanceForDisburse, setSelectedAdvanceForDisburse] = useState<Advance | null>(null);
+  const [disburseForm, setDisburseForm] = useState({
+    disbursement_method: "Kas",
+    disbursement_account_id: "",
+    disbursement_date: new Date().toISOString().split("T")[0],
+    reference_number: "",
+  });
 
   // Form states
   const [advanceForm, setAdvanceForm] = useState({
@@ -78,10 +96,6 @@ export default function EmployeeAdvanceForm() {
     amount: 0,
     advance_date: new Date().toISOString().split("T")[0],
     notes: "",
-    disbursement_method: "Kas",
-    disbursement_account_id: "",
-    disbursement_date: new Date().toISOString().split("T")[0],
-    reference_number: "",
     bukti_url: "",
   });
 
@@ -198,6 +212,67 @@ export default function EmployeeAdvanceForm() {
     setExpenseAccounts(data || []);
   };
 
+  const handleDisburseAdvance = async () => {
+    if (!selectedAdvanceForDisburse || !disburseForm.disbursement_account_id) {
+      toast({
+        title: "Error",
+        description: "Pilih akun sumber dana",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log("🚀 DISBURSE PAYLOAD", {
+        advance_id: selectedAdvanceForDisburse.id,
+        employee_id: selectedAdvanceForDisburse.employee_id,
+        employee_name: selectedAdvanceForDisburse.employee_name,
+        amount: selectedAdvanceForDisburse.amount,
+      });
+
+      const { data, error } = await supabase.functions.invoke(
+        "supabase-functions-employee-advance-disburse",
+        {
+          body: {
+            advance_id: selectedAdvanceForDisburse.id,
+            disbursement_method: disburseForm.disbursement_method,
+            disbursement_account_id: disburseForm.disbursement_account_id,
+            disbursement_date: disburseForm.disbursement_date,
+            reference_number: disburseForm.reference_number,
+          },
+        }
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Uang muka berhasil dicairkan",
+      });
+
+      setShowDisburseDialog(false);
+      setSelectedAdvanceForDisburse(null);
+      setDisburseForm({
+        disbursement_method: "Kas",
+        disbursement_account_id: "",
+        disbursement_date: new Date().toISOString().split("T")[0],
+        reference_number: "",
+      });
+
+      fetchAdvances();
+    } catch (error: any) {
+      console.error("Error disbursing advance:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal mencairkan uang muka",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCreateAdvance = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -220,10 +295,7 @@ export default function EmployeeAdvanceForm() {
           advance_date: advanceForm.advance_date,
           notes: advanceForm.notes,
           bukti_url: advanceForm.bukti_url,
-          disbursement_method: advanceForm.disbursement_method,
-          disbursement_account_id: advanceForm.disbursement_account_id,
-          disbursement_date: advanceForm.disbursement_date,
-          reference_number: advanceForm.reference_number,
+          status: "draft",
           created_by: user?.id,
         })
         .select()
@@ -445,19 +517,25 @@ export default function EmployeeAdvanceForm() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      pending: "secondary",
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      draft: "outline",
+      requested: "secondary",
+      disbursed: "default",
       partially_settled: "default",
       settled: "default",
       returned: "default",
+      cancelled: "destructive",
     };
 
     return (
       <Badge variant={variants[status] || "default"}>
-        {status === "pending" && "Belum Diselesaikan"}
+        {status === "draft" && "Draft"}
+        {status === "requested" && "Menunggu Pencairan"}
+        {status === "disbursed" && "Sudah Dicairkan"}
         {status === "partially_settled" && "Sebagian Diselesaikan"}
         {status === "settled" && "Selesai"}
         {status === "returned" && "Dikembalikan"}
+        {status === "cancelled" && "Dibatalkan"}
       </Badge>
     );
   };
@@ -570,113 +648,6 @@ export default function EmployeeAdvanceForm() {
                       setAdvanceForm({ ...advanceForm, notes: e.target.value })
                     }
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Metode Pencairan *</Label>
-                    <Select
-                      value={advanceForm.disbursement_method}
-                      onValueChange={(value) =>
-                        setAdvanceForm({
-                          ...advanceForm,
-                          disbursement_method: value,
-                          disbursement_account_id: "",
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih metode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Kas">Kas</SelectItem>
-                        <SelectItem value="Bank">Bank</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {advanceForm.disbursement_method === "Bank" && (
-                    <div className="space-y-2">
-                      <Label>Rekening Bank *</Label>
-                      <Select
-                        value={advanceForm.disbursement_account_id}
-                        onValueChange={(value) =>
-                          setAdvanceForm({
-                            ...advanceForm,
-                            disbursement_account_id: value,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih rekening bank" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankAccounts.map((bank) => (
-                            <SelectItem key={bank.id} value={bank.id}>
-                              {bank.account_code} - {bank.account_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {advanceForm.disbursement_method === "Kas" && (
-                    <div className="space-y-2">
-                      <Label>Kas *</Label>
-                      <Select
-                        value={advanceForm.disbursement_account_id}
-                        onValueChange={(value) =>
-                          setAdvanceForm({
-                            ...advanceForm,
-                            disbursement_account_id: value,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {kasAccounts.map((kas) => (
-                            <SelectItem key={kas.id} value={kas.id}>
-                              {kas.account_code} - {kas.account_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tanggal Pencairan *</Label>
-                    <Input
-                      type="date"
-                      value={advanceForm.disbursement_date}
-                      onChange={(e) =>
-                        setAdvanceForm({
-                          ...advanceForm,
-                          disbursement_date: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>No. Bukti / Reference</Label>
-                    <Input
-                      type="text"
-                      placeholder="Nomor bukti atau referensi"
-                      value={advanceForm.reference_number}
-                      onChange={(e) =>
-                        setAdvanceForm({
-                          ...advanceForm,
-                          reference_number: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
                 </div>
 
                 {/* Bukti Foto Transaksi */}
@@ -804,7 +775,7 @@ export default function EmployeeAdvanceForm() {
                         .map((adv) => (
                           <SelectItem key={adv.id} value={adv.id}>
                             {adv.advance_number} - {adv.employee_name} (Sisa: Rp{" "}
-                            {adv.remaining_balance.toLocaleString()})
+                            {(adv.remaining_balance ?? 0).toLocaleString()})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -815,7 +786,7 @@ export default function EmployeeAdvanceForm() {
                   <div className="bg-slate-50 border rounded-lg p-4">
                     <p className="text-sm">
                       <strong>Sisa Saldo:</strong> Rp{" "}
-                      {selectedAdvance.remaining_balance.toLocaleString()}
+                      {(selectedAdvance?.remaining_balance ?? 0).toLocaleString()}
                     </p>
                   </div>
                 )}
@@ -1091,7 +1062,7 @@ export default function EmployeeAdvanceForm() {
                         .map((adv) => (
                           <SelectItem key={adv.id} value={adv.id}>
                             {adv.advance_number} - {adv.employee_name} (Sisa: Rp{" "}
-                            {adv.remaining_balance.toLocaleString()})
+                            {(adv.remaining_balance ?? 0).toLocaleString()})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -1102,7 +1073,7 @@ export default function EmployeeAdvanceForm() {
                   <div className="bg-slate-50 border rounded-lg p-4">
                     <p className="text-sm">
                       <strong>Sisa Saldo:</strong> Rp{" "}
-                      {selectedAdvance.remaining_balance.toLocaleString()}
+                      {(selectedAdvance?.remaining_balance ?? 0).toLocaleString()}
                     </p>
                   </div>
                 )}
@@ -1341,6 +1312,7 @@ export default function EmployeeAdvanceForm() {
                     <TableHead>No. Bukti</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Akun COA</TableHead>
+                    <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1354,10 +1326,10 @@ export default function EmployeeAdvanceForm() {
                         {new Date(adv.advance_date).toLocaleDateString("id-ID")}
                       </TableCell>
                       <TableCell>
-                        Rp {adv.advance_amount.toLocaleString()}
+                        Rp {(adv.amount ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="font-bold">
-                        Rp {adv.remaining_balance.toLocaleString()}
+                        Rp {(adv.remaining_balance ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell>{adv.disbursement_method || "-"}</TableCell>
                       <TableCell>
@@ -1370,6 +1342,20 @@ export default function EmployeeAdvanceForm() {
                       <TableCell className="font-mono text-xs">
                         {adv.coa_account_code}
                       </TableCell>
+                      <TableCell>
+                        {(adv.status === "draft" || adv.status === "requested") && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAdvanceForDisburse(adv);
+                              setShowDisburseDialog(true);
+                            }}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Cairkan
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1378,6 +1364,184 @@ export default function EmployeeAdvanceForm() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Disburse Dialog */}
+      <Dialog open={showDisburseDialog} onOpenChange={setShowDisburseDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Cairkan Uang Muka</DialogTitle>
+            <DialogDescription>
+              Proses pencairan uang muka dan buat jurnal otomatis
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAdvanceForDisburse && (
+            <div className="space-y-6">
+              {/* Selected Advance Details */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Nomor Uang Muka</p>
+                      <p className="font-mono font-bold">
+                        {selectedAdvanceForDisburse.advance_number}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Karyawan</p>
+                      <p className="font-bold">{selectedAdvanceForDisburse.employee_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Jumlah</p>
+                      <p className="font-bold text-lg">
+                        Rp {(selectedAdvanceForDisburse.amount ?? 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Tanggal Pengajuan</p>
+                      <p className="font-bold">
+                        {new Date(selectedAdvanceForDisburse.advance_date).toLocaleDateString("id-ID")}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Disbursement Details */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Detail Pencairan</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Metode Pencairan *</Label>
+                    <Select
+                      value={disburseForm.disbursement_method}
+                      onValueChange={(value) =>
+                        setDisburseForm({
+                          ...disburseForm,
+                          disbursement_method: value,
+                          disbursement_account_id: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Kas">Kas</SelectItem>
+                        <SelectItem value="Bank">Bank</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {disburseForm.disbursement_method === "Bank" && (
+                    <div className="space-y-2">
+                      <Label>Rekening Bank *</Label>
+                      <Select
+                        value={disburseForm.disbursement_account_id}
+                        onValueChange={(value) =>
+                          setDisburseForm({
+                            ...disburseForm,
+                            disbursement_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih rekening bank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((bank) => (
+                            <SelectItem key={bank.id} value={bank.id}>
+                              {bank.account_code} - {bank.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {disburseForm.disbursement_method === "Kas" && (
+                    <div className="space-y-2">
+                      <Label>Kas *</Label>
+                      <Select
+                        value={disburseForm.disbursement_account_id}
+                        onValueChange={(value) =>
+                          setDisburseForm({
+                            ...disburseForm,
+                            disbursement_account_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih kas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kasAccounts.map((kas) => (
+                            <SelectItem key={kas.id} value={kas.id}>
+                              {kas.account_code} - {kas.account_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tanggal Pencairan *</Label>
+                    <Input
+                      type="date"
+                      value={disburseForm.disbursement_date}
+                      onChange={(e) =>
+                        setDisburseForm({
+                          ...disburseForm,
+                          disbursement_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>No. Bukti / Reference</Label>
+                    <Input
+                      type="text"
+                      placeholder="Nomor bukti atau referensi"
+                      value={disburseForm.reference_number}
+                      onChange={(e) =>
+                        setDisburseForm({
+                          ...disburseForm,
+                          reference_number: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <Button
+                onClick={handleDisburseAdvance}
+                disabled={isLoading || !disburseForm.disbursement_account_id}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Cairkan Uang Muka
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
