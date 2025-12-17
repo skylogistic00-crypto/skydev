@@ -159,7 +159,8 @@ Deno.serve(async (req) => {
           whereClause = `account_type = '${payload.account_type}'`;
         }
         
-        const query = `SELECT id, account_name, account_type, account_code FROM chart_of_accounts WHERE ${whereClause} AND is_active = true ORDER BY account_name`;
+        // CRITICAL FILTERS: allow_manual_posting = true, is_active = true, is_contra = false
+        const query = `SELECT id, account_name, account_type, account_code FROM chart_of_accounts WHERE ${whereClause} AND is_active = true AND allow_manual_posting = true AND is_contra = false ORDER BY account_name`;
         const result = await runPicaQuery(query);
         
         return new Response(

@@ -970,8 +970,12 @@ export type Database = {
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
+          bank_account_code: string | null
+          bank_account_id: string | null
+          bank_account_name: string | null
           bank_name: string | null
           created_at: string | null
+          created_by: string | null
           duplicate_records: number | null
           error_records: number | null
           file_name: string | null
@@ -987,6 +991,7 @@ export type Database = {
           rejection_reason: string | null
           status: string | null
           total_records: number | null
+          total_rows: number | null
           updated_at: string | null
           upload_status: string | null
           user_id: string
@@ -995,8 +1000,12 @@ export type Database = {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bank_account_code?: string | null
+          bank_account_id?: string | null
+          bank_account_name?: string | null
           bank_name?: string | null
           created_at?: string | null
+          created_by?: string | null
           duplicate_records?: number | null
           error_records?: number | null
           file_name?: string | null
@@ -1012,6 +1021,7 @@ export type Database = {
           rejection_reason?: string | null
           status?: string | null
           total_records?: number | null
+          total_rows?: number | null
           updated_at?: string | null
           upload_status?: string | null
           user_id: string
@@ -1020,8 +1030,12 @@ export type Database = {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bank_account_code?: string | null
+          bank_account_id?: string | null
+          bank_account_name?: string | null
           bank_name?: string | null
           created_at?: string | null
+          created_by?: string | null
           duplicate_records?: number | null
           error_records?: number | null
           file_name?: string | null
@@ -1037,6 +1051,7 @@ export type Database = {
           rejection_reason?: string | null
           status?: string | null
           total_records?: number | null
+          total_rows?: number | null
           updated_at?: string | null
           upload_status?: string | null
           user_id?: string
@@ -1048,10 +1063,17 @@ export type Database = {
           akun: string | null
           amount: number
           approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          balance: number | null
+          bank_account_code: string | null
+          bank_account_id: string | null
+          bank_account_name: string | null
           bank_account_number: string | null
           bank_name: string
           bank_reference_id: string | null
           created_at: string | null
+          created_by: string | null
           credit: string | null
           debit: string | null
           description: string | null
@@ -1060,18 +1082,23 @@ export type Database = {
           is_duplicate: boolean | null
           journal_entry_id: string | null
           kas_bank: string | null
+          mapping_status: string | null
           matched: string | null
           matched_at: string | null
           matched_transaction_id: string | null
           mutation_date: string | null
           ocr_confidence: number | null
           ocr_data: Json | null
+          pic: string | null
+          pos: string | null
           posted_at: string | null
+          pp: string | null
           processed: string | null
           raw_data: Json | null
           raw_payload: string | null
           source: string | null
           status: string | null
+          sub_akun: string | null
           transaction_date: string
           transaction_type: string
           type: string | null
@@ -1083,10 +1110,17 @@ export type Database = {
           akun?: string | null
           amount?: number
           approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          balance?: number | null
+          bank_account_code?: string | null
+          bank_account_id?: string | null
+          bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name: string
           bank_reference_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit?: string | null
           debit?: string | null
           description?: string | null
@@ -1095,18 +1129,23 @@ export type Database = {
           is_duplicate?: boolean | null
           journal_entry_id?: string | null
           kas_bank?: string | null
+          mapping_status?: string | null
           matched?: string | null
           matched_at?: string | null
           matched_transaction_id?: string | null
           mutation_date?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
+          pic?: string | null
+          pos?: string | null
           posted_at?: string | null
+          pp?: string | null
           processed?: string | null
           raw_data?: Json | null
           raw_payload?: string | null
           source?: string | null
           status?: string | null
+          sub_akun?: string | null
           transaction_date: string
           transaction_type: string
           type?: string | null
@@ -1118,10 +1157,17 @@ export type Database = {
           akun?: string | null
           amount?: number
           approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          balance?: number | null
+          bank_account_code?: string | null
+          bank_account_id?: string | null
+          bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name?: string
           bank_reference_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           credit?: string | null
           debit?: string | null
           description?: string | null
@@ -1130,18 +1176,23 @@ export type Database = {
           is_duplicate?: boolean | null
           journal_entry_id?: string | null
           kas_bank?: string | null
+          mapping_status?: string | null
           matched?: string | null
           matched_at?: string | null
           matched_transaction_id?: string | null
           mutation_date?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
+          pic?: string | null
+          pos?: string | null
           posted_at?: string | null
+          pp?: string | null
           processed?: string | null
           raw_data?: Json | null
           raw_payload?: string | null
           source?: string | null
           status?: string | null
+          sub_akun?: string | null
           transaction_date?: string
           transaction_type?: string
           type?: string | null
@@ -1622,6 +1673,7 @@ export type Database = {
           bukti: string | null
           category: string | null
           coa_cash_code: string | null
+          coa_cash_id: string | null
           coa_contra_code: string | null
           coa_revenue_account: string | null
           coa_revenue_code: string | null
@@ -1660,6 +1712,7 @@ export type Database = {
           bukti?: string | null
           category?: string | null
           coa_cash_code?: string | null
+          coa_cash_id?: string | null
           coa_contra_code?: string | null
           coa_revenue_account?: string | null
           coa_revenue_code?: string | null
@@ -1698,6 +1751,7 @@ export type Database = {
           bukti?: string | null
           category?: string | null
           coa_cash_code?: string | null
+          coa_cash_id?: string | null
           coa_contra_code?: string | null
           coa_revenue_account?: string | null
           coa_revenue_code?: string | null
@@ -3753,6 +3807,7 @@ export type Database = {
           license_number: string | null
           major: string | null
           marital_status: string | null
+          name: string | null
           nik: string | null
           nomor_kk: string | null
           notes: string | null
@@ -3825,6 +3880,7 @@ export type Database = {
           license_number?: string | null
           major?: string | null
           marital_status?: string | null
+          name?: string | null
           nik?: string | null
           nomor_kk?: string | null
           notes?: string | null
@@ -3897,6 +3953,7 @@ export type Database = {
           license_number?: string | null
           major?: string | null
           marital_status?: string | null
+          name?: string | null
           nik?: string | null
           nomor_kk?: string | null
           notes?: string | null
@@ -7231,6 +7288,33 @@ export type Database = {
         }
         Relationships: []
       }
+      profit_centers: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       purchase_requests: {
         Row: {
           barcode: string | null
@@ -9248,15 +9332,30 @@ export type Database = {
       }
       transaction_cart: {
         Row: {
+          account_code: string | null
+          account_name: string | null
+          account_type: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          borrower_name: string | null
           brand: string | null
+          bukti: string | null
           coa_selected: string | null
           consignee: string | null
           created_at: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          credit_account_type: string | null
           customer: string | null
           description: string | null
+          employee_id: string | null
+          employee_name: string | null
+          expense_account: string | null
           harga_beli: number | null
           harga_jual: number | null
           id: string
+          interest_rate: number | null
           item_name: string | null
           jenis_layanan: string | null
           jenis_transaksi: string
@@ -9264,11 +9363,17 @@ export type Database = {
           kas_tujuan: string | null
           kategori: string | null
           kategori_pengeluaran: string | null
+          loan_term_months: number | null
+          loan_type: string | null
           nominal: number
           payment_type: string | null
           ppn_amount: number | null
           ppn_percentage: number | null
           quantity: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          revenue_account: string | null
           selected_bank: string | null
           selected_kas: string | null
           session_id: string | null
@@ -9281,15 +9386,30 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_code?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          borrower_name?: string | null
           brand?: string | null
+          bukti?: string | null
           coa_selected?: string | null
           consignee?: string | null
           created_at?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          credit_account_type?: string | null
           customer?: string | null
           description?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          expense_account?: string | null
           harga_beli?: number | null
           harga_jual?: number | null
           id?: string
+          interest_rate?: number | null
           item_name?: string | null
           jenis_layanan?: string | null
           jenis_transaksi: string
@@ -9297,11 +9417,17 @@ export type Database = {
           kas_tujuan?: string | null
           kategori?: string | null
           kategori_pengeluaran?: string | null
+          loan_term_months?: number | null
+          loan_type?: string | null
           nominal: number
           payment_type?: string | null
           ppn_amount?: number | null
           ppn_percentage?: number | null
           quantity?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          revenue_account?: string | null
           selected_bank?: string | null
           selected_kas?: string | null
           session_id?: string | null
@@ -9314,15 +9440,30 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_code?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          borrower_name?: string | null
           brand?: string | null
+          bukti?: string | null
           coa_selected?: string | null
           consignee?: string | null
           created_at?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          credit_account_type?: string | null
           customer?: string | null
           description?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          expense_account?: string | null
           harga_beli?: number | null
           harga_jual?: number | null
           id?: string
+          interest_rate?: number | null
           item_name?: string | null
           jenis_layanan?: string | null
           jenis_transaksi?: string
@@ -9330,11 +9471,17 @@ export type Database = {
           kas_tujuan?: string | null
           kategori?: string | null
           kategori_pengeluaran?: string | null
+          loan_term_months?: number | null
+          loan_type?: string | null
           nominal?: number
           payment_type?: string | null
           ppn_amount?: number | null
           ppn_percentage?: number | null
           quantity?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          revenue_account?: string | null
           selected_bank?: string | null
           selected_kas?: string | null
           session_id?: string | null
@@ -9345,6 +9492,30 @@ export type Database = {
           tanggal?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      transaction_categories: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }

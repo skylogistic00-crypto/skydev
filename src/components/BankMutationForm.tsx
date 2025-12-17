@@ -14,7 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { AlertCircle, CheckCircle2, Loader2, Upload, FileSpreadsheet, Trash2, Check } from "lucide-react";
 
 interface BankAccount {
   id: string;
@@ -22,19 +30,35 @@ interface BankAccount {
   account_name: string;
 }
 
-interface ExpenseAccount {
+interface COAAccount {
   id: string;
   account_code: string;
   account_name: string;
+}
+
+interface MutationRow {
+  id: string;
+  tanggal: string;
+  keterangan: string;
+  debit: number;
+  kredit: number;
+  saldo: number;
+  debit_account_id: string;
+  kredit_account_id: string;
+  debit_account_name?: string;
+  kredit_account_name?: string;
 }
 
 export default function BankMutationForm() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
+  const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [mutations, setMutations] = useState<MutationRow[]>([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState("");
 
   const [formData, setFormData] = useState({
     mutation_date: new Date().toISOString().split("T")[0],
@@ -52,6 +76,7 @@ export default function BankMutationForm() {
     try {
       setLoadingAccounts(true);
 
+      // Load bank accounts (1-12xx)
       const { data: banks, error: banksError } = await supabase
         .from("chart_of_accounts")
         .select("id, account_code, account_name")
@@ -61,14 +86,14 @@ export default function BankMutationForm() {
       if (banksError) throw banksError;
       setBankAccounts(banks || []);
 
-      const { data: expenses, error: expensesError } = await supabase
+      // Load all COA accounts for dropdown
+      const { data: coa, error: coaError } = await supabase
         .from("chart_of_accounts")
         .select("id, account_code, account_name")
-        .like("account_code", "6-%")
         .order("account_code");
 
-      if (expensesError) throw expensesError;
-      setExpenseAccounts(expenses || []);
+      if (coaError) throw coaError;
+      setCoaAccounts(coa || []);
     } catch (error) {
       console.error("Error loading accounts:", error);
       toast({
@@ -81,15 +106,229 @@ export default function BankMutationForm() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!selectedBankAccount) {
+      toast({
+        title: "Error",
+        description: "Pilih akun bank terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const selectedBank = bankAccounts.find((b) => b.id === selectedBankAccount);
+      if (!selectedBank) {
+        throw new Error("Akun bank tidak ditemukan");
+      }
+
+      // Parse file locally (tanpa edge function)
+      await handleLocalParsing(file, selectedBank);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleLocalParsing = async (file: File, selectedBank: BankAccount) => {
+    const text = await file.text();
+    const lines = text.split("\n").filter((line) => line.trim());
+
+    if (lines.length < 2) {
+      throw new Error("File kosong atau format tidak valid");
+    }
+
+    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+    const parsedMutations: MutationRow[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(",");
+      const row: any = {};
+
+      headers.forEach((header, index) => {
+        row[header] = values[index]?.trim() || "";
+      });
+
+      parsedMutations.push({
+        id: `temp-${i}`,
+        tanggal: row.tanggal || row.date || row.tgl || "",
+        keterangan: row.keterangan || row.description || row.ket || row.uraian || "",
+        debit: parseFloat(row.debit || row.db || "0") || 0,
+        kredit: parseFloat(row.kredit || row.credit || row.cr || row.kr || "0") || 0,
+        saldo: parseFloat(row.saldo || row.balance || "0") || 0,
+        debit_account_id: "",
+        kredit_account_id: selectedBankAccount,
+        debit_account_name: "",
+        kredit_account_name: selectedBank.account_name,
+      });
+    }
+
+    setMutations(parsedMutations);
+
+    toast({
+      title: "Berhasil",
+      description: `${parsedMutations.length} baris mutasi berhasil diupload (local parsing)`,
+    });
+  };
+
+  const callAIMapping = async (uploadId: string, mutationsData: MutationRow[]) => {
+    try {
+      // Local keyword-based mapping (tanpa edge function)
+      const suggestAccount = (description: string, isDebit: boolean): string | null => {
+        const desc = description.toLowerCase();
+        
+        // Find matching account from coaAccounts based on keywords
+        if (desc.includes("gaji") || desc.includes("salary")) {
+          const acc = coaAccounts.find((a) => a.account_code?.startsWith("6-1") && a.account_name?.toLowerCase().includes("gaji"));
+          return acc?.id || null;
+        }
+        if (desc.includes("listrik") || desc.includes("pln")) {
+          const acc = coaAccounts.find((a) => a.account_name?.toLowerCase().includes("listrik"));
+          return acc?.id || null;
+        }
+        if (desc.includes("sewa") || desc.includes("rent")) {
+          const acc = coaAccounts.find((a) => a.account_name?.toLowerCase().includes("sewa"));
+          return acc?.id || null;
+        }
+        if (desc.includes("penjualan") || desc.includes("sales") || desc.includes("pendapatan")) {
+          const acc = coaAccounts.find((a) => a.account_code?.startsWith("4-") && a.account_name?.toLowerCase().includes("penjualan"));
+          return acc?.id || null;
+        }
+        if (desc.includes("pembelian") || desc.includes("purchase")) {
+          const acc = coaAccounts.find((a) => a.account_code?.startsWith("5-"));
+          return acc?.id || null;
+        }
+        
+        // Default: find beban lain-lain or pendapatan lain-lain
+        if (isDebit) {
+          const acc = coaAccounts.find((a) => a.account_code?.startsWith("6-9") || a.account_name?.toLowerCase().includes("beban lain"));
+          return acc?.id || null;
+        } else {
+          const acc = coaAccounts.find((a) => a.account_code?.startsWith("4-9") || a.account_name?.toLowerCase().includes("pendapatan lain"));
+          return acc?.id || null;
+        }
+      };
+
+      // Map mutations locally
+      setMutations((prev) =>
+        prev.map((row) => {
+          const isDebit = row.debit > 0;
+          const suggestedAccountId = suggestAccount(row.keterangan, isDebit);
+          if (suggestedAccountId) {
+            const account = coaAccounts.find((a) => a.id === suggestedAccountId);
+            return {
+              ...row,
+              debit_account_id: isDebit ? suggestedAccountId : row.debit_account_id,
+              debit_account_name: isDebit ? account?.account_name || "" : row.debit_account_name,
+            };
+          }
+          return row;
+        })
+      );
+
+      toast({
+        title: "AI Mapping",
+        description: "Akun berhasil disarankan secara otomatis",
+      });
+    } catch (error) {
+      console.error("AI mapping error:", error);
+    }
+  };
+
+  const handleAccountChange = (rowId: string, field: "debit_account_id" | "kredit_account_id", value: string) => {
+    setMutations((prev) =>
+      prev.map((row) => {
+        if (row.id === rowId) {
+          const account = coaAccounts.find((a) => a.id === value);
+          return {
+            ...row,
+            [field]: value,
+            [`${field.replace("_id", "_name")}`]: account?.account_name || "",
+          };
+        }
+        return row;
+      })
+    );
+  };
+
+  const handleDeleteRow = (rowId: string) => {
+    setMutations((prev) => prev.filter((row) => row.id !== rowId));
+  };
+
+  const handleApproveAll = async () => {
+    try {
+      if (mutations.length === 0) {
+        throw new Error("Tidak ada data mutasi untuk diposting");
+      }
+
+      // Validate all rows have accounts
+      const invalidRows = mutations.filter((row) => !row.debit_account_id || !row.kredit_account_id);
+      if (invalidRows.length > 0) {
+        throw new Error(`${invalidRows.length} baris belum memiliki akun lengkap`);
+      }
+
+      setLoading(true);
+
+      // Post to journal_entries
+      const journalEntries = mutations.map((row) => ({
+        entry_date: row.tanggal,
+        description: row.keterangan,
+        debit_account_id: row.debit_account_id,
+        credit_account_id: row.kredit_account_id,
+        amount: row.debit > 0 ? row.debit : row.kredit,
+        created_by: user?.id,
+        source: "bank_mutation",
+        approval_status: "approved",
+      }));
+
+      const { error: journalError } = await supabase.from("journal_entries").insert(journalEntries);
+
+      if (journalError) throw journalError;
+
+      toast({
+        title: "Berhasil",
+        description: `${mutations.length} mutasi berhasil diposting ke jurnal`,
+      });
+
+      // Clear mutations
+      setMutations([]);
+    } catch (error: any) {
+      console.error("Approve error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Gagal posting mutasi",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ WAJIB: Pastikan user sudah login
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User belum login. Silakan login terlebih dahulu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("AUTH USER:", user);
 
     try {
       if (!formData.selectedBankAccount || !formData.selectedExpenseAccount) {
@@ -109,7 +348,7 @@ export default function BankMutationForm() {
       const selectedBank = bankAccounts.find(
         (b) => b.account_code === formData.selectedBankAccount
       );
-      const selectedExpense = expenseAccounts.find(
+      const selectedExpense = coaAccounts.find(
         (e) => e.account_code === formData.selectedExpenseAccount
       );
 
@@ -124,6 +363,14 @@ export default function BankMutationForm() {
           file_type: "manual",
           bank_name: selectedBank.account_name,
           status: "posted",
+          original_filename: "Manual Bank Transaction", // ✅ WAJIB: original_filename (NOT NULL)
+          user_id: user.id, // ✅ WAJIB: user_id (NOT NULL)
+          created_by: user.id,
+          bank_account_id: selectedBank.id,
+          bank_account_code: selectedBank.account_code,
+          bank_account_name: selectedBank.account_name,
+          file_size: 0, // ✅ WAJIB: file_size (NOT NULL) - manual entry
+          mime_type: "application/json", // ✅ WAJIB: mime_type (NOT NULL) - manual entry
         })
         .select()
         .single();
@@ -146,6 +393,14 @@ export default function BankMutationForm() {
           kas_bank: selectedBank.account_code,
           akun: selectedExpense.account_code,
           approval_status: "approved",
+          user_id: user.id, // ✅ WAJIB: user_id (NOT NULL constraint)
+          created_by: user.id,
+          bank_name: selectedBank.account_name, // ✅ WAJIB: bank_name (NOT NULL constraint)
+          bank_account_id: selectedBank.id,
+          bank_account_code: selectedBank.account_code,
+          bank_account_name: selectedBank.account_name,
+          transaction_date: formData.mutation_date, // ✅ WAJIB: transaction_date (NOT NULL constraint)
+          transaction_type: "expense", // ✅ WAJIB: transaction_type (NOT NULL constraint)
         })
         .select()
         .single();
@@ -205,132 +460,153 @@ export default function BankMutationForm() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
         <Card>
           <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6" />
-              Mutasi Bank
+              <FileSpreadsheet className="h-6 w-6" />
+              Upload Mutasi Bank
             </CardTitle>
-            <p className="text-sm text-blue-100 mt-2">
-              Input pengeluaran melalui bank dengan posting otomatis ke jurnal
-            </p>
           </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            {/* Bank Account Selection */}
+            <div>
+              <Label htmlFor="bank-account">Pilih Akun Bank</Label>
+              <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
+                <SelectTrigger id="bank-account">
+                  <SelectValue placeholder="Pilih akun bank..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.id}>
+                      {bank.account_code} - {bank.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="mutation_date">Tanggal Mutasi</Label>
+            {/* File Upload */}
+            <div>
+              <Label htmlFor="file-upload">Upload File Mutasi (CSV/Excel)</Label>
+              <div className="flex items-center gap-2">
                 <Input
-                  id="mutation_date"
-                  type="date"
-                  value={formData.mutation_date}
-                  onChange={(e) =>
-                    handleInputChange("mutation_date", e.target.value)
-                  }
-                  required
+                  id="file-upload"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileUpload}
+                  disabled={!selectedBankAccount || uploading}
                 />
+                {uploading && <Loader2 className="h-5 w-5 animate-spin text-blue-600" />}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bank">Akun Bank</Label>
-                <Select
-                  value={formData.selectedBankAccount}
-                  onValueChange={(value) =>
-                    handleInputChange("selectedBankAccount", value)
-                  }
-                >
-                  <SelectTrigger id="bank">
-                    <SelectValue placeholder="Pilih akun bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bankAccounts.map((bank) => (
-                      <SelectItem key={bank.id} value={bank.account_code}>
-                        {bank.account_code} - {bank.account_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="expense">Akun Beban</Label>
-                <Select
-                  value={formData.selectedExpenseAccount}
-                  onValueChange={(value) =>
-                    handleInputChange("selectedExpenseAccount", value)
-                  }
-                >
-                  <SelectTrigger id="expense">
-                    <SelectValue placeholder="Pilih akun beban" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {expenseAccounts.map((expense) => (
-                      <SelectItem key={expense.id} value={expense.account_code}>
-                        {expense.account_code} - {expense.account_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Nominal</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="0"
-                  value={formData.amount}
-                  onChange={(e) => handleInputChange("amount", e.target.value)}
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Deskripsi</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Contoh: Pembayaran listrik bulan Januari"
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold">Informasi:</p>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Mutasi bank akan otomatis diposting ke jurnal</li>
-                    <li>Status approval langsung &quot;approved&quot;</li>
-                    <li>Tidak perlu approval manual</li>
-                  </ul>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  "Simpan Mutasi Bank"
-                )}
-              </Button>
-            </form>
+              <p className="text-sm text-slate-500 mt-1">
+                Format: tanggal, keterangan, debit, kredit, saldo
+              </p>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Mutations Table */}
+        {mutations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Data Mutasi ({mutations.length} baris)</CardTitle>
+                <Button onClick={handleApproveAll} disabled={loading} className="bg-green-600 hover:bg-green-700">
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Posting...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve & Post Semua
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Kredit</TableHead>
+                      <TableHead className="text-right">Saldo</TableHead>
+                      <TableHead>Akun Debit</TableHead>
+                      <TableHead>Akun Kredit</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mutations.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="whitespace-nowrap">{row.tanggal}</TableCell>
+                        <TableCell className="max-w-xs truncate">{row.keterangan}</TableCell>
+                        <TableCell className="text-right">
+                          {row.debit > 0 ? row.debit.toLocaleString("id-ID") : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.kredit > 0 ? row.kredit.toLocaleString("id-ID") : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">{row.saldo.toLocaleString("id-ID")}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={row.debit_account_id}
+                            onValueChange={(value) => handleAccountChange(row.id, "debit_account_id", value)}
+                          >
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Pilih akun..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coaAccounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.account_code} - {acc.account_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={row.kredit_account_id}
+                            onValueChange={(value) => handleAccountChange(row.id, "kredit_account_id", value)}
+                          >
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Pilih akun..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coaAccounts.map((acc) => (
+                                <SelectItem key={acc.id} value={acc.id}>
+                                  {acc.account_code} - {acc.account_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRow(row.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

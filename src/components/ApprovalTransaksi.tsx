@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface PendingTransaction {
   id: string;
-  type: "purchase" | "expense" | "income" | "cash_disbursement";
+  type: "purchase" | "expense" | "income" | "cash_disbursement" | "bank_pendapatan" | "bank_pengeluaran";
   transaction_date?: string;
   tanggal?: string;
   item_name?: string;
@@ -38,6 +38,7 @@ interface PendingTransaction {
   service_category?: string;
   service_type?: string;
   category?: string;
+  kategori?: string;
   description?: string;
   keterangan?: string;
   total_amount?: number;
@@ -45,12 +46,25 @@ interface PendingTransaction {
   nominal?: number;
   payment_method?: string;
   transaction_type?: string;
+  jenis_transaksi?: string;
   journal_ref?: string;
   coa_cash_code?: string;
   coa_expense_code?: string;
   coa_inventory_code?: string;
   coa_payable_code?: string;
+  coa_contra_code?: string;
   account_number?: string;
+  account_code?: string;
+  account_name?: string;
+  account_type?: string;
+  credit_account_code?: string;
+  credit_account_name?: string;
+  selected_bank?: string;
+  sumber_penerimaan?: string;
+  sumber_pengeluaran?: string;
+  expense_account?: string;
+  customer?: string;
+  supplier?: string;
   notes?: string;
   bukti?: string;
   rejection_reason?: string;
@@ -80,29 +94,29 @@ export default function ApprovalTransaksi({
   useEffect(() => {
     fetchPendingTransactions();
 
-    // Subscribe to changes
-    const subscription = supabase
-      .channel("approval-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "purchase_transactions" },
-        () => fetchPendingTransactions(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "kas_transaksi" },
-        () => fetchPendingTransactions(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "approval_transaksi" },
-        () => fetchPendingTransactions(),
-      )
-      .subscribe();
+    // Realtime subscription disabled for performance
+    // const subscription = supabase
+    //   .channel("approval-changes")
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "purchase_transactions" },
+    //     () => fetchPendingTransactions(),
+    //   )
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "kas_transaksi" },
+    //     () => fetchPendingTransactions(),
+    //   )
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "approval_transaksi" },
+    //     () => fetchPendingTransactions(),
+    //   )
+    //   .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    // return () => {
+    //   subscription.unsubscribe();
+    // };
   }, []);
 
   const fetchPendingTransactions = async () => {
@@ -149,6 +163,16 @@ export default function ApprovalTransaksi({
 
       if (approvalError) throw approvalError;
 
+      // 🔒 Fetch pending BANK transactions from transaction_cart (Pendapatan Bank & Pengeluaran Bank)
+      const { data: bankCartData, error: bankCartError } = await supabase
+        .from("transaction_cart")
+        .select("*")
+        .eq("approval_status", "waiting_approval")
+        .eq("payment_type", "bank")
+        .order("tanggal", { ascending: false });
+
+      if (bankCartError) throw bankCartError;
+
       // Combine and format transactions
       const combined: PendingTransaction[] = [
         ...(purchaseData || []).map((t) => ({
@@ -164,6 +188,14 @@ export default function ApprovalTransaksi({
         ...(approvalData || []).map((t) => ({
           ...t,
           type: t.type || ("approval" as const),
+        })),
+        // 🔒 Bank transactions from transaction_cart
+        ...(bankCartData || []).map((t) => ({
+          ...t,
+          type: (t.jenis_transaksi?.toLowerCase().includes("pendapatan") || 
+                 t.jenis_transaksi?.toLowerCase().includes("penerimaan"))
+            ? "bank_pendapatan" as const
+            : "bank_pengeluaran" as const,
         })),
       ];
 
@@ -200,6 +232,12 @@ export default function ApprovalTransaksi({
       } else if (transaction.type === "income") {
         // Approve income transaction
         await approveIncomeTransaction(transaction, user.id);
+      } else if (transaction.type === "bank_pendapatan") {
+        // 🔒 Approve Bank Pendapatan from transaction_cart
+        await approveBankPendapatanTransaction(transaction, user.id);
+      } else if (transaction.type === "bank_pengeluaran") {
+        // 🔒 Approve Bank Pengeluaran from transaction_cart
+        await approveBankPengeluaranTransaction(transaction, user.id);
       } else if (
         transaction.type === "Penjualan Barang" ||
         transaction.type === "Penjualan Jasa" ||
@@ -291,26 +329,59 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    // Create journal entry for expense
+    // Create journal entries for expense (2 baris: Debit dan Credit)
     const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // For expense: Debit expense account, Credit cash account
-    const { error: journalError } = await supabase
+    // Akun Beban (Debit) dan Akun Kas (Credit)
+    const expenseAccountCode = transaction.coa_expense_code || transaction.account_code || "6-1100";
+    const expenseAccountName = transaction.account_name || "Beban";
+    const cashAccountCode = transaction.coa_cash_code || transaction.account_number || "1-1100";
+    const cashAccountName = transaction.credit_account_name || "Kas";
+    const sumberPengeluaran = transaction.kategori || transaction.service_category || transaction.category || "";
+
+    // Baris 1: DEBIT - Akun Beban
+    const { error: debitError } = await supabase
       .from("journal_entries")
       .insert({
         journal_ref: journalRef,
-        debit_account: "6-1100", // Default expense account
-        credit_account: transaction.account_number || "1-1100",
+        account_code: expenseAccountCode,
+        account_name: expenseAccountName,
+        account_type: "Expense",
         debit: transaction.nominal,
-        credit: transaction.nominal,
+        credit: 0,
+        debit_account: expenseAccountCode,
+        credit_account: cashAccountCode,
         description: transaction.keterangan || "Pengeluaran Kas",
         tanggal: transaction.tanggal,
-        kategori: transaction.service_category,
+        kategori: transaction.kategori || transaction.service_category,
+        sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
         approval_status: "approved",
       });
 
-    if (journalError) throw journalError;
+    if (debitError) throw debitError;
+
+    // Baris 2: CREDIT - Akun Kas
+    const { error: creditError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        account_code: cashAccountCode,
+        account_name: cashAccountName,
+        account_type: "Asset",
+        debit: 0,
+        credit: transaction.nominal,
+        debit_account: expenseAccountCode,
+        credit_account: cashAccountCode,
+        description: transaction.keterangan || "Pengeluaran Kas",
+        tanggal: transaction.tanggal,
+        kategori: transaction.kategori || transaction.service_category,
+        sumber_pengeluaran: sumberPengeluaran,
+        jenis_transaksi: "Pengeluaran Kas",
+        approval_status: "approved",
+      });
+
+    if (creditError) throw creditError;
 
     // Update kas_transaksi status
     const { error: updateError } = await supabase
@@ -367,31 +438,61 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    // Create journal entry for cash disbursement
+    // Create journal entries for cash disbursement (2 baris: Debit dan Credit)
     const journalRef =
       transaction.journal_ref ||
       `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // For cash disbursement: Debit expense account, Credit cash account
-    const debitAccount = transaction.coa_expense_code || "6-1100";
-    const creditAccount = transaction.coa_cash_code || "1-1100";
+    // Akun Beban (Debit) dan Akun Kas (Credit)
+    const expenseAccountCode = transaction.coa_expense_code || transaction.account_code || "6-1100";
+    const expenseAccountName = transaction.account_name || "Beban";
+    const cashAccountCode = transaction.coa_cash_code || "1-1100";
+    const cashAccountName = transaction.credit_account_name || "Kas";
+    const sumberPengeluaran = transaction.kategori || transaction.category || "";
 
-    const { error: journalError } = await supabase
+    // Baris 1: DEBIT - Akun Beban
+    const { error: debitError } = await supabase
       .from("journal_entries")
       .insert({
         journal_ref: journalRef,
-        debit_account: debitAccount,
-        credit_account: creditAccount,
+        account_code: expenseAccountCode,
+        account_name: expenseAccountName,
+        account_type: "Expense",
         debit: transaction.amount,
-        credit: transaction.amount,
+        credit: 0,
+        debit_account: expenseAccountCode,
+        credit_account: cashAccountCode,
         description: transaction.description || "Pengeluaran Kas",
         tanggal: transaction.transaction_date,
         kategori: transaction.category,
+        sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
         approval_status: "approved",
       });
 
-    if (journalError) throw journalError;
+    if (debitError) throw debitError;
+
+    // Baris 2: CREDIT - Akun Kas
+    const { error: creditError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        account_code: cashAccountCode,
+        account_name: cashAccountName,
+        account_type: "Asset",
+        debit: 0,
+        credit: transaction.amount,
+        debit_account: expenseAccountCode,
+        credit_account: cashAccountCode,
+        description: transaction.description || "Pengeluaran Kas",
+        tanggal: transaction.transaction_date,
+        kategori: transaction.category,
+        sumber_pengeluaran: sumberPengeluaran,
+        jenis_transaksi: "Pengeluaran Kas",
+        approval_status: "approved",
+      });
+
+    if (creditError) throw creditError;
 
     // Update cash_disbursement status
     const { error: updateError } = await supabase
@@ -425,6 +526,158 @@ export default function ApprovalTransaksi({
     if (updateError) throw updateError;
   };
 
+  // 🔒 Approve Bank Pendapatan from transaction_cart
+  const approveBankPendapatanTransaction = async (
+    transaction: PendingTransaction,
+    userId: string,
+  ) => {
+    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Bank Pendapatan: Debit Bank, Credit Revenue
+    const bankAccountCode = transaction.selected_bank || transaction.account_code || "1-1200";
+    const bankAccountName = transaction.account_name || "Bank";
+    const revenueAccountCode = transaction.credit_account_code || "4-1100";
+    const revenueAccountName = transaction.credit_account_name || "Pendapatan";
+    const sumberPenerimaan = transaction.kategori || transaction.sumber_penerimaan || "";
+    
+    // Baris 1: DEBIT - Akun Bank
+    const { error: debitError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        transaction_date: transaction.tanggal,
+        account_code: bankAccountCode,
+        account_name: bankAccountName,
+        account_type: "Asset",
+        debit: transaction.nominal,
+        credit: 0,
+        description: transaction.description || "Pendapatan Bank",
+        source_type: "transaksi_keuangan",
+        debit_account: bankAccountCode,
+        credit_account: revenueAccountCode,
+        jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
+        kategori: transaction.kategori || transaction.sumber_penerimaan,
+        sumber_penerimaan: sumberPenerimaan,
+        bukti_url: transaction.bukti || null,
+        approval_status: "approved",
+      });
+
+    if (debitError) throw debitError;
+
+    // Baris 2: CREDIT - Akun Pendapatan
+    const { error: creditError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        transaction_date: transaction.tanggal,
+        account_code: revenueAccountCode,
+        account_name: revenueAccountName,
+        account_type: transaction.credit_account_type || "Revenue",
+        debit: 0,
+        credit: transaction.nominal,
+        description: transaction.description || "Pendapatan Bank",
+        source_type: "transaksi_keuangan",
+        debit_account: bankAccountCode,
+        credit_account: revenueAccountCode,
+        jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
+        kategori: transaction.kategori || transaction.sumber_penerimaan,
+        sumber_penerimaan: sumberPenerimaan,
+        bukti_url: transaction.bukti || null,
+        approval_status: "approved",
+      });
+
+    if (creditError) throw creditError;
+
+    // Update transaction_cart status
+    const { error: updateError } = await supabase
+      .from("transaction_cart")
+      .update({
+        approval_status: "approved",
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        status: "checked_out",
+      })
+      .eq("id", transaction.id);
+
+    if (updateError) throw updateError;
+  };
+
+  // 🔒 Approve Bank Pengeluaran from transaction_cart
+  const approveBankPengeluaranTransaction = async (
+    transaction: PendingTransaction,
+    userId: string,
+  ) => {
+    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Bank Pengeluaran: Debit Expense, Credit Bank
+    const expenseAccountCode = transaction.account_code || transaction.expense_account || "6-1100";
+    const expenseAccountName = transaction.account_name || "Beban";
+    const bankAccountCode = transaction.selected_bank || "1-1200";
+    const bankAccountName = transaction.credit_account_name || "Bank";
+    const sumberPengeluaran = transaction.kategori || "";
+    
+    // Baris 1: DEBIT - Akun Beban
+    const { error: debitError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        transaction_date: transaction.tanggal,
+        account_code: expenseAccountCode,
+        account_name: expenseAccountName,
+        account_type: transaction.account_type || "Expense",
+        debit: transaction.nominal,
+        credit: 0,
+        description: transaction.description || "Pengeluaran Bank",
+        source_type: "transaksi_keuangan",
+        debit_account: expenseAccountCode,
+        credit_account: bankAccountCode,
+        jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
+        kategori: transaction.kategori,
+        sumber_pengeluaran: sumberPengeluaran,
+        bukti_url: transaction.bukti || null,
+        approval_status: "approved",
+      });
+
+    if (debitError) throw debitError;
+
+    // Baris 2: CREDIT - Akun Bank
+    const { error: creditError } = await supabase
+      .from("journal_entries")
+      .insert({
+        journal_ref: journalRef,
+        transaction_date: transaction.tanggal,
+        account_code: bankAccountCode,
+        account_name: bankAccountName,
+        account_type: "Asset",
+        debit: 0,
+        credit: transaction.nominal,
+        description: transaction.description || "Pengeluaran Bank",
+        source_type: "transaksi_keuangan",
+        debit_account: expenseAccountCode,
+        credit_account: bankAccountCode,
+        jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
+        kategori: transaction.kategori,
+        sumber_pengeluaran: sumberPengeluaran,
+        bukti_url: transaction.bukti || null,
+        approval_status: "approved",
+      });
+
+    if (creditError) throw creditError;
+
+    // Update transaction_cart status
+    const { error: updateError } = await supabase
+      .from("transaction_cart")
+      .update({
+        approval_status: "approved",
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        status: "checked_out",
+      })
+      .eq("id", transaction.id);
+
+    if (updateError) throw updateError;
+  };
+
   const handleReject = (transaction: PendingTransaction) => {
     setSelectedTransaction(transaction);
     setShowRejectDialog(true);
@@ -448,11 +701,14 @@ export default function ApprovalTransaksi({
           ? "purchase_transactions"
           : selectedTransaction.type === "cash_disbursement"
             ? "cash_disbursement"
-            : selectedTransaction.type === "Penjualan Barang" ||
-                selectedTransaction.type === "Penjualan Jasa" ||
-                selectedTransaction.type === "Pembelian Jasa"
-              ? "approval_transaksi"
-              : "kas_transaksi";
+            : selectedTransaction.type === "bank_pendapatan" ||
+                selectedTransaction.type === "bank_pengeluaran"
+              ? "transaction_cart"
+              : selectedTransaction.type === "Penjualan Barang" ||
+                  selectedTransaction.type === "Penjualan Jasa" ||
+                  selectedTransaction.type === "Pembelian Jasa"
+                ? "approval_transaksi"
+                : "kas_transaksi";
 
       const { error } = await supabase
         .from(table)
@@ -585,20 +841,28 @@ export default function ApprovalTransaksi({
                               variant={
                                 transaction.type === "purchase"
                                   ? "default"
-                                  : "secondary"
+                                  : transaction.type === "bank_pendapatan"
+                                    ? "outline"
+                                    : transaction.type === "bank_pengeluaran"
+                                      ? "destructive"
+                                      : "secondary"
                               }
                             >
                               {transaction.type === "purchase"
                                 ? "Pembelian"
                                 : transaction.type === "cash_disbursement"
                                   ? "Pengeluaran Kas"
-                                  : transaction.type === "Penjualan Barang"
-                                    ? "Penjualan Barang"
-                                    : transaction.type === "Penjualan Jasa"
-                                      ? "Penjualan Jasa"
-                                      : transaction.type === "Pembelian Jasa"
-                                        ? "Pembelian Jasa"
-                                        : "Pengeluaran"}
+                                  : transaction.type === "bank_pendapatan"
+                                    ? "🏦 Pendapatan Bank"
+                                    : transaction.type === "bank_pengeluaran"
+                                      ? "🏦 Pengeluaran Bank"
+                                      : transaction.type === "Penjualan Barang"
+                                        ? "Penjualan Barang"
+                                        : transaction.type === "Penjualan Jasa"
+                                          ? "Penjualan Jasa"
+                                          : transaction.type === "Pembelian Jasa"
+                                            ? "Pembelian Jasa"
+                                            : "Pengeluaran"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -609,31 +873,44 @@ export default function ApprovalTransaksi({
                                   ? "CASH_DISBURSEMENT"
                                   : transaction.type === "income"
                                     ? "CASH_AND_BANK_RECEIPTS"
-                                    : transaction.type === "Penjualan Barang" ||
-                                        transaction.type === "Penjualan Jasa" ||
-                                        transaction.type === "Pembelian Jasa"
-                                      ? "APPROVAL_TRANSAKSI"
-                                      : "KAS_TRANSAKSI"}
+                                    : transaction.type === "bank_pendapatan" ||
+                                        transaction.type === "bank_pengeluaran"
+                                      ? "TRANSACTION_CART"
+                                      : transaction.type === "Penjualan Barang" ||
+                                          transaction.type === "Penjualan Jasa" ||
+                                          transaction.type === "Pembelian Jasa"
+                                        ? "APPROVAL_TRANSAKSI"
+                                        : "KAS_TRANSAKSI"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {transaction.coa_cash_code ||
-                              transaction.coa_expense_code ||
-                              transaction.account_number ||
-                              transaction.account_name ||
-                              "-"}
+                            {transaction.type === "bank_pendapatan" ||
+                            transaction.type === "bank_pengeluaran"
+                              ? transaction.account_code ||
+                                transaction.selected_bank ||
+                                "-"
+                              : transaction.coa_cash_code ||
+                                transaction.coa_expense_code ||
+                                transaction.account_number ||
+                                transaction.account_name ||
+                                "-"}
                           </TableCell>
                           <TableCell>
                             {transaction.type === "purchase"
                               ? transaction.item_name
                               : transaction.type === "cash_disbursement"
                                 ? transaction.description
-                                : transaction.type === "Penjualan Barang" ||
-                                    transaction.type === "Penjualan Jasa" ||
-                                    transaction.type === "Pembelian Jasa"
-                                  ? transaction.item_name ||
-                                    transaction.description
-                                  : transaction.keterangan}
+                                : transaction.type === "bank_pendapatan" ||
+                                    transaction.type === "bank_pengeluaran"
+                                  ? transaction.description ||
+                                    transaction.kategori ||
+                                    transaction.jenis_transaksi
+                                  : transaction.type === "Penjualan Barang" ||
+                                      transaction.type === "Penjualan Jasa" ||
+                                      transaction.type === "Pembelian Jasa"
+                                    ? transaction.item_name ||
+                                      transaction.description
+                                    : transaction.keterangan}
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             {formatCurrency(
@@ -735,13 +1012,17 @@ export default function ApprovalTransaksi({
                         ? "Pengeluaran Kas"
                         : selectedTransaction.type === "income"
                           ? "Penerimaan Kas"
-                          : selectedTransaction.type === "Penjualan Barang"
-                            ? "Penjualan Barang"
-                            : selectedTransaction.type === "Penjualan Jasa"
-                              ? "Penjualan Jasa"
-                              : selectedTransaction.type === "Pembelian Jasa"
-                                ? "Pembelian Jasa"
-                                : "Pengeluaran"}
+                          : selectedTransaction.type === "bank_pendapatan"
+                            ? "🏦 Pendapatan Bank"
+                            : selectedTransaction.type === "bank_pengeluaran"
+                              ? "🏦 Pengeluaran Bank"
+                              : selectedTransaction.type === "Penjualan Barang"
+                                ? "Penjualan Barang"
+                                : selectedTransaction.type === "Penjualan Jasa"
+                                  ? "Penjualan Jasa"
+                                  : selectedTransaction.type === "Pembelian Jasa"
+                                    ? "Pembelian Jasa"
+                                    : "Pengeluaran"}
                   </p>
                 </div>
                 <div>
@@ -766,10 +1047,13 @@ export default function ApprovalTransaksi({
                   <p className="text-sm font-medium text-slate-500">Source</p>
                   <p className="text-base">
                     {selectedTransaction.type === "purchase"
-                      ? "CASH DISBURSEMENT"
+                      ? "PURCHASE_TRANSACTIONS"
                       : selectedTransaction.type === "cash_disbursement"
-                        ? "CASH DISBURSEMENT"
-                        : "CASH AND BANK RECEIPTS"}
+                        ? "CASH_DISBURSEMENT"
+                        : selectedTransaction.type === "bank_pendapatan" ||
+                            selectedTransaction.type === "bank_pengeluaran"
+                          ? "TRANSACTION_CART"
+                          : "CASH_AND_BANK_RECEIPTS"}
                   </p>
                 </div>
               </div>
@@ -807,13 +1091,63 @@ export default function ApprovalTransaksi({
                       </p>
                     </div>
                   )}
-                  {selectedTransaction.category && (
+                  {(selectedTransaction.category || selectedTransaction.kategori) && (
                     <div>
                       <p className="text-sm font-medium text-slate-500">
                         Kategori
                       </p>
                       <p className="text-base">
-                        {selectedTransaction.category}
+                        {selectedTransaction.category || selectedTransaction.kategori}
+                      </p>
+                    </div>
+                  )}
+                  {selectedTransaction.selected_bank && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">
+                        Rekening Bank
+                      </p>
+                      <p className="text-base font-mono">
+                        {selectedTransaction.selected_bank}
+                      </p>
+                    </div>
+                  )}
+                  {selectedTransaction.account_code && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">
+                        Kode Akun
+                      </p>
+                      <p className="text-base font-mono">
+                        {selectedTransaction.account_code} - {selectedTransaction.account_name}
+                      </p>
+                    </div>
+                  )}
+                  {selectedTransaction.credit_account_code && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">
+                        Akun Kredit
+                      </p>
+                      <p className="text-base font-mono">
+                        {selectedTransaction.credit_account_code} - {selectedTransaction.credit_account_name}
+                      </p>
+                    </div>
+                  )}
+                  {selectedTransaction.sumber_penerimaan && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">
+                        Sumber Penerimaan
+                      </p>
+                      <p className="text-base">
+                        {selectedTransaction.sumber_penerimaan}
+                      </p>
+                    </div>
+                  )}
+                  {(selectedTransaction.customer || selectedTransaction.supplier) && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">
+                        {selectedTransaction.customer ? "Customer" : "Supplier"}
+                      </p>
+                      <p className="text-base">
+                        {selectedTransaction.customer || selectedTransaction.supplier}
                       </p>
                     </div>
                   )}

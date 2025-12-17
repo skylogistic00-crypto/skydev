@@ -122,32 +122,33 @@ export default function COAManagement() {
     fetchCoaAccounts();
     fetchCoaMappings();
 
-    const coaChannel = supabase
-      .channel("coa-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "chart_of_accounts" },
-        () => {
-          fetchCoaAccounts();
-        },
-      )
-      .subscribe();
+    // Realtime subscriptions disabled for performance
+    // const coaChannel = supabase
+    //   .channel("coa-changes")
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "chart_of_accounts" },
+    //     () => {
+    //       fetchCoaAccounts();
+    //     },
+    //   )
+    //   .subscribe();
 
-    const mappingChannel = supabase
-      .channel("mapping-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "coa_category_mapping" },
-        () => {
-          fetchCoaMappings();
-        },
-      )
-      .subscribe();
+    // const mappingChannel = supabase
+    //   .channel("mapping-changes")
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "coa_category_mapping" },
+    //     () => {
+    //       fetchCoaMappings();
+    //     },
+    //   )
+    //   .subscribe();
 
-    return () => {
-      supabase.removeChannel(coaChannel);
-      supabase.removeChannel(mappingChannel);
-    };
+    // return () => {
+    //   supabase.removeChannel(coaChannel);
+    //   supabase.removeChannel(mappingChannel);
+    // };
   }, []);
 
   const fetchCoaAccounts = async () => {

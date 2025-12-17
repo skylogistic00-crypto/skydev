@@ -101,20 +101,21 @@ export default function CashBook() {
     fetchTransactions();
     fetchCoaAccounts();
 
-    const channel = supabase
-      .channel("kas-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "kas_transaksi" },
-        () => {
-          fetchTransactions();
-        },
-      )
-      .subscribe();
+    // Realtime subscription disabled for performance
+    // const channel = supabase
+    //   .channel("kas-changes")
+    //   .on(
+    //     "postgres_changes",
+    //     { event: "*", schema: "public", table: "kas_transaksi" },
+    //     () => {
+    //       fetchTransactions();
+    //     },
+    //   )
+    //   .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // return () => {
+    //   supabase.removeChannel(channel);
+    // };
   }, []);
 
   useEffect(() => {
@@ -151,7 +152,8 @@ export default function CashBook() {
       const { data, error } = await supabase
         .from("kas_transaksi")
         .select("*")
-        .order("tanggal", { ascending: false });
+        .order("tanggal", { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       setTransactions(data || []);

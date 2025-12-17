@@ -20,6 +20,7 @@ import BarangKeluar from "@/components/BarangKeluar";
 import AirWaybill from "@/components/AirWaybill";
 import TransaksiKeuanganForm from "@/components/TransaksiKeuanganForm";
 import BankMutationForm from "@/components/BankMutationForm";
+import BankMutationUpload from "@/components/BankMutationUpload";
 import AdminSetup from "@/components/AdminSetup";
 import COAManagement from "@/components/COAManagement";
 import BarangLamaReport from "@/components/BarangLamaReport";
@@ -481,7 +482,7 @@ function AppRoutesContent() {
             <div className="min-h-screen bg-slate-50">
               <Header />
               <Navigation />
-              <BankMutationForm />
+              <BankMutationUpload />
             </div>
           </ProtectedRoute>
         }
