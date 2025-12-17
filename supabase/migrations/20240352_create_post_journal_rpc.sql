@@ -1,10 +1,14 @@
--- Create RPC function to post cash disbursement to journal
+-- Drop and recreate RPC function to post cash disbursement to journal
+DROP FUNCTION IF EXISTS post_cash_disbursement_to_journal(UUID);
+
 CREATE OR REPLACE FUNCTION post_cash_disbursement_to_journal(p_disbursement_id UUID)
 RETURNS JSONB AS $$
 DECLARE
   v_disbursement RECORD;
   v_journal_ref TEXT;
   v_entry_count INT := 0;
+  v_cash_account_code TEXT;
+  v_cash_account_name TEXT;
 BEGIN
   -- Get disbursement data
   SELECT * INTO v_disbursement
@@ -59,6 +63,26 @@ BEGIN
   v_entry_count := v_entry_count + 1;
   
   -- Create credit entry (cash/bank account)
+  -- CRITICAL: Use cash_account_id to get the exact leaf account (Kas Besar/Kas Kecil)
+  -- NO DEFAULT FALLBACK - reject if no specific account is provided
+  IF v_disbursement.cash_account_id IS NOT NULL THEN
+    SELECT account_code, account_name INTO v_cash_account_code, v_cash_account_name
+    FROM chart_of_accounts
+    WHERE id = v_disbursement.cash_account_id;
+  ELSIF v_disbursement.coa_cash_code IS NOT NULL THEN
+    SELECT account_code, account_name INTO v_cash_account_code, v_cash_account_name
+    FROM chart_of_accounts
+    WHERE account_code = v_disbursement.coa_cash_code;
+  END IF;
+  
+  -- REJECT if no specific cash account is found
+  IF v_cash_account_code IS NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil). Tidak boleh menggunakan akun default.'
+    );
+  END IF;
+  
   INSERT INTO journal_entries (
     tanggal,
     journal_ref,
@@ -75,11 +99,8 @@ BEGIN
   VALUES (
     v_disbursement.transaction_date,
     v_journal_ref,
-    v_disbursement.coa_cash_code,
-    CASE 
-      WHEN v_disbursement.payment_method = 'Tunai' THEN 'Kas'
-      ELSE 'Bank'
-    END,
+    v_cash_account_code,
+    v_cash_account_name,
     0,
     v_disbursement.amount,
     v_disbursement.description || ' - ' || v_disbursement.payee_name,
@@ -144,3 +165,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION post_cash_disbursement_to_journal(UUID) IS 'Post cash disbursement to journal entries';
+

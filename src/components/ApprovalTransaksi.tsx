@@ -68,6 +68,8 @@ interface PendingTransaction {
   notes?: string;
   bukti?: string;
   rejection_reason?: string;
+  cash_account_id?: string;
+  coa_cash_id?: string;
 }
 
 interface ApprovalTransaksiProps {
@@ -335,8 +337,31 @@ export default function ApprovalTransaksi({
     // Akun Beban (Debit) dan Akun Kas (Credit)
     const expenseAccountCode = transaction.coa_expense_code || transaction.account_code || "6-1100";
     const expenseAccountName = transaction.account_name || "Beban";
-    const cashAccountCode = transaction.coa_cash_code || transaction.account_number || "1-1100";
-    const cashAccountName = transaction.credit_account_name || "Kas";
+    
+    // CRITICAL: Use cash_account_id first, then coa_cash_code - NO DEFAULT FALLBACK
+    let cashAccountCode = transaction.coa_cash_code || transaction.account_number;
+    let cashAccountName = transaction.credit_account_name;
+    
+    // If cash_account_id exists, fetch the actual account from chart_of_accounts
+    if (transaction.cash_account_id) {
+      const { data: cashAccount } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, account_name")
+        .eq("id", transaction.cash_account_id)
+        .single();
+      if (cashAccount) {
+        cashAccountCode = cashAccount.account_code;
+        cashAccountName = cashAccount.account_name;
+      }
+    }
+    
+    // REJECT if no specific cash account is selected
+    if (!cashAccountCode) {
+      throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil).");
+    }
+    if (!cashAccountName) {
+      cashAccountName = "Kas";
+    }
     const sumberPengeluaran = transaction.kategori || transaction.service_category || transaction.category || "";
 
     // Baris 1: DEBIT - Akun Beban
@@ -403,12 +428,32 @@ export default function ApprovalTransaksi({
     // Create journal entry for income
     const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // CRITICAL: Get cash account from cash_account_id first, then coa_cash_code - NO DEFAULT FALLBACK
+    let cashAccountCode = transaction.coa_cash_code;
+    
+    // If cash_account_id exists, fetch the actual account from chart_of_accounts
+    if (transaction.cash_account_id) {
+      const { data: cashAccount } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, account_name")
+        .eq("id", transaction.cash_account_id)
+        .single();
+      if (cashAccount) {
+        cashAccountCode = cashAccount.account_code;
+      }
+    }
+    
+    // REJECT if no specific cash account is selected
+    if (!cashAccountCode) {
+      throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil). Tidak boleh menggunakan akun default 1-1100.");
+    }
+
     // For income: Debit cash account, Credit revenue account
     const { error: journalError } = await supabase
       .from("journal_entries")
       .insert({
         journal_ref: journalRef,
-        debit_account: transaction.coa_cash_code || "1-1100",
+        debit_account: cashAccountCode,
         credit_account: transaction.coa_contra_code || "4-1000",
         debit: transaction.amount,
         credit: transaction.amount,
@@ -446,8 +491,31 @@ export default function ApprovalTransaksi({
     // Akun Beban (Debit) dan Akun Kas (Credit)
     const expenseAccountCode = transaction.coa_expense_code || transaction.account_code || "6-1100";
     const expenseAccountName = transaction.account_name || "Beban";
-    const cashAccountCode = transaction.coa_cash_code || "1-1100";
-    const cashAccountName = transaction.credit_account_name || "Kas";
+    
+    // CRITICAL: Use cash_account_id first, then coa_cash_code - NO DEFAULT FALLBACK
+    let cashAccountCode = transaction.coa_cash_code;
+    let cashAccountName = transaction.credit_account_name;
+    
+    // If cash_account_id exists, fetch the actual account from chart_of_accounts
+    if (transaction.cash_account_id) {
+      const { data: cashAccount } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, account_name")
+        .eq("id", transaction.cash_account_id)
+        .single();
+      if (cashAccount) {
+        cashAccountCode = cashAccount.account_code;
+        cashAccountName = cashAccount.account_name;
+      }
+    }
+    
+    // REJECT if no specific cash account is selected
+    if (!cashAccountCode) {
+      throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil).");
+    }
+    if (!cashAccountName) {
+      cashAccountName = "Kas";
+    }
     const sumberPengeluaran = transaction.kategori || transaction.category || "";
 
     // Baris 1: DEBIT - Akun Beban

@@ -1992,6 +1992,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_header: boolean | null
+          is_postable: boolean | null
           level: number
           normal_balance: string | null
           parent_code: string | null
@@ -2014,6 +2015,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_header?: boolean | null
+          is_postable?: boolean | null
           level?: number
           normal_balance?: string | null
           parent_code?: string | null
@@ -2036,6 +2038,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_header?: boolean | null
+          is_postable?: boolean | null
           level?: number
           normal_balance?: string | null
           parent_code?: string | null
@@ -12012,7 +12015,7 @@ export type Database = {
       }
       post_cash_disbursement_to_journal: {
         Args: { p_disbursement_id: string }
-        Returns: string
+        Returns: Json
       }
       post_journal_bank_mutation: {
         Args: { p_bank_mutation_id: string }

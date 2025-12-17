@@ -557,7 +557,7 @@ export default function SalesForm() {
           customer_id: formData.customer_id,
           // name: formData.name,
           coa_cash_code:
-            formData.payment_method === "Piutang" ? "1-1200" : "1-1100",
+            formData.payment_method === "Piutang" ? "" : "",  // TODO: Require user to select specific Kas/Bank account
           coa_revenue_code: formData.coa_account_code,
           coa_cogs_code:
             formData.transaction_type === "Barang" ? "5-1100" : null,
@@ -566,7 +566,7 @@ export default function SalesForm() {
               ? formData.coa_account_code
               : null,
           coa_tax_code: formData.tax_amount > 0 ? "2-1250" : null,
-          account_code: formData.payment_method === "Piutang" ? "1-1200" : "1-1100",
+          account_code: "",  // TODO: Require user to select specific Kas/Bank account
           notes: formData.notes,
           created_by: user?.id || "system",
         })
