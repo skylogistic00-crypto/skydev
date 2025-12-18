@@ -278,30 +278,67 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
-      // Generate unique advance number to avoid conflicts
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
-      
-      // Insert advance record
-      const { data: advanceData, error: advanceError } = await supabase
+      // Check if employee has existing active advance
+      const { data: existingAdvances, error: checkError } = await supabase
         .from("employee_advances")
-        .insert({
-          employee_id: advanceForm.employee_id,
-          employee_name: advanceForm.employee_name,
-          advance_number: tempAdvanceNumber,
-          amount: advanceForm.amount,
-          remaining_balance: advanceForm.amount,
-          advance_date: advanceForm.advance_date,
-          notes: advanceForm.notes,
-          bukti_url: advanceForm.bukti_url,
-          status: "draft",
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+        .select("*")
+        .eq("employee_id", advanceForm.employee_id)
+        .neq("status", "settled")
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-      if (advanceError) throw advanceError;
+      if (checkError) throw checkError;
+
+      let advanceData;
+
+      if (existingAdvances && existingAdvances.length > 0) {
+        // Add to existing advance balance
+        const existingAdvance = existingAdvances[0];
+        const newAmount = existingAdvance.amount + advanceForm.amount;
+        const newBalance = existingAdvance.remaining_balance + advanceForm.amount;
+
+        const { data: updatedAdvance, error: updateError } = await supabase
+          .from("employee_advances")
+          .update({
+            amount: newAmount,
+            remaining_balance: newBalance,
+            notes: existingAdvance.notes 
+              ? `${existingAdvance.notes}\n[${advanceForm.advance_date}] Tambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'Penambahan uang muka'}`
+              : `[${advanceForm.advance_date}] Tambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'Penambahan uang muka'}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingAdvance.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        advanceData = updatedAdvance;
+      } else {
+        // Create new advance record
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
+        
+        const { data: newAdvance, error: insertError } = await supabase
+          .from("employee_advances")
+          .insert({
+            employee_id: advanceForm.employee_id,
+            employee_name: advanceForm.employee_name,
+            advance_number: tempAdvanceNumber,
+            amount: advanceForm.amount,
+            remaining_balance: advanceForm.amount,
+            advance_date: advanceForm.advance_date,
+            notes: advanceForm.notes,
+            bukti_url: advanceForm.bukti_url,
+            status: "draft",
+            created_by: user?.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        advanceData = newAdvance;
+      }
 
       // Create journal entry
       // Fallback accounts for employee advance
@@ -333,9 +370,12 @@ export default function EmployeeAdvanceForm() {
 
       if (journalError) throw journalError;
 
+      const isAddition = existingAdvances && existingAdvances.length > 0;
       toast({
-        title: "Uang Muka Berhasil Dibuat",
-        description: `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} telah diberikan kepada ${advanceForm.employee_name}`,
+        title: isAddition ? "Uang Muka Berhasil Ditambahkan" : "Uang Muka Berhasil Dibuat",
+        description: isAddition 
+          ? `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} telah ditambahkan ke saldo ${advanceForm.employee_name}. Total saldo: Rp ${advanceData.remaining_balance.toLocaleString()}`
+          : `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} telah diberikan kepada ${advanceForm.employee_name}`,
       });
 
       // Reset form

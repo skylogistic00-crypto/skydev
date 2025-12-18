@@ -199,6 +199,16 @@ Deno.serve(async (req) => {
     const debitAccountCode = debitEntry?.account_code;
     const creditAccountCode = payload.type === "advance" ? cashCOA.account_code : creditEntry?.account_code;
     
+    // Determine jenis_transaksi based on type
+    let jenisTransaksi = '';
+    if (payload.type === 'advance') {
+      jenisTransaksi = 'Uang Muka';
+    } else if (payload.type === 'settlement') {
+      jenisTransaksi = 'Penyelesaian Uang Muka';
+    } else if (payload.type === 'return') {
+      jenisTransaksi = 'Pengembalian Uang Muka';
+    }
+
     const journalInserts = journalEntries.map((entry) => ({
       journal_ref: journalRef,
       entry_date: payload.date,
@@ -213,6 +223,7 @@ Deno.serve(async (req) => {
       credit_account: creditAccountCode,
       reference_type: `employee_advance_${payload.type}`,
       reference_id: payload.advance_id || payload.settlement_id || payload.return_id,
+      jenis_transaksi: jenisTransaksi,
       bukti_url: payload.bukti_url,
       status: "posted",
       created_by: user.id,
