@@ -9,4 +9,4 @@ DROP CONSTRAINT IF EXISTS employee_advances_status_check;
 
 ALTER TABLE employee_advances
 ADD CONSTRAINT employee_advances_status_check 
-CHECK (status IN ('draft', 'requested', 'disbursed', 'settled', 'partially_settled', 'returned', 'cancelled'));
+CHECK (status IN ('draft', 'pending', 'requested', 'disbursed', 'settled', 'partially_settled', 'returned', 'cancelled'));
