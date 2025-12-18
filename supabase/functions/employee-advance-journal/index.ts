@@ -100,7 +100,13 @@ Deno.serve(async (req) => {
       // Credit: Kas (Aset)
       
       journalDescription = `Uang muka kepada ${payload.employee_name}`;
-      journalRef = `ADV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${payload.advance_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)}`;
+      
+      // If this is an addition to existing advance, create unique journal_ref
+      if (payload.is_addition) {
+        journalRef = `ADV-ADD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
+      } else {
+        journalRef = `ADV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${payload.advance_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)}`;
+      }
       
       journalEntries = [
         {
