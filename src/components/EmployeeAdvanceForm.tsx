@@ -168,6 +168,13 @@ export default function EmployeeAdvanceForm() {
   };
 
   const fetchSettlements = async (advanceId: string) => {
+    // Fetch advance details including notes to extract history
+    const { data: advanceData, error: advanceError } = await supabase
+      .from("employee_advances")
+      .select("*")
+      .eq("id", advanceId)
+      .single();
+
     // Fetch settlements
     const { data: settlements, error: settlementsError } = await supabase
       .from("employee_advance_settlements")
@@ -182,8 +189,8 @@ export default function EmployeeAdvanceForm() {
       .eq("advance_id", advanceId)
       .order("return_date", { ascending: false });
 
-    if (settlementsError || returnsError) {
-      console.error("Error fetching data:", settlementsError || returnsError);
+    if (settlementsError || returnsError || advanceError) {
+      console.error("Error fetching data:", settlementsError || returnsError || advanceError);
       toast({
         title: "Error",
         description: "Gagal mengambil data",
@@ -192,8 +199,41 @@ export default function EmployeeAdvanceForm() {
       return;
     }
 
-    // Combine both with type indicator
+    // Parse notes to extract addition history
+    const additionHistory: any[] = [];
+    let totalAdditions = 0;
+    if (advanceData?.notes) {
+      const lines = advanceData.notes.split('\n');
+      lines.forEach((line: string) => {
+        const match = line.match(/\[([^\]]+)\] Penambahan: Rp ([\d.,]+) - (.+)/);
+        if (match) {
+          const amount = parseFloat(match[2].replace(/[.,]/g, ''));
+          totalAdditions += amount;
+          additionHistory.push({
+            type: 'addition',
+            date: match[1],
+            amount: amount,
+            notes: match[3]
+          });
+        }
+      });
+    }
+
+    // Calculate initial amount (total - all additions)
+    const initialAmount = (advanceData?.amount || 0) - totalAdditions;
+
+    // Add initial advance as first addition
+    const initialAddition = {
+      type: 'initial',
+      date: new Date(advanceData?.advance_date).toLocaleDateString('id-ID'),
+      amount: initialAmount,
+      notes: 'Uang muka awal'
+    };
+
+    // Combine all with type indicator
     const combined = [
+      initialAddition,
+      ...additionHistory,
       ...(settlements || []).map(s => ({ ...s, type: 'settlement' })),
       ...(returns || []).map(r => ({ ...r, type: 'return' }))
     ];
@@ -372,35 +412,95 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
-      // Always create new advance record (no more adding to existing balance)
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
-      
-      const { data: advanceData, error: insertError } = await supabase
+      // Check if employee already has an active advance
+      const { data: existingAdvances, error: fetchError } = await supabase
         .from("employee_advances")
-        .insert({
-          employee_id: advanceForm.employee_id,
-          employee_name: advanceForm.employee_name,
-          advance_number: tempAdvanceNumber,
-          amount: advanceForm.amount,
-          remaining_balance: advanceForm.amount,
-          advance_date: advanceForm.advance_date,
-          notes: advanceForm.notes,
-          bukti_url: advanceForm.bukti_url,
-          status: "draft",
-          created_by: user?.id,
-        })
-        .select()
+        .select("id, amount, remaining_balance, notes")
+        .eq("employee_id", advanceForm.employee_id)
+        .in("status", ["draft", "requested", "disbursed", "partially_settled"])
         .single();
 
-      if (insertError) throw insertError;
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+        throw fetchError;
+      }
 
-      // Journal entry will be created only after both approvals and disbursement
-      toast({
-        title: "Uang Muka Berhasil Dibuat",
-        description: `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} untuk ${advanceForm.employee_name} menunggu approval`,
-      });
+      if (existingAdvances) {
+        // Add to existing advance balance
+        const newAmount = existingAdvances.amount + advanceForm.amount;
+        const newRemainingBalance = existingAdvances.remaining_balance + advanceForm.amount;
+        const existingNotes = existingAdvances.notes || '';
+
+        const { error: updateError } = await supabase
+          .from("employee_advances")
+          .update({
+            amount: newAmount,
+            remaining_balance: newRemainingBalance,
+            notes: (existingNotes ? existingNotes + '\n' : '') + `[${new Date().toLocaleDateString()}] Penambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'No notes'}`,
+          })
+          .eq("id", existingAdvances.id);
+
+        if (updateError) throw updateError;
+
+        // Create journal entry for addition using edge function
+        const { error: journalError } = await supabase.functions.invoke(
+          "supabase-functions-employee-advance-journal",
+          {
+            body: {
+              type: "advance",
+              advance_id: existingAdvances.id,
+              employee_name: advanceForm.employee_name,
+              amount: advanceForm.amount,
+              date: advanceForm.advance_date,
+              description: advanceForm.notes,
+              bukti_url: advanceForm.bukti_url,
+              is_addition: true,
+            },
+          }
+        );
+
+        if (journalError) {
+          console.error("Journal entry error:", journalError);
+          toast({
+            title: "Warning",
+            description: "Saldo berhasil ditambah tapi gagal membuat jurnal",
+            variant: "destructive",
+          });
+        }
+
+        toast({
+          title: "Saldo Uang Muka Bertambah",
+          description: `Saldo ${advanceForm.employee_name} bertambah Rp ${advanceForm.amount.toLocaleString()}. Total: Rp ${newAmount.toLocaleString()}`,
+        });
+      } else {
+        // Create new advance record
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
+        
+        const { data: advanceData, error: insertError } = await supabase
+          .from("employee_advances")
+          .insert({
+            employee_id: advanceForm.employee_id,
+            employee_name: advanceForm.employee_name,
+            advance_number: tempAdvanceNumber,
+            amount: advanceForm.amount,
+            remaining_balance: advanceForm.amount,
+            advance_date: advanceForm.advance_date,
+            notes: advanceForm.notes,
+            bukti_url: advanceForm.bukti_url,
+            status: "draft",
+            created_by: user?.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Uang Muka Berhasil Dibuat",
+          description: `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} untuk ${advanceForm.employee_name} menunggu approval`,
+        });
+      }
 
       // Reset form
       setAdvanceForm({
@@ -675,6 +775,29 @@ export default function EmployeeAdvanceForm() {
                         ))}
                       </SelectContent>
                     </Select>
+                    
+                    {/* Show employee advance history */}
+                    {advanceForm.employee_id && (() => {
+                      const employeeAdvances = advances.filter(
+                        (adv) => adv.employee_id === advanceForm.employee_id && 
+                        ['draft', 'requested', 'disbursed', 'partially_settled'].includes(adv.status)
+                      );
+                      const totalBalance = employeeAdvances.reduce((sum, adv) => sum + (adv.remaining_balance || 0), 0);
+                      
+                      if (employeeAdvances.length > 0) {
+                        return (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                            <p className="font-medium text-blue-900">
+                              Saldo Uang Muka: Rp {totalBalance.toLocaleString()}
+                            </p>
+                            <p className="text-blue-700 text-xs mt-1">
+                              {employeeAdvances.length} uang muka aktif
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   <div className="space-y-2">
@@ -1715,14 +1838,27 @@ export default function EmployeeAdvanceForm() {
             </div>
           ) : (
             <div className="space-y-3">
-              {selectedAdvanceSettlements.map((settlement) => (
+              {selectedAdvanceSettlements.map((settlement, index) => (
                 <div 
-                  key={settlement.id} 
-                  className={`border-l-4 ${settlement.type === 'return' ? 'border-l-green-500' : 'border-l-blue-500'} bg-gray-50 p-4 rounded`}
+                  key={settlement.id || index} 
+                  className={`border-l-4 ${
+                    settlement.type === 'return' ? 'border-l-green-500' : 
+                    settlement.type === 'initial' ? 'border-l-purple-500' : 
+                    settlement.type === 'addition' ? 'border-l-orange-500' : 
+                    'border-l-blue-500'
+                  } bg-gray-50 p-4 rounded`}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded ${settlement.type === 'return' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {settlement.type === 'return' ? 'Pengembalian' : 'Serahkan Struk'}
+                    <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                      settlement.type === 'return' ? 'bg-green-100 text-green-800' : 
+                      settlement.type === 'initial' ? 'bg-purple-100 text-purple-800' : 
+                      settlement.type === 'addition' ? 'bg-orange-100 text-orange-800' : 
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {settlement.type === 'return' ? '💰 Pengembalian' : 
+                       settlement.type === 'initial' ? '🎯 Uang Muka Awal' : 
+                       settlement.type === 'addition' ? '➕ Penambahan' : 
+                       '🧾 Serahkan Struk'}
                     </span>
                   </div>
                   
@@ -1755,6 +1891,22 @@ export default function EmployeeAdvanceForm() {
                           </a>
                         </div>
                       )}
+                    </div>
+                  ) : settlement.type === 'initial' || settlement.type === 'addition' ? (
+                    // Initial or Addition layout
+                    <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                      <div>
+                        <span className="text-gray-600">Tanggal:</span>{" "}
+                        <span className="font-semibold">{settlement.date}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Jumlah:</span>{" "}
+                        <span className="font-bold text-purple-600">Rp {(settlement.amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Keterangan:</span>{" "}
+                        <span className="font-semibold">{settlement.notes || "-"}</span>
+                      </div>
                     </div>
                   ) : (
                     // Settlement layout

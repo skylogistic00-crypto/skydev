@@ -64,7 +64,6 @@ export default function BarcodeScannerModal({
         setSelectedDeviceId(backCamera?.deviceId || cameras[0].deviceId);
       }
     } catch (err: any) {
-      console.error("Camera initialization error:", err);
       setError("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.");
       toast({
         title: "Error",
