@@ -39,6 +39,8 @@ import {
   Upload,
   ScanLine,
   Send,
+  Check,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -68,10 +70,12 @@ interface Advance {
   disbursement_date?: string;
   reference_number?: string;
   disbursement_account_id?: string;
+  manager_approval?: string;
+  finance_approval?: string;
 }
 
 export default function EmployeeAdvanceForm() {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -82,6 +86,8 @@ export default function EmployeeAdvanceForm() {
   const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
   const [showDisburseDialog, setShowDisburseDialog] = useState(false);
   const [selectedAdvanceForDisburse, setSelectedAdvanceForDisburse] = useState<Advance | null>(null);
+  const [showSettlementsDialog, setShowSettlementsDialog] = useState(false);
+  const [selectedAdvanceSettlements, setSelectedAdvanceSettlements] = useState<any[]>([]);
   const [disburseForm, setDisburseForm] = useState({
     disbursement_method: "Kas",
     disbursement_account_id: "",
@@ -148,7 +154,7 @@ export default function EmployeeAdvanceForm() {
 
   const fetchAdvances = async () => {
     const { data, error } = await supabase
-      .from("employee_advances")
+      .from("vw_employee_advance_summary")
       .select("*")
       .order("advance_date", { ascending: false });
 
@@ -159,6 +165,94 @@ export default function EmployeeAdvanceForm() {
 
     console.log("Fetched advances:", data);
     setAdvances(data || []);
+  };
+
+  const fetchSettlements = async (advanceId: string) => {
+    // Fetch settlements
+    const { data: settlements, error: settlementsError } = await supabase
+      .from("employee_advance_settlements")
+      .select("*")
+      .eq("advance_id", advanceId)
+      .order("settlement_date", { ascending: false });
+
+    // Fetch returns
+    const { data: returns, error: returnsError } = await supabase
+      .from("employee_advance_returns")
+      .select("*")
+      .eq("advance_id", advanceId)
+      .order("return_date", { ascending: false });
+
+    if (settlementsError || returnsError) {
+      console.error("Error fetching data:", settlementsError || returnsError);
+      toast({
+        title: "Error",
+        description: "Gagal mengambil data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Combine both with type indicator
+    const combined = [
+      ...(settlements || []).map(s => ({ ...s, type: 'settlement' })),
+      ...(returns || []).map(r => ({ ...r, type: 'return' }))
+    ];
+
+    setSelectedAdvanceSettlements(combined);
+    setShowSettlementsDialog(true);
+  };
+
+  const handleApproval = async (advanceId: string, approvalType: 'manager' | 'finance', status: 'approved' | 'rejected') => {
+    try {
+      const updateField = approvalType === 'manager' ? 'manager_approval' : 'finance_approval';
+      
+      // Get current advance to check other approval status
+      const { data: currentAdvance } = await supabase
+        .from("employee_advances")
+        .select("manager_approval, finance_approval")
+        .eq("id", advanceId)
+        .single();
+
+      // Determine new status
+      let newStatus = 'requested';
+      if (status === 'rejected') {
+        newStatus = 'rejected';
+      } else {
+        // Check if both approvals will be approved
+        const managerApproval = approvalType === 'manager' ? status : currentAdvance?.manager_approval;
+        const financeApproval = approvalType === 'finance' ? status : currentAdvance?.finance_approval;
+        
+        if (managerApproval === 'approved' && financeApproval === 'approved') {
+          newStatus = 'requested'; // Ready for disbursement
+        } else if (managerApproval === 'rejected' || financeApproval === 'rejected') {
+          newStatus = 'rejected';
+        }
+      }
+      
+      const { error } = await supabase
+        .from("employee_advances")
+        .update({ 
+          [updateField]: status,
+          status: newStatus
+        })
+        .eq("id", advanceId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Approval Updated",
+        description: `${approvalType === 'manager' ? 'Manager' : 'Finance'} approval set to ${status}`,
+      });
+
+      fetchAdvances();
+    } catch (error: any) {
+      console.error("Error updating approval:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update approval",
+        variant: "destructive",
+      });
+    }
   };
 
   const fetchBankAccounts = async () => {
@@ -278,104 +372,34 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
-      // Check if employee has existing active advance
-      const { data: existingAdvances, error: checkError } = await supabase
+      // Always create new advance record (no more adding to existing balance)
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
+      
+      const { data: advanceData, error: insertError } = await supabase
         .from("employee_advances")
-        .select("*")
-        .eq("employee_id", advanceForm.employee_id)
-        .neq("status", "settled")
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .insert({
+          employee_id: advanceForm.employee_id,
+          employee_name: advanceForm.employee_name,
+          advance_number: tempAdvanceNumber,
+          amount: advanceForm.amount,
+          remaining_balance: advanceForm.amount,
+          advance_date: advanceForm.advance_date,
+          notes: advanceForm.notes,
+          bukti_url: advanceForm.bukti_url,
+          status: "draft",
+          created_by: user?.id,
+        })
+        .select()
+        .single();
 
-      if (checkError) throw checkError;
+      if (insertError) throw insertError;
 
-      let advanceData;
-
-      if (existingAdvances && existingAdvances.length > 0) {
-        // Add to existing advance balance
-        const existingAdvance = existingAdvances[0];
-        const newAmount = existingAdvance.amount + advanceForm.amount;
-        const newBalance = existingAdvance.remaining_balance + advanceForm.amount;
-
-        const { data: updatedAdvance, error: updateError } = await supabase
-          .from("employee_advances")
-          .update({
-            amount: newAmount,
-            remaining_balance: newBalance,
-            notes: existingAdvance.notes 
-              ? `${existingAdvance.notes}\n[${advanceForm.advance_date}] Tambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'Penambahan uang muka'}`
-              : `[${advanceForm.advance_date}] Tambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'Penambahan uang muka'}`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingAdvance.id)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-        advanceData = updatedAdvance;
-      } else {
-        // Create new advance record
-        const timestamp = Date.now();
-        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
-        
-        const { data: newAdvance, error: insertError } = await supabase
-          .from("employee_advances")
-          .insert({
-            employee_id: advanceForm.employee_id,
-            employee_name: advanceForm.employee_name,
-            advance_number: tempAdvanceNumber,
-            amount: advanceForm.amount,
-            remaining_balance: advanceForm.amount,
-            advance_date: advanceForm.advance_date,
-            notes: advanceForm.notes,
-            bukti_url: advanceForm.bukti_url,
-            status: "draft",
-            created_by: user?.id,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        advanceData = newAdvance;
-      }
-
-      // Create journal entry
-      // Fallback accounts for employee advance
-      const debitAccountCode = advanceData.coa_account_code || "1-1500"; // Uang Muka Karyawan
-      
-      // Get credit account from selected bank or kas
-      let creditAccountId = null;
-      if (advanceForm.payment_method === "Bank" && advanceForm.bank_account_id) {
-        creditAccountId = advanceForm.bank_account_id;
-      } else if (advanceForm.payment_method === "Kas" && advanceForm.kas_account_id) {
-        creditAccountId = advanceForm.kas_account_id;
-      }
-      
-      const { error: journalError } = await supabase.functions.invoke(
-        "supabase-functions-employee-advance-journal",
-        {
-          body: {
-            type: "advance",
-            advance_id: advanceData.id,
-            employee_name: advanceForm.employee_name,
-            amount: advanceForm.amount,
-            date: advanceForm.advance_date,
-            coa_account_code: debitAccountCode,
-            credit_account_id: creditAccountId,
-            bukti_url: advanceForm.bukti_url,
-          },
-        }
-      );
-
-      if (journalError) throw journalError;
-
-      const isAddition = existingAdvances && existingAdvances.length > 0;
+      // Journal entry will be created only after both approvals and disbursement
       toast({
-        title: isAddition ? "Uang Muka Berhasil Ditambahkan" : "Uang Muka Berhasil Dibuat",
-        description: isAddition 
-          ? `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} telah ditambahkan ke saldo ${advanceForm.employee_name}. Total saldo: Rp ${advanceData.remaining_balance.toLocaleString()}`
-          : `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} telah diberikan kepada ${advanceForm.employee_name}`,
+        title: "Uang Muka Berhasil Dibuat",
+        description: `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} untuk ${advanceForm.employee_name} menunggu approval`,
       });
 
       // Reset form
@@ -409,7 +433,7 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
-      // Insert settlement record
+      // Insert settlement record (without journal)
       const { data: settlementData, error: settlementError } = await supabase
         .from("employee_advance_settlements")
         .insert({
@@ -431,17 +455,15 @@ export default function EmployeeAdvanceForm() {
 
       if (settlementError) throw settlementError;
 
-      // Create journal entry
-      const { error: journalError } = await supabase.functions.invoke(
-        "supabase-functions-employee-advance-journal",
+      // Call settlement function to create journal entries
+      const { error: settlementJournalError } = await supabase.functions.invoke(
+        "supabase-functions-employee-advance-settlement",
         {
           body: {
-            type: "settlement",
             settlement_id: settlementData.id,
             advance_id: settlementForm.advance_id,
-            employee_name: selectedAdvance?.employee_name,
-            amount: settlementForm.total,
-            date: settlementForm.settlement_date,
+            settlement_amount: settlementForm.total,
+            settlement_date: settlementForm.settlement_date,
             description: settlementForm.description,
             expense_account_code: settlementForm.expense_account_code,
             coa_account_code: selectedAdvance?.coa_account_code,
@@ -450,7 +472,7 @@ export default function EmployeeAdvanceForm() {
         }
       );
 
-      if (journalError) throw journalError;
+      if (settlementJournalError) throw settlementJournalError;
 
       toast({
         title: "Penyelesaian Berhasil",
@@ -565,6 +587,9 @@ export default function EmployeeAdvanceForm() {
       settled: "default",
       returned: "default",
       cancelled: "destructive",
+      waiting_manager_verification: "secondary",
+      waiting_finance_verification: "secondary",
+      rejected: "destructive",
     };
 
     return (
@@ -576,6 +601,9 @@ export default function EmployeeAdvanceForm() {
         {status === "settled" && "Selesai"}
         {status === "returned" && "Dikembalikan"}
         {status === "cancelled" && "Dibatalkan"}
+        {status === "waiting_manager_verification" && "Menunggu Approval Manager"}
+        {status === "waiting_finance_verification" && "Menunggu Approval Finance"}
+        {status === "rejected" && "Ditolak"}
       </Badge>
     );
   };
@@ -811,7 +839,12 @@ export default function EmployeeAdvanceForm() {
                     </SelectTrigger>
                     <SelectContent>
                       {advances
-                        .filter((a) => a.remaining_balance > 0)
+                        .filter((a) => 
+                          a.remaining_balance > 0 && 
+                          a.manager_approval === 'approved' && 
+                          a.finance_approval === 'approved' &&
+                          (a.status === 'disbursed' || a.status === 'partially_settled')
+                        )
                         .map((adv) => (
                           <SelectItem key={adv.id} value={adv.id}>
                             {adv.advance_number} - {adv.employee_name} (Sisa: Rp{" "}
@@ -1098,7 +1131,12 @@ export default function EmployeeAdvanceForm() {
                     </SelectTrigger>
                     <SelectContent>
                       {advances
-                        .filter((a) => a.remaining_balance > 0)
+                        .filter((a) => 
+                          a.remaining_balance > 0 && 
+                          a.manager_approval === 'approved' && 
+                          a.finance_approval === 'approved' &&
+                          (a.status === 'disbursed' || a.status === 'partially_settled')
+                        )
                         .map((adv) => (
                           <SelectItem key={adv.id} value={adv.id}>
                             {adv.advance_number} - {adv.employee_name} (Sisa: Rp{" "}
@@ -1352,13 +1390,20 @@ export default function EmployeeAdvanceForm() {
                     <TableHead>No. Bukti</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Akun COA</TableHead>
+                    <TableHead>Approval Manager</TableHead>
+                    <TableHead>Approval Finance</TableHead>
                     <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {advances.map((adv) => (
-                    <TableRow key={adv.id}>
-                      <TableCell className="font-mono">
+                    <TableRow 
+                      key={adv.id}
+                    >
+                      <TableCell 
+                        className="font-mono cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                        onClick={() => fetchSettlements(adv.id)}
+                      >
                         {adv.advance_number}
                       </TableCell>
                       <TableCell>{adv.employee_name}</TableCell>
@@ -1368,10 +1413,12 @@ export default function EmployeeAdvanceForm() {
                       <TableCell>
                         Rp {(adv.amount ?? 0).toLocaleString()}
                       </TableCell>
-                      <TableCell className="font-bold">
+                      <TableCell>
                         Rp {(adv.remaining_balance ?? 0).toLocaleString()}
                       </TableCell>
-                      <TableCell>{adv.disbursement_method || "-"}</TableCell>
+                      <TableCell>
+                        {adv.disbursement_method || "-"}
+                      </TableCell>
                       <TableCell>
                         {adv.disbursement_date ? new Date(adv.disbursement_date).toLocaleDateString("id-ID") : "-"}
                       </TableCell>
@@ -1383,10 +1430,79 @@ export default function EmployeeAdvanceForm() {
                         {adv.coa_account_code}
                       </TableCell>
                       <TableCell>
-                        {(adv.status === "draft" || adv.status === "requested") && (
+                        {adv.manager_approval ? (
+                          <span className={`text-sm font-medium ${adv.manager_approval === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                            {adv.manager_approval === 'approved' ? 'Approved' : 'Rejected'}
+                          </span>
+                        ) : (
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproval(adv.id, 'manager', 'approved');
+                              }}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproval(adv.id, 'manager', 'rejected');
+                              }}
+                            >
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {adv.finance_approval ? (
+                          <span className={`text-sm font-medium ${adv.finance_approval === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                            {adv.finance_approval === 'approved' ? 'Approved' : 'Rejected'}
+                          </span>
+                        ) : (
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproval(adv.id, 'finance', 'approved');
+                              }}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproval(adv.id, 'finance', 'rejected');
+                              }}
+                            >
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {adv.manager_approval === 'approved' && 
+                         adv.finance_approval === 'approved' && 
+                         adv.status !== 'disbursed' && 
+                         adv.status !== 'settled' && 
+                         adv.status !== 'partially_settled' && (
                           <Button
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedAdvanceForDisburse(adv);
                               setShowDisburseDialog(true);
                             }}
@@ -1578,6 +1694,127 @@ export default function EmployeeAdvanceForm() {
                   </>
                 )}
               </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Settlements Dialog */}
+      <Dialog open={showSettlementsDialog} onOpenChange={setShowSettlementsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Data Serahkan Struk & Pengembalian</DialogTitle>
+            <DialogDescription>
+              Semua struk yang diserahkan dan uang yang dikembalikan untuk uang muka ini
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAdvanceSettlements.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Belum ada data penyelesaian
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {selectedAdvanceSettlements.map((settlement) => (
+                <div 
+                  key={settlement.id} 
+                  className={`border-l-4 ${settlement.type === 'return' ? 'border-l-green-500' : 'border-l-blue-500'} bg-gray-50 p-4 rounded`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded ${settlement.type === 'return' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {settlement.type === 'return' ? 'Pengembalian' : 'Serahkan Struk'}
+                    </span>
+                  </div>
+                  
+                  {settlement.type === 'return' ? (
+                    // Return layout
+                    <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                      <div>
+                        <span className="text-gray-600">Tanggal:</span>{" "}
+                        <span className="font-semibold">
+                          {new Date(settlement.return_date).toLocaleDateString("id-ID")}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Jumlah Dikembalikan:</span>{" "}
+                        <span className="font-bold text-green-600">Rp {(settlement.amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Catatan:</span>{" "}
+                        <span className="font-semibold">{settlement.notes || "-"}</span>
+                      </div>
+                      {settlement.bukti_url && (
+                        <div>
+                          <a
+                            href={settlement.bukti_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            Lihat Bukti →
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Settlement layout
+                    <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                      <div>
+                        <span className="text-gray-600">Tanggal:</span>{" "}
+                        <span className="font-semibold">
+                          {new Date(settlement.settlement_date).toLocaleDateString("id-ID")}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Merchant:</span>{" "}
+                        <span className="font-semibold">{settlement.merchant || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Kategori:</span>{" "}
+                        <span className="font-semibold">{settlement.category || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Akun Beban:</span>{" "}
+                        <span className="font-mono">{settlement.expense_account_code || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Jumlah:</span>{" "}
+                        <span className="font-semibold">Rp {(settlement.amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">PPN:</span>{" "}
+                        <span className="font-semibold">Rp {(settlement.ppn || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Total:</span>{" "}
+                        <span className="font-bold text-blue-600">Rp {(settlement.total || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">No. Struk:</span>{" "}
+                        <span className="font-mono">{settlement.receipt_number || "-"}</span>
+                      </div>
+                      {settlement.bukti_url && (
+                        <div>
+                          <a
+                            href={settlement.bukti_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            Lihat Bukti →
+                          </a>
+                        </div>
+                      )}
+                      {settlement.description && (
+                        <div className="col-span-3">
+                          <span className="text-gray-600">Deskripsi:</span>{" "}
+                          <span>{settlement.description}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </DialogContent>

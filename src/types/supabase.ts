@@ -3593,7 +3593,10 @@ export type Database = {
           disbursement_method: string | null
           employee_id: string | null
           employee_name: string
+          finance_approval: string | null
           id: string
+          journal_ref: string | null
+          manager_approval: string | null
           notes: string | null
           reference_number: string | null
           remaining_balance: number
@@ -3613,7 +3616,10 @@ export type Database = {
           disbursement_method?: string | null
           employee_id?: string | null
           employee_name: string
+          finance_approval?: string | null
           id?: string
+          journal_ref?: string | null
+          manager_approval?: string | null
           notes?: string | null
           reference_number?: string | null
           remaining_balance: number
@@ -3633,7 +3639,10 @@ export type Database = {
           disbursement_method?: string | null
           employee_id?: string | null
           employee_name?: string
+          finance_approval?: string | null
           id?: string
+          journal_ref?: string | null
+          manager_approval?: string | null
           notes?: string | null
           reference_number?: string | null
           remaining_balance?: number
@@ -4592,6 +4601,7 @@ export type Database = {
           debit_account: string | null
           description: string | null
           id: string
+          jenis_transaksi: string | null
           journal_entry_id: string | null
           journal_id: string | null
           journal_number: number | null
@@ -4616,6 +4626,7 @@ export type Database = {
           debit_account?: string | null
           description?: string | null
           id?: string
+          jenis_transaksi?: string | null
           journal_entry_id?: string | null
           journal_id?: string | null
           journal_number?: number | null
@@ -4640,6 +4651,7 @@ export type Database = {
           debit_account?: string | null
           description?: string | null
           id?: string
+          jenis_transaksi?: string | null
           journal_entry_id?: string | null
           journal_id?: string | null
           journal_number?: number | null
@@ -11278,9 +11290,9 @@ export type Database = {
       }
       vw_employee_advance_summary: {
         Row: {
-          advance_amount: number | null
           advance_date: string | null
           advance_number: string | null
+          amount: number | null
           coa_account_code: string | null
           created_at: string | null
           disbursement_account_id: string | null
@@ -11288,7 +11300,9 @@ export type Database = {
           disbursement_method: string | null
           employee_id: string | null
           employee_name: string | null
+          finance_approval: string | null
           id: string | null
+          manager_approval: string | null
           reference_number: string | null
           remaining_balance: number | null
           return_count: number | null

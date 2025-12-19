@@ -69,11 +69,13 @@ export default function EmployeeAdvanceDisbursement() {
 
   const loadData = async () => {
     try {
-      // Load pending advances
+      // Load pending advances (only those with both approvals approved)
       const { data: advancesData, error: advancesError } = await supabase
         .from("vw_employee_advance_summary")
         .select("*")
         .eq("status", "requested")
+        .eq("manager_approval", "approved")
+        .eq("finance_approval", "approved")
         .order("advance_date", { ascending: false });
 
       if (advancesError) throw advancesError;

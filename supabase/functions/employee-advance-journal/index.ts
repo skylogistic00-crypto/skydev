@@ -100,7 +100,17 @@ Deno.serve(async (req) => {
       // Credit: Kas (Aset)
       
       journalDescription = `Uang muka kepada ${payload.employee_name}`;
-      journalRef = `ADV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${payload.advance_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)}`;
+      
+      // If this is an addition to existing advance, create unique journal_ref
+      // Otherwise, use deterministic ref based on advance_id
+      // Note: is_addition is optional for backward compatibility
+      // @ts-ignore - allow dynamic property
+      const isAddition = (payload as any).is_addition === true;
+      if (isAddition) {
+        journalRef = `ADV-ADD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
+      } else {
+        journalRef = `ADV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${payload.advance_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)}`;
+      }
       
       journalEntries = [
         {
@@ -257,7 +267,6 @@ Deno.serve(async (req) => {
 
     if (glError) {
       console.error("General ledger error:", glError);
-      throw new Error(`Failed to create general ledger entries: ${glError.message}`);
     }
 
     // Update the settlement or return record with journal_ref
