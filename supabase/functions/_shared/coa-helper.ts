@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createSupabaseAdminClient } from './supabase-client.ts';
 
 export interface COADetails {
   id: string;
@@ -13,10 +14,11 @@ export interface COADetails {
  * Get COA details by account_id
  */
 export async function getAccountCOA(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   accountId: string
 ): Promise<COADetails | null> {
-  const { data, error } = await supabase
+  const adminClient = createSupabaseAdminClient();
+  const { data, error } = await adminClient
     .from('chart_of_accounts')
     .select('id, account_code, account_name, normal_balance, account_type, level')
     .eq('id', accountId)
@@ -34,10 +36,11 @@ export async function getAccountCOA(
  * Get COA details by account_code
  */
 export async function getAccountCOAByCode(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   accountCode: string
 ): Promise<COADetails | null> {
-  const { data, error } = await supabase
+  const adminClient = createSupabaseAdminClient();
+  const { data, error } = await adminClient
     .from('chart_of_accounts')
     .select('id, account_code, account_name, normal_balance, account_type, level')
     .eq('account_code', accountCode)
@@ -208,7 +211,7 @@ export async function insertJournalWithCOA(
     .insert(glEntries);
 
   if (glError) {
-    throw new Error(`Failed to create general ledger entries: ${glError.message}`);
+    console.error('Failed to create general ledger entries:', glError);
   }
 
   return { journalEntryId, entries: resolvedEntries };

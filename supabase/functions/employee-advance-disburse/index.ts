@@ -1,150 +1,217 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "@shared/cors.ts";
-import { createSupabaseClient } from "@shared/supabase-client.ts";
-import { getAccountCOAByCode } from "@shared/coa-helper.ts";
 
-interface DisburseRequest {
-  employee_id: string;
-  employee_name: string;
-  amount: number;
-  advance_date?: string;
-  purpose?: string;
-  notes?: string;
-  bukti_url?: string;
-  cash_account_code?: string;
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+interface DisbursementRequest {
+  advance_id: string;
+  disbursement_method: "Kas" | "Bank";
+  disbursement_account_id: string;
+  disbursement_date: string;
+  reference_number: string;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { 
-      headers: corsHeaders, 
-      status: 200 
-    });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {
-    const supabaseClient = createSupabaseClient();
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
-      throw new Error("Unauthorized");
-    }
-
-    const payload: DisburseRequest = await req.json();
-
-    // Validate required fields
-    if (!payload.employee_id || !payload.employee_name || !payload.amount) {
-      throw new Error("Missing required fields: employee_id, employee_name, amount");
-    }
-
-    if (payload.amount <= 0) {
-      throw new Error("Amount must be greater than 0");
-    }
-
-    // Get COA accounts
-    const advanceCOA = await getAccountCOAByCode(supabaseClient, "1-1500");
-    if (!advanceCOA) {
-      throw new Error("Employee advance COA account not found (1-1500)");
-    }
-
-    const cashAccountCode = payload.cash_account_code || "1-1110";
-    const cashCOA = await getAccountCOAByCode(supabaseClient, cashAccountCode);
-    if (!cashCOA) {
-      throw new Error(`Cash COA account not found (${cashAccountCode})`);
-    }
-
-    // Create employee advance record
-    const { data: advanceData, error: advanceError } = await supabaseClient
-      .from("employee_advances")
-      .insert({
-        employee_id: payload.employee_id,
-        employee_name: payload.employee_name,
-        amount: payload.amount,
-        remaining_balance: payload.amount,
-        advance_date: payload.advance_date || new Date().toISOString().split('T')[0],
-        purpose: payload.purpose || "Uang Muka Karyawan",
-        notes: payload.notes,
-        bukti_url: payload.bukti_url,
-        coa_account_code: "1-1500",
-        status: "pending",
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (advanceError) {
-      throw new Error(`Failed to create advance: ${advanceError.message}`);
-    }
-
-    // Create journal entry for the disbursement
-    const journalDescription = `Uang Muka Karyawan - ${payload.employee_name}`;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { data: journalData, error: journalError } = await supabaseClient
-      .from("journal_entries")
-      .insert({
-        date: payload.advance_date || new Date().toISOString().split('T')[0],
-        description: journalDescription,
-        debit_account: advanceCOA.id,
-        credit_account: cashCOA.id,
-        amount: payload.amount,
-        reference_type: "employee_advance_advance",
-        reference_id: advanceData.id,
-        status: "posted",
-        bukti_url: payload.bukti_url,
-        created_by: user.id,
-      })
-      .select()
+    // Check if body exists
+    const bodyText = await req.text();
+    console.log("📥 RAW BODY:", bodyText);
+    
+    if (!bodyText || bodyText.trim() === "") {
+      return new Response(
+        JSON.stringify({ error: "Request body is empty" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    
+    let parsedBody: DisbursementRequest;
+    try {
+      parsedBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("❌ JSON PARSE ERROR:", parseError);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body", detail: bodyText }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    
+    const { advance_id, disbursement_method, disbursement_account_id, disbursement_date, reference_number } = parsedBody;
+
+    // Get advance details
+    const { data: advance, error: advanceError } = await supabase
+      .from("employee_advances")
+      .select("*")
+      .eq("id", advance_id)
       .single();
+
+    if (advanceError || !advance) {
+      return new Response(
+        JSON.stringify({ error: "Advance not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    // Get COA account details for uang muka
+    let uangMukaAccount;
+    
+    if (advance.coa_account_id) {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("*")
+        .eq("id", advance.coa_account_id)
+        .single();
+      
+      if (!error && data) {
+        uangMukaAccount = data;
+      }
+    }
+    
+    // Fallback to account code if id not found
+    if (!uangMukaAccount && advance.coa_account_code) {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("*")
+        .eq("account_code", advance.coa_account_code)
+        .single();
+      
+      if (!error && data) {
+        uangMukaAccount = data;
+      }
+    }
+    
+    // Final fallback to default uang muka account
+    if (!uangMukaAccount) {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("*")
+        .eq("account_code", "1-1500")
+        .single();
+      
+      if (!error && data) {
+        uangMukaAccount = data;
+      }
+    }
+
+    if (!uangMukaAccount) {
+      return new Response(
+        JSON.stringify({ error: "Uang Muka account not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    // Get disbursement account details
+    const { data: disbursementAccount, error: disbursementError } = await supabase
+      .from("chart_of_accounts")
+      .select("*")
+      .eq("id", disbursement_account_id)
+      .single();
+
+    if (disbursementError || !disbursementAccount) {
+      return new Response(
+        JSON.stringify({ error: "Disbursement account not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    // Generate journal reference
+    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create journal entries (Debit: Uang Muka Karyawan, Credit: Kas/Bank)
+    const journalEntries = [
+      {
+        transaction_date: disbursement_date,
+        journal_ref: journalRef,
+        account_id: uangMukaAccount.id,
+        account_code: uangMukaAccount.account_code,
+        account_name: uangMukaAccount.account_name,
+        account_type: uangMukaAccount.account_type,
+        debit: advance.amount,
+        credit: 0,
+        debit_account: uangMukaAccount.account_code,
+        credit_account: disbursementAccount.account_code,
+        description: `Pencairan Uang Muka - ${advance.employee_name} (${advance.advance_number})`,
+        source_type: "employee_advance_disbursement",
+        jenis_transaksi: "Uang Muka",
+        bukti_url: advance.bukti_url || null,
+        approval_status: "approved",
+      },
+      {
+        transaction_date: disbursement_date,
+        journal_ref: journalRef,
+        account_id: disbursementAccount.id,
+        account_code: disbursementAccount.account_code,
+        account_name: disbursementAccount.account_name,
+        account_type: disbursementAccount.account_type,
+        debit: 0,
+        credit: advance.amount,
+        debit_account: uangMukaAccount.account_code,
+        credit_account: disbursementAccount.account_code,
+        description: `Pencairan Uang Muka - ${advance.employee_name} (${advance.advance_number})`,
+        source_type: "employee_advance_disbursement",
+        jenis_transaksi: "Uang Muka",
+        bukti_url: advance.bukti_url || null,
+        approval_status: "approved",
+      },
+    ];
+
+    // Insert journal entries
+    const { error: journalError } = await supabase
+      .from("journal_entries")
+      .insert(journalEntries);
 
     if (journalError) {
-      // Rollback advance if journal fails
-      await supabaseClient
-        .from("employee_advances")
-        .delete()
-        .eq("id", advanceData.id);
-      
-      throw new Error(`Failed to create journal entry: ${journalError.message}`);
+      console.error("❌ Journal entry error:", journalError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create journal entries: " + journalError.message }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
 
-    // Update advance with journal entry id
-    await supabaseClient
+    // Update advance status to disbursed
+    const { error: updateError } = await supabase
       .from("employee_advances")
-      .update({ journal_entry_id: journalData.id })
-      .eq("id", advanceData.id);
+      .update({
+        status: "disbursed",
+        disbursement_method,
+        disbursement_account_id,
+        disbursement_date,
+        reference_number,
+        journal_ref: journalRef,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", advance_id);
+
+    if (updateError) {
+      return new Response(
+        JSON.stringify({ error: updateError.message }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Employee advance disbursed successfully",
-        data: {
-          advance: advanceData,
-          journal_entry: journalData,
-        },
+        advance_id,
+        journal_ref: journalRef,
+        message: "Uang muka berhasil dicairkan dan jurnal telah dibuat",
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("Error in employee-advance-disburse:", error);
+    console.error("🔥 DISBURSE ERROR DETAIL:", error);
     return new Response(
       JSON.stringify({
-        success: false,
-        error: error.message,
+        error: "Internal server error",
+        detail: error?.message ?? error,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

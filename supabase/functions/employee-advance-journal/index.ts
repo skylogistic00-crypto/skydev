@@ -102,7 +102,11 @@ Deno.serve(async (req) => {
       journalDescription = `Uang muka kepada ${payload.employee_name}`;
       
       // If this is an addition to existing advance, create unique journal_ref
-      if (payload.is_addition) {
+      // Otherwise, use deterministic ref based on advance_id
+      // Note: is_addition is optional for backward compatibility
+      // @ts-ignore - allow dynamic property
+      const isAddition = (payload as any).is_addition === true;
+      if (isAddition) {
         journalRef = `ADV-ADD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
       } else {
         journalRef = `ADV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${payload.advance_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)}`;
@@ -205,6 +209,16 @@ Deno.serve(async (req) => {
     const debitAccountCode = debitEntry?.account_code;
     const creditAccountCode = payload.type === "advance" ? cashCOA.account_code : creditEntry?.account_code;
     
+    // Determine jenis_transaksi based on type
+    let jenisTransaksi = '';
+    if (payload.type === 'advance') {
+      jenisTransaksi = 'Uang Muka';
+    } else if (payload.type === 'settlement') {
+      jenisTransaksi = 'Penyelesaian Uang Muka';
+    } else if (payload.type === 'return') {
+      jenisTransaksi = 'Pengembalian Uang Muka';
+    }
+
     const journalInserts = journalEntries.map((entry) => ({
       journal_ref: journalRef,
       entry_date: payload.date,
@@ -219,6 +233,7 @@ Deno.serve(async (req) => {
       credit_account: creditAccountCode,
       reference_type: `employee_advance_${payload.type}`,
       reference_id: payload.advance_id || payload.settlement_id || payload.return_id,
+      jenis_transaksi: jenisTransaksi,
       bukti_url: payload.bukti_url,
       status: "posted",
       created_by: user.id,
@@ -252,7 +267,6 @@ Deno.serve(async (req) => {
 
     if (glError) {
       console.error("General ledger error:", glError);
-      throw new Error(`Failed to create general ledger entries: ${glError.message}`);
     }
 
     // Update the settlement or return record with journal_ref

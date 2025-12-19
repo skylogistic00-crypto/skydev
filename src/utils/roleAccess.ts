@@ -252,6 +252,7 @@ export function canClick(role: string | null) {
 // Roles yang bisa approve purchase request
 export const CAN_APPROVE_PR_ROLES = [
   "super_admin",
+  "admin",
   "accounting_manager",
   "warehouse_manager",
 ];

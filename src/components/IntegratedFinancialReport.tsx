@@ -314,9 +314,6 @@ export default function IntegratedFinancialReport() {
           // Determine jenis_transaksi based on reference_type
           let jenisTransaksi = '-';
           
-          // Debug log
-          console.log('Entry reference_type:', entry.reference_type);
-          
           // Check for employee advance types (check exact match first)
           if (entry.reference_type === 'employee_advance_advance') {
             jenisTransaksi = 'Uang Muka';
@@ -340,7 +337,10 @@ export default function IntegratedFinancialReport() {
             jenisTransaksi = 'Jurnal Umum';
           }
           
-          console.log('Mapped jenis_transaksi:', jenisTransaksi);
+          // Use jenis_transaksi from database if available
+          if (entry.jenis_transaksi) {
+            jenisTransaksi = entry.jenis_transaksi;
+          }
           
           return {
             ...entry,

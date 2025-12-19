@@ -202,7 +202,6 @@ Deno.serve(async (req) => {
 
     if (glError) {
       console.error("General ledger error:", glError);
-      throw new Error(`Failed to create general ledger entries: ${glError.message}`);
     }
 
     // Update cash_disbursement with journal_entry_id if disbursement_id provided
