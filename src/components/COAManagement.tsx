@@ -64,6 +64,7 @@ export default function COAManagement() {
   const { toast } = useToast();
   const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
   const [coaMappings, setCoaMappings] = useState<COAMapping[]>([]);
+  const [blueprintTypes, setBlueprintTypes] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCoaDialogOpen, setIsCoaDialogOpen] = useState(false);
   const [isMappingDialogOpen, setIsMappingDialogOpen] = useState(false);
@@ -123,6 +124,7 @@ export default function COAManagement() {
   useEffect(() => {
     fetchCoaAccounts();
     fetchCoaMappings();
+    fetchBlueprintTypes();
 
     // Realtime subscriptions disabled for performance
     // const coaChannel = supabase
@@ -198,6 +200,33 @@ export default function COAManagement() {
         description: "Gagal memuat data mapping",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchBlueprintTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("chart_of_accounts")
+        .select("description")
+        .not("description", "is", null)
+        .neq("description", "");
+
+      if (error) throw error;
+      
+      // Extract unique blueprint types from description
+      const uniqueTypes = Array.from(
+        new Set(
+          (data || [])
+            .map((item) => item.description)
+            .filter((desc) => desc && desc.length > 0)
+        )
+      ).sort();
+      
+      setBlueprintTypes(uniqueTypes as string[]);
+    } catch (error) {
+      console.error("Error fetching blueprint types:", error);
+      // Use fallback types if fetch fails
+      setBlueprintTypes(["VEHICLE", "SPKLU", "WAREHOUSE", "DRIVER", "BARANG", "JASA"]);
     }
   };
 
@@ -1128,12 +1157,22 @@ export default function COAManagement() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="VEHICLE">Kendaraan</SelectItem>
-                          <SelectItem value="SPKLU">SPKLU</SelectItem>
-                          <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
-                          <SelectItem value="DRIVER">Driver</SelectItem>
-                          <SelectItem value="BARANG">Barang</SelectItem>
-                          <SelectItem value="JASA">Jasa</SelectItem>
+                          {blueprintTypes.length > 0 ? (
+                            blueprintTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <>
+                              <SelectItem value="VEHICLE">Kendaraan</SelectItem>
+                              <SelectItem value="SPKLU">SPKLU</SelectItem>
+                              <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+                              <SelectItem value="DRIVER">Driver</SelectItem>
+                              <SelectItem value="BARANG">Barang</SelectItem>
+                              <SelectItem value="JASA">Jasa</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

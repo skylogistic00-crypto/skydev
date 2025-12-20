@@ -990,16 +990,20 @@ export default function EmployeeAdvanceForm() {
                 {/* OCR Scanner */}
                 <OCRScanner
                   onResult={(result) => {
+                    const ocrNominal = result.nominal || 0;
                     setSettlementForm({
                       ...settlementForm,
                       merchant: result.toko || settlementForm.merchant,
                       receipt_number: result.nomorNota || settlementForm.receipt_number,
-                      amount: result.nominal || settlementForm.amount,
+                      amount: ocrNominal,
+                      total: ocrNominal,
+                      ppn: 0,
                       description: result.deskripsi || settlementForm.description,
+                      bukti_url: result.imageUrl || settlementForm.bukti_url,
                     });
                     toast({
                       title: "✅ Data terisi otomatis",
-                      description: "Silakan periksa dan sesuaikan jika perlu",
+                      description: "Data OCR dan foto bukti telah tersimpan",
                     });
                   }}
                   showPreview={true}
@@ -1185,7 +1189,14 @@ export default function EmployeeAdvanceForm() {
                     }}
                   />
                   {settlementForm.bukti_url && (
-                    <p className="text-sm text-green-600">✓ File berhasil diupload</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-green-600 font-medium">✓ Bukti foto transaksi tersimpan</p>
+                      <img 
+                        src={settlementForm.bukti_url} 
+                        alt="Bukti transaksi" 
+                        className="max-w-xs rounded border"
+                      />
+                    </div>
                   )}
                 </div>
 
