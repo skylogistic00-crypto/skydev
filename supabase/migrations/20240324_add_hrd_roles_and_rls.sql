@@ -1,23 +1,10 @@
 -- Add HRD roles to roles table
-DO $$
-DECLARE
-  next_role_id INTEGER;
-BEGIN
-  SELECT COALESCE(MAX(role_id), 0) + 1 INTO next_role_id FROM public.roles;
-  
-  INSERT INTO public.roles (role_id, role_name, description, permissions, entity)
-  SELECT next_role_id, 'hrd_admin', 'HRD Admin - Full access ke semua fitur HRD', '["hrd_all", "employee_all", "payroll_all", "attendance_all", "leave_all", "contract_all", "performance_all"]'::jsonb, 'karyawan'
-  WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE role_name = 'hrd_admin')
-  UNION ALL
-  SELECT next_role_id + 1, 'hrd_manager', 'HRD Manager - Approve cuti, lihat data tim', '["hrd_view", "employee_view", "leave_approve", "attendance_view", "payroll_view", "contract_view", "performance_view"]'::jsonb, 'karyawan'
-  WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE role_name = 'hrd_manager')
-  UNION ALL
-  SELECT next_role_id + 2, 'hrd_supervisor', 'HRD Supervisor - Lihat departemen tertentu', '["hrd_view_department", "employee_view_department", "attendance_view_department", "leave_view_department"]'::jsonb, 'karyawan'
-  WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE role_name = 'hrd_supervisor')
-  UNION ALL
-  SELECT next_role_id + 3, 'hrd_staff', 'HRD Staff - Akses data pribadi', '["hrd_view_self", "attendance_self", "leave_self", "payroll_self", "performance_self"]'::jsonb, 'karyawan'
-  WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE role_name = 'hrd_staff');
-END $$;
+INSERT INTO public.roles (name, description, permissions) VALUES
+  ('hrd_admin', 'HRD Admin - Full access ke semua fitur HRD', '["hrd_all", "employee_all", "payroll_all", "attendance_all", "leave_all", "contract_all", "performance_all"]'::jsonb),
+  ('hrd_manager', 'HRD Manager - Approve cuti, lihat data tim', '["hrd_view", "employee_view", "leave_approve", "attendance_view", "payroll_view", "contract_view", "performance_view"]'::jsonb),
+  ('hrd_supervisor', 'HRD Supervisor - Lihat departemen tertentu', '["hrd_view_department", "employee_view_department", "attendance_view_department", "leave_view_department"]'::jsonb),
+  ('hrd_staff', 'HRD Staff - Akses data pribadi', '["hrd_view_self", "attendance_self", "leave_self", "payroll_self", "performance_self"]'::jsonb)
+ON CONFLICT (name) DO NOTHING;
 
 -- Create function to get user role
 CREATE OR REPLACE FUNCTION get_user_role()
@@ -25,9 +12,8 @@ RETURNS TEXT AS $$
 DECLARE
   user_role TEXT;
 BEGIN
-  SELECT r.role_name INTO user_role
+  SELECT u.role INTO user_role
   FROM users u
-  JOIN roles r ON u.role_id = r.role_id
   WHERE u.id = auth.uid();
   
   RETURN user_role;

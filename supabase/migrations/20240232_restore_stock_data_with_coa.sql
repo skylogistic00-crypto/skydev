@@ -1,3 +1,7 @@
+-- DISABLED: This migration only restores seed data and should not run on schema reset
+DO $$ BEGIN RAISE NOTICE 'Migration 20240232 disabled - data seeding only'; END $$;
+
+/*
 -- Restore stock data dengan COA mapping yang sesuai
 
 -- Pastikan COA untuk persediaan barang sudah ada
@@ -98,3 +102,4 @@ ON CONFLICT (kategori_layanan, jenis_layanan) DO UPDATE SET
   revenue_account_code = EXCLUDED.revenue_account_code,
   cogs_account_code = EXCLUDED.cogs_account_code,
   expense_account_code = EXCLUDED.expense_account_code;
+*/

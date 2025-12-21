@@ -1,3 +1,7 @@
+-- DISABLED: This migration only restores seed data and should not run on schema reset
+DO $$ BEGIN RAISE NOTICE 'Migration 20240235 disabled - data seeding only'; END $$;
+
+/*
 -- Insert stock data dengan kolom minimal yang pasti ada
 
 -- Pastikan COA sudah ada
@@ -26,3 +30,4 @@ INSERT INTO stock (
   ('Meja Kerja', 'MJK-001', 'CV Furniture', 1500000, 1200000, 1500000),
   ('Kursi Kantor', 'KRS-001', 'CV Furniture', 1200000, 900000, 1200000)
 ON CONFLICT (barcode) DO NOTHING;
+*/

@@ -3,9 +3,9 @@ SELECT
   id,
   tanggal AS entry_date,
   keterangan AS description,
-  jenis_transaksi,
-  CASE WHEN jenis_transaksi = 'masuk' THEN jumlah ELSE 0 END AS cash_in,
-  CASE WHEN jenis_transaksi = 'keluar' THEN jumlah ELSE 0 END AS cash_out,
-  CASE WHEN jenis_transaksi = 'masuk' THEN jumlah ELSE -jumlah END AS cash_movement
+  payment_type,
+  CASE WHEN payment_type = 'Penerimaan Kas' THEN nominal ELSE 0 END AS cash_in,
+  CASE WHEN payment_type = 'Pengeluaran Kas' THEN nominal ELSE 0 END AS cash_out,
+  CASE WHEN payment_type = 'Penerimaan Kas' THEN nominal ELSE -nominal END AS cash_movement
 FROM kas_transaksi
 ORDER BY tanggal DESC, created_at DESC;
