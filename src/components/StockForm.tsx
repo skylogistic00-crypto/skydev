@@ -107,6 +107,7 @@ interface StockItem {
   hs_description: string;
   cost_per_unit?: number;
   qty_available?: number;
+  quantity?: number;
   created_at?: string;
 }
 
@@ -1435,7 +1436,6 @@ export default function StockForm() {
         ...formData,
         warehouses: warehouse.name, // Store warehouse name in warehouses column
         warehouse_name: warehouse.name, // Store name for display
-        warehouse_id: warehouseId, // Store warehouse_id for foreign key
       });
       setShowWarehouseModal(false);
       setShowForm(true);
@@ -1570,6 +1570,11 @@ export default function StockForm() {
     setItemType("barang");
     setFormData({
       item_name: "",
+      brand: "",
+      isManualItem: false,
+      manualItemName: "",
+      isManualBrand: false,
+      manualBrand: "",
       service_category: "",
       service_type: "",
       description: "",
@@ -1607,6 +1612,8 @@ export default function StockForm() {
       hs_category: "",
       hs_sub_category: "",
       hs_description: "",
+      batch_number: "",
+      expired_date: "",
     });
     setSupplierInfo({
       phone_number: "",

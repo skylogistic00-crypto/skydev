@@ -36,6 +36,7 @@ interface AuthContextType {
     upload_ijasah?: string,
   ) => Promise<void>;
   signOut: () => Promise<void>;
+  exitRecoveryMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -261,9 +262,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const exitRecoveryMode = () => {
+    // Clear any recovery session state if needed
+    console.log("Exiting recovery mode");
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, userRole, userProfile, loading, signIn, signUp, signOut }}
+      value={{ user, userRole, userProfile, loading, signIn, signUp, signOut, exitRecoveryMode }}
     >
       {initialized ? children : (
         <div className="min-h-screen flex items-center justify-center text-gray-600">
@@ -287,6 +293,7 @@ export function useAuth() {
       signIn: async () => { throw new Error("AuthProvider not initialized"); },
       signUp: async () => { throw new Error("AuthProvider not initialized"); },
       signOut: async () => { throw new Error("AuthProvider not initialized"); },
+      exitRecoveryMode: () => { console.log("AuthProvider not initialized"); },
     } as AuthContextType;
   }
   return context;

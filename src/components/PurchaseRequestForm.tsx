@@ -467,6 +467,7 @@ export default function PurchaseRequestForm({
     // Reset current item
     setCurrentItem({
       item_name: "",
+      brand: "",
       quantity: 1,
       unit: "",
       unit_price: 0,

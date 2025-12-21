@@ -195,7 +195,7 @@ export function AuthFormContent({
       .order("role_name", { ascending: true });
 
     if (error) {
-      console.error("Error loading roles:", err);
+      console.error("Error loading roles:", error);
     } else {
       setRoles(data || []);
     }
@@ -281,8 +281,8 @@ export function AuthFormContent({
         );
 
       if (ocrError) {
-        console.error("OCR Error:", ocrErr);
-        throw ocrErr;
+        console.error("OCR Error:", ocrError);
+        throw ocrError;
       }
 
       if (!ocrData || !ocrData.success) {
@@ -647,7 +647,7 @@ export function AuthFormContent({
 
       // Single state update with all fields using SMART MERGE
       // CRITICAL: Use smartMerge to prevent overwriting existing data
-      setSignUpData((prev) => smartMerge(prev, updatedSignUpData));
+      setSignUpData((prev) => smartMerge(prev, updatedSignUpData) as typeof prev);
 
       // ========================================
       // UPDATE METADATA FOR SMART MERGE PROTECTION

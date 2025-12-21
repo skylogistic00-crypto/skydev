@@ -14,13 +14,15 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient<Database>(supabaseUrl, supabaseAnonKey)
   : (null as any);
 
-export type UserRole = 'admin' | 'editor' | 'viewer';
+export type UserRole = 'admin' | 'editor' | 'viewer' | 'super_admin' | 'Super Admin' | 'accounting_manager' | 'Accounting Manager' | string;
 
 export interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
   role: UserRole;
+  role_name?: string;
+  status?: string;
   created_at: string;
   updated_at: string;
 }

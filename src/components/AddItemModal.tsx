@@ -45,7 +45,7 @@ export default function AddItemModal({
       if (!error && data) {
         const uniqueJenis = Array.from(
           new Set(data.map((item) => item.jenis_barang).filter(Boolean)),
-        );
+        ) as string[];
         setJenisBarangList(uniqueJenis);
       }
     };

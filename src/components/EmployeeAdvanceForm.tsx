@@ -74,7 +74,7 @@ interface Advance {
   finance_approval?: string;
 }
 
-export default function EmployeeAdvanceForm() {
+export default function EmployeeAdvanceForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -103,6 +103,9 @@ export default function EmployeeAdvanceForm() {
     advance_date: new Date().toISOString().split("T")[0],
     notes: "",
     bukti_url: "",
+    payment_method: "Kas",
+    bank_account_id: "",
+    kas_account_id: "",
   });
 
   const [settlementForm, setSettlementForm] = useState({

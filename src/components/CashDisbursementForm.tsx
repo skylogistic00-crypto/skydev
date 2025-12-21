@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
-export default function CashDisbursementForm({ onSuccess }) {
+export default function CashDisbursementForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const { toast } = useToast();
 
   const [transactionDate, setTransactionDate] = useState(new Date());

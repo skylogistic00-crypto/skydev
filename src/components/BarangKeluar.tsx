@@ -75,6 +75,8 @@ interface BarangKeluarForm {
   payment: string;
   payment_status: string;
   notes: string;
+  batch_number?: string;
+  expired_date?: string;
 }
 
 export default function BarangKeluar() {
@@ -160,7 +162,7 @@ export default function BarangKeluar() {
       if (error) throw error;
       setItems(data || []);
     } catch (error) {
-      console.error("Error fetching items:", err);
+      console.error("Error fetching items:", error);
     }
   };
 
@@ -175,7 +177,7 @@ export default function BarangKeluar() {
       if (error) throw error;
       setBarangLini2Items(data || []);
     } catch (error) {
-      console.error("Error fetching barang lini 2:", err);
+      console.error("Error fetching barang lini 2:", error);
     }
   };
 
@@ -203,7 +205,7 @@ export default function BarangKeluar() {
           .single();
 
         if (error) {
-          console.error("Error fetching stock data:", err);
+          console.error("Error fetching stock data:", error);
         }
 
         setFormData({
@@ -231,7 +233,7 @@ export default function BarangKeluar() {
           lots: stockData?.lots || barang.lots || "",
         });
       } catch (error) {
-        console.error("Error in handleBarangSelect:", err);
+        console.error("Error in handleBarangSelect:", error);
         toast({
           title: "Error",
           description: "Gagal mengambil data dari stock",

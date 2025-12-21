@@ -174,7 +174,7 @@ export default function AirWaybill() {
       if (error) throw error;
       setItems(data || []);
     } catch (error) {
-      console.error("Error fetching airwaybills:", err);
+      console.error("Error fetching airwaybills:", error);
     }
   };
 

@@ -28,7 +28,8 @@ import Navigation from "./Navigation";
 import PurchaseRequestForm from "./PurchaseRequestForm";
 import SupplierForm from "./SupplierForm";
 import PermohonanDanaForm from "./PermohonanDanaForm";
-
+import GeneralLedgerView from "./GeneralLedgerView";
+import TrialBalanceView from "./TrialBalanceView";
 import { Button } from "./ui/button";
 import { canClick,canEdit } from "@/utils/roleAccess";
 import {
@@ -46,10 +47,16 @@ type ViewType =
   | "suppliers"
   | "users"
   | "inventory"
+  | "general-ledger"
+  | "trial-balance"
+  | "financial-report"
   | "create-request"
   | "create-supplier"
   | "permohonan-dana"
-  | "create-permohonan";
+  | "create-permohonan"
+  | "general-ledger"
+  | "trial-balance"
+  | "financial-report";
 
 export default function Dashboard() {
   const { userProfile } = useAuth();
@@ -373,8 +380,6 @@ export default function Dashboard() {
                       </div>
                       
                       <div className="mt-4 pt-4 border-t border-slate-200">
-                      
-                      <div className="pt-4 border-t border-slate-200">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

@@ -109,6 +109,7 @@ export default function PayrollSystem() {
     bpjs_kesehatan_deduction: "0",
     bpjs_ketenagakerjaan_deduction: "0",
     tax_pph21: "0",
+    notes: "",
   });
 
   useEffect(() => {

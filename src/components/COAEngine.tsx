@@ -30,6 +30,10 @@ interface COAAnalysisResult {
   status: "pending" | "approved" | "needs_review";
   asset_category?: string;
   vehicle_metadata?: VehicleMetadata;
+  description?: string;
+  flow_type?: string;
+  trans_type?: string;
+  usage_role?: string;
 }
 
 export default function COAEngine() {
@@ -44,15 +48,12 @@ export default function COAEngine() {
   const [editedAccountCode, setEditedAccountCode] = useState("");
   const [codeValidationError, setCodeValidationError] = useState<string | null>(null);
 
+  const roleValue = (userProfile as any)?.role_name || userProfile?.role;
   const isAdmin = 
-    (userProfile as any)?.role_name === "super_admin" || 
-    (userProfile as any)?.role_name === "Super Admin" ||
-    (userProfile as any)?.role_name === "accounting_manager" ||
-    (userProfile as any)?.role_name === "Accounting Manager" ||
-    userProfile?.role === "super_admin" || 
-    userProfile?.role === "Super Admin" ||
-    userProfile?.role === "accounting_manager" ||
-    userProfile?.role === "Accounting Manager";
+    roleValue === "super_admin" || 
+    roleValue === "Super Admin" ||
+    roleValue === "accounting_manager" ||
+    roleValue === "Accounting Manager";
 
   // Debug log
   console.log("COAEngine - userProfile:", userProfile);

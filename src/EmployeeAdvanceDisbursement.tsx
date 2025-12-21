@@ -39,6 +39,9 @@ interface Advance {
   remaining_balance: number;
   status: string;
   coa_account_code: string;
+  disbursement_method?: string;
+  disbursement_date?: string;
+  reference_number?: string;
 }
 
 interface COAAccount {

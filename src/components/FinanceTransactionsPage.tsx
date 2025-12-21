@@ -468,9 +468,9 @@ export default function FinanceTransactionsPage({
       const parsed = parseOCR(fullText, "RECEIPT");
 
       // Map to form fields
-      setFormData((prev) => ({
+      setFormData((prev: FormData) => ({
         ...prev,
-        merchant: parsed.nama || prev.merchant,
+        merchant: (parsed.nama as string) || prev.merchant,
         description: fullText.substring(0, 200),
         date_trans: parsed.alamat
           ? new Date().toISOString().split("T")[0]

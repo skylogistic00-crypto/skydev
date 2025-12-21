@@ -408,6 +408,7 @@ export default function EmployeeManagementAdvanced({
   const resetForm = () => {
     setFormData({
       full_name: "",
+      ethnicity: "",
       email: "",
       phone: "",
       birth_date: "",
@@ -420,6 +421,7 @@ export default function EmployeeManagementAdvanced({
       province: "",
       postal_code: "",
       ktp_number: "",
+      ktp_document_url: "",
       npwp_number: "",
       bpjs_kesehatan: "",
       bpjs_ketenagakerjaan: "",
@@ -441,7 +443,7 @@ export default function EmployeeManagementAdvanced({
       notes: "",
     });
     setFiles({
-      selfie: null,
+      photo: null,
       ktp: null,
       npwp: null,
       cv: null,
@@ -1290,7 +1292,7 @@ export default function EmployeeManagementAdvanced({
                 {filteredEmployees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell className="font-medium">
-                      {employee.employee_code}
+                      {employee.employee_number}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

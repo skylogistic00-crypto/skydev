@@ -27,7 +27,8 @@ export default function Depreciation() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const isAdmin = userProfile?.role === "super_admin" || userProfile?.role === "accounting_manager";
+  const roleValue = (userProfile as any)?.role_name || userProfile?.role;
+  const isAdmin = roleValue === "super_admin" || roleValue === "accounting_manager";
 
   const handlePreview = async () => {
     if (!period) {

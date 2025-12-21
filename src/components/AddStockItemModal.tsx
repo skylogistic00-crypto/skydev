@@ -63,7 +63,7 @@ export default function AddStockItemModal({
     if (data) {
       const uniqueJenis = Array.from(
         new Set(data.map((item) => item.jenis_barang).filter(Boolean)),
-      );
+      ) as string[];
       setJenisBarangList(uniqueJenis);
     }
   };

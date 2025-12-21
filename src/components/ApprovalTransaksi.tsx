@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface PendingTransaction {
   id: string;
-  type: "purchase" | "expense" | "income" | "cash_disbursement" | "bank_pendapatan" | "bank_pengeluaran";
+  type: "purchase" | "expense" | "income" | "cash_disbursement" | "bank_pendapatan" | "bank_pengeluaran" | "Penjualan Barang" | "Penjualan Jasa" | "Pembelian Jasa";
   transaction_date?: string;
   tanggal?: string;
   item_name?: string;
@@ -59,6 +59,7 @@ interface PendingTransaction {
   account_type?: string;
   credit_account_code?: string;
   credit_account_name?: string;
+  credit_account_type?: string;
   selected_bank?: string;
   sumber_penerimaan?: string;
   sumber_pengeluaran?: string;
@@ -70,6 +71,7 @@ interface PendingTransaction {
   rejection_reason?: string;
   cash_account_id?: string;
   coa_cash_id?: string;
+  document_number?: string;
 }
 
 interface ApprovalTransaksiProps {
@@ -240,11 +242,13 @@ export default function ApprovalTransaksi({
       } else if (transaction.type === "bank_pengeluaran") {
         // 🔒 Approve Bank Pengeluaran from transaction_cart
         await approveBankPengeluaranTransaction(transaction, user.id);
-      } else if (
-        transaction.type === "Penjualan Barang" ||
-        transaction.type === "Penjualan Jasa" ||
-        transaction.type === "Pembelian Jasa"
-      ) {
+      } else if (transaction.type === "Penjualan Barang") {
+        // Approve transaction from approval_transaksi table
+        await approveApprovalTransaction(transaction, user.id);
+      } else if (transaction.type === "Penjualan Jasa") {
+        // Approve transaction from approval_transaksi table
+        await approveApprovalTransaction(transaction, user.id);
+      } else if (transaction.type === "Pembelian Jasa") {
         // Approve transaction from approval_transaksi table
         await approveApprovalTransaction(transaction, user.id);
       } else {
@@ -770,17 +774,18 @@ export default function ApprovalTransaksi({
         throw new Error("User not authenticated");
       }
 
+      const transactionType = selectedTransaction.type as string;
       const table =
-        selectedTransaction.type === "purchase"
+        transactionType === "purchase"
           ? "purchase_transactions"
-          : selectedTransaction.type === "cash_disbursement"
+          : transactionType === "cash_disbursement"
             ? "cash_disbursement"
-            : selectedTransaction.type === "bank_pendapatan" ||
-                selectedTransaction.type === "bank_pengeluaran"
+            : transactionType === "bank_pendapatan" ||
+                transactionType === "bank_pengeluaran"
               ? "transaction_cart"
-              : selectedTransaction.type === "Penjualan Barang" ||
-                  selectedTransaction.type === "Penjualan Jasa" ||
-                  selectedTransaction.type === "Pembelian Jasa"
+              : transactionType === "Penjualan Barang" ||
+                  transactionType === "Penjualan Jasa" ||
+                  transactionType === "Pembelian Jasa"
                 ? "approval_transaksi"
                 : "kas_transaksi";
 
@@ -922,37 +927,37 @@ export default function ApprovalTransaksi({
                                       : "secondary"
                               }
                             >
-                              {transaction.type === "purchase"
+                              {(transaction.type as string) === "purchase"
                                 ? "Pembelian"
-                                : transaction.type === "cash_disbursement"
+                                : (transaction.type as string) === "cash_disbursement"
                                   ? "Pengeluaran Kas"
-                                  : transaction.type === "bank_pendapatan"
+                                  : (transaction.type as string) === "bank_pendapatan"
                                     ? "🏦 Pendapatan Bank"
-                                    : transaction.type === "bank_pengeluaran"
+                                    : (transaction.type as string) === "bank_pengeluaran"
                                       ? "🏦 Pengeluaran Bank"
-                                      : transaction.type === "Penjualan Barang"
+                                      : (transaction.type as string) === "Penjualan Barang"
                                         ? "Penjualan Barang"
-                                        : transaction.type === "Penjualan Jasa"
+                                        : (transaction.type as string) === "Penjualan Jasa"
                                           ? "Penjualan Jasa"
-                                          : transaction.type === "Pembelian Jasa"
+                                          : (transaction.type as string) === "Pembelian Jasa"
                                             ? "Pembelian Jasa"
                                             : "Pengeluaran"}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {transaction.type === "purchase"
+                              {(transaction.type as string) === "purchase"
                                 ? "PURCHASE_TRANSACTIONS"
-                                : transaction.type === "cash_disbursement"
+                                : (transaction.type as string) === "cash_disbursement"
                                   ? "CASH_DISBURSEMENT"
-                                  : transaction.type === "income"
+                                  : (transaction.type as string) === "income"
                                     ? "CASH_AND_BANK_RECEIPTS"
-                                    : transaction.type === "bank_pendapatan" ||
-                                        transaction.type === "bank_pengeluaran"
+                                    : (transaction.type as string) === "bank_pendapatan" ||
+                                        (transaction.type as string) === "bank_pengeluaran"
                                       ? "TRANSACTION_CART"
-                                      : transaction.type === "Penjualan Barang" ||
-                                          transaction.type === "Penjualan Jasa" ||
-                                          transaction.type === "Pembelian Jasa"
+                                      : (transaction.type as string) === "Penjualan Barang" ||
+                                          (transaction.type as string) === "Penjualan Jasa" ||
+                                          (transaction.type as string) === "Pembelian Jasa"
                                         ? "APPROVAL_TRANSAKSI"
                                         : "KAS_TRANSAKSI"}
                             </Badge>
@@ -970,18 +975,18 @@ export default function ApprovalTransaksi({
                                 "-"}
                           </TableCell>
                           <TableCell>
-                            {transaction.type === "purchase"
+                            {(transaction.type as string) === "purchase"
                               ? transaction.item_name
-                              : transaction.type === "cash_disbursement"
+                              : (transaction.type as string) === "cash_disbursement"
                                 ? transaction.description
-                                : transaction.type === "bank_pendapatan" ||
-                                    transaction.type === "bank_pengeluaran"
+                                : (transaction.type as string) === "bank_pendapatan" ||
+                                    (transaction.type as string) === "bank_pengeluaran"
                                   ? transaction.description ||
                                     transaction.kategori ||
                                     transaction.jenis_transaksi
-                                  : transaction.type === "Penjualan Barang" ||
-                                      transaction.type === "Penjualan Jasa" ||
-                                      transaction.type === "Pembelian Jasa"
+                                  : (transaction.type as string) === "Penjualan Barang" ||
+                                      (transaction.type as string) === "Penjualan Jasa" ||
+                                      (transaction.type as string) === "Pembelian Jasa"
                                     ? transaction.item_name ||
                                       transaction.description
                                     : transaction.keterangan}
@@ -1080,21 +1085,21 @@ export default function ApprovalTransaksi({
                     Jenis Transaksi
                   </p>
                   <p className="text-base font-semibold">
-                    {selectedTransaction.type === "purchase"
+                    {(selectedTransaction.type as string) === "purchase"
                       ? "Pembelian"
-                      : selectedTransaction.type === "cash_disbursement"
+                      : (selectedTransaction.type as string) === "cash_disbursement"
                         ? "Pengeluaran Kas"
-                        : selectedTransaction.type === "income"
+                        : (selectedTransaction.type as string) === "income"
                           ? "Penerimaan Kas"
-                          : selectedTransaction.type === "bank_pendapatan"
+                          : (selectedTransaction.type as string) === "bank_pendapatan"
                             ? "🏦 Pendapatan Bank"
-                            : selectedTransaction.type === "bank_pengeluaran"
+                            : (selectedTransaction.type as string) === "bank_pengeluaran"
                               ? "🏦 Pengeluaran Bank"
-                              : selectedTransaction.type === "Penjualan Barang"
+                              : (selectedTransaction.type as string) === "Penjualan Barang"
                                 ? "Penjualan Barang"
-                                : selectedTransaction.type === "Penjualan Jasa"
+                                : (selectedTransaction.type as string) === "Penjualan Jasa"
                                   ? "Penjualan Jasa"
-                                  : selectedTransaction.type === "Pembelian Jasa"
+                                  : (selectedTransaction.type as string) === "Pembelian Jasa"
                                     ? "Pembelian Jasa"
                                     : "Pengeluaran"}
                   </p>
@@ -1120,12 +1125,12 @@ export default function ApprovalTransaksi({
                 <div>
                   <p className="text-sm font-medium text-slate-500">Source</p>
                   <p className="text-base">
-                    {selectedTransaction.type === "purchase"
+                    {(selectedTransaction.type as string) === "purchase"
                       ? "PURCHASE_TRANSACTIONS"
-                      : selectedTransaction.type === "cash_disbursement"
+                      : (selectedTransaction.type as string) === "cash_disbursement"
                         ? "CASH_DISBURSEMENT"
-                        : selectedTransaction.type === "bank_pendapatan" ||
-                            selectedTransaction.type === "bank_pengeluaran"
+                        : (selectedTransaction.type as string) === "bank_pendapatan" ||
+                            (selectedTransaction.type as string) === "bank_pengeluaran"
                           ? "TRANSACTION_CART"
                           : "CASH_AND_BANK_RECEIPTS"}
                   </p>

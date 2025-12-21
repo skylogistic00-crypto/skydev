@@ -98,12 +98,12 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
 
   // 4. role tidak termasuk allowedRoles → tahan user
   if (
-    allowedRoles &&
-    userProfile?.roles?.role_name &&
-    !allowedRoles.includes(userProfile.roles.role_name)
-  ) {
-    return null;
-  }
+  allowedRoles &&
+  userProfile?.role &&
+  !allowedRoles.includes(userProfile.role)
+) {
+  return null;
+}
 
   // 5. semua aman → tampilkan halaman
   return <>{children}</>;
@@ -508,7 +508,7 @@ function AppRoutesContent() {
             <div className="min-h-screen bg-slate-50">
               <Header />
               <Navigation />
-              <EmployeeAdvanceForm />
+              <EmployeeAdvanceForm onSuccess={() => {}} />
             </div>
           </ProtectedRoute>
         }

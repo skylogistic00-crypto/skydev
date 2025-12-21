@@ -28,6 +28,7 @@ interface Item {
   unit?: string;
   brand?: string;
   model?: string;
+  qty_available?: number;
 }
 
 interface Department {

@@ -136,7 +136,7 @@ export default function BarangLini() {
         ...new Set(data?.map((item) => item.item_arrival_date).filter(Boolean)),
       ];
       console.log("📅 Available dates:", dates);
-      setAvailableDates(dates);
+      setAvailableDates(dates as string[]);
     } catch (error) {
       console.error("❌ Error fetching stock items:", error);
       toast({

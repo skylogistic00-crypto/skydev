@@ -7,7 +7,8 @@ export type DocumentType =
   | "NOTA"
   | "KWITANSI"
   | "SURAT_JALAN"
-  | "CASH_DISBURSEMENT";
+  | "CASH_DISBURSEMENT"
+  | "RECEIPT";
 
 export interface ParsedOCRData {
   [key: string]: string | number | null;

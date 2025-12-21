@@ -374,7 +374,7 @@ export default function StockAdjustmentForm() {
       setSelectedStock(stock);
 
       // Get warehouse name from the joined data
-      const warehouseName = stock.warehouses?.name || stock.warehouses || "";
+      const warehouseName = typeof stock.warehouses === 'object' ? (stock.warehouses as any)?.name || "" : stock.warehouses || "";
 
       setFormData((prev) => ({
         ...prev,
@@ -592,6 +592,8 @@ export default function StockAdjustmentForm() {
       created_by: "",
       supplier_id: "",
       stock_id: "",
+      batch_number: "",
+      expired_date: "",
     });
     setEditingId(null);
     setSelectedStock(null);

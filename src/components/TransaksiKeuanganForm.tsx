@@ -1134,7 +1134,7 @@ export default function TransaksiKeuanganForm() {
           body: {
             userInput:
               previewMemo ||
-              memo ||
+              description ||
               "Suggest journal entries for this transaksi keuangan.",
           },
         },
@@ -1233,7 +1233,7 @@ export default function TransaksiKeuanganForm() {
         setNamaPengeluaranSearch(ocrData.vendor_name);
       }
       if (ocrData.transaction_date) {
-        setTanggalTransaksi(ocrData.transaction_date);
+        setTanggal(ocrData.transaction_date);
       }
       if (ocrData.total_amount) {
         setNominal(ocrData.total_amount.toString());
@@ -2564,7 +2564,7 @@ export default function TransaksiKeuanganForm() {
         .delete()
         .eq("id", transaction.id);
 
-      if (supabaseError) throw supabaseError;
+      if (error) throw error;
 
       toast({
         title: "✅ Berhasil",
@@ -3965,8 +3965,8 @@ export default function TransaksiKeuanganForm() {
         return {
           debit: mappingRule.debit_account_code,
           credit: mappingRule.credit_account_code,
-          debitName: debitAccountData?.account_name || mappingRule.debit_account_name || "",
-          creditName: creditAccountData?.account_name || mappingRule.credit_account_name || "",
+          debitName: debitAccountData?.account_name || "",
+          creditName: creditAccountData?.account_name || "",
           debitType: debitAccountData?.account_type || "Aset",
           creditType: creditAccountData?.account_type || "Aset",
           is_cash_related: mappingRule.is_cash_related,
@@ -4012,7 +4012,7 @@ export default function TransaksiKeuanganForm() {
         mappingRule.extras.needs_hpp
       ) {
         const hppDebitAccount = await loadCOAByFilter(
-          mappingRule.exras.hppFilter,
+          mappingRule.extras?.hppFilter,
         );
         const hppCreditAccount = await loadCOAByFilter({
           usage_role: "inventory",
@@ -4231,7 +4231,7 @@ export default function TransaksiKeuanganForm() {
           invoice_id: null,
           booking_id: null,
           amount: Number(nominal),
-          payment_method_id: paymentType?.id || null,
+          payment_method_id: typeof paymentType === 'object' ? (paymentType as any)?.id || null : null,
           debit_account_id: selectedExpenseAccount?.id || null,
           debit_account_code: selectedExpenseAccount?.account_code || null,
           debit_account_name: selectedExpenseAccount?.account_name || null,
@@ -4659,7 +4659,6 @@ export default function TransaksiKeuanganForm() {
             transaction_date: previewTanggal,
             payee_name:
               namaPengeluaran ||
-              namaKaryawanPengeluaran ||
               supplier ||
               customer ||
               null,
@@ -4693,7 +4692,7 @@ export default function TransaksiKeuanganForm() {
             created_by: user?.id,
 
             // Additional fields
-            document_number: data?.[0]?.id?.substring(0, 8) || null,
+            document_number: null,
             notes: description,
             bukti: uploadedBuktiUrl || null,
             ocr_data: ocrDataPayload,
@@ -5241,7 +5240,6 @@ export default function TransaksiKeuanganForm() {
       ppnPercentage,
       ppnAmount,
       tanggal,
-      description,
       coaSelected,
       sumberPenerimaan,
       kasSumber,
@@ -7570,10 +7568,7 @@ export default function TransaksiKeuanganForm() {
                                         {displayDocNumber}
                                       </DialogDescription>
                                     </DialogHeader>
-                                    {console.log(
-                                      "🔍 Transaction OCR Data:",
-                                      transaction.ocr_data,
-                                    )}
+                                    {/* Debug log removed */}
                                     <div className="space-y-4 mt-4">
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -8953,8 +8948,8 @@ export default function TransaksiKeuanganForm() {
                       setItemQty(1);
                       setItemPrice(0);
                       setItemTotal(0);
-                      setTaxPercentage(0);
-                      setTaxAmount(0);
+                      setTaxPercentage("0");
+                      setTaxAmount("0");
                       setCoaSelected("");
                       setBuktiFile(null);
                       setBuktiUrl("");
@@ -9000,7 +8995,7 @@ export default function TransaksiKeuanganForm() {
                         id: crypto.randomUUID(),
                         itemName: "",
                         jenisBarang: "",
-                        quantity: 1,
+                        quantity: "1",
                         sellingPrice: 0,
                         nominal: "0"
                       }]);
@@ -12776,10 +12771,10 @@ export default function TransaksiKeuanganForm() {
                       onChange={(e) => setNominal(e.target.value)}
                       placeholder="0"
                       readOnly={
-                        (jenisTransaksi === "Penjualan" &&
+                        !!(jenisTransaksi === "Penjualan" &&
                           itemName &&
                           description) ||
-                        (jenisTransaksi === "Pembelian Barang" &&
+                        !!(jenisTransaksi === "Pembelian Barang" &&
                           itemName &&
                           description)
                       }
@@ -12890,10 +12885,10 @@ export default function TransaksiKeuanganForm() {
                                 "File bukti transaksi telah tersimpan",
                             });
                           } catch (err: any) {
-                            console.error("Upload error:", error);
+                            console.error("Upload error:", err);
                             toast({
                               title: "❌ Upload gagal",
-                              description: error.message,
+                              description: err.message,
                               variant: "destructive",
                             });
                           }

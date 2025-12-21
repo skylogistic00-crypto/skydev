@@ -307,7 +307,7 @@ export default function GoogleOCRScanner() {
 
                       <div>
                         <Label htmlFor="jenis_kelamin">Jenis Kelamin</Label>
-                        <Select defaultValue={parsedData?.jenis_kelamin || ""}>
+                        <Select defaultValue={String(parsedData?.jenis_kelamin || "")}>
                           <SelectTrigger id="jenis_kelamin">
                             <SelectValue placeholder="Pilih jenis kelamin" />
                           </SelectTrigger>

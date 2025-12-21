@@ -109,7 +109,7 @@ export default function BalanceSheetReport() {
         description: `Data neraca periode ${periodStart} - ${periodEnd} berhasil dimuat`,
       });
     } catch (error) {
-      console.error("❌ Error loading balance sheet:", err);
+      console.error("❌ Error loading balance sheet:", error);
       const errorMessage = error instanceof Error ? error.message : "Gagal memuat data laporan";
       toast({
         title: "Error",

@@ -119,7 +119,7 @@ export default function BarangLamaReport() {
 
       setBarangLama(data || []);
     } catch (error) {
-      console.error("Error fetching barang lama:", err);
+      console.error("Error fetching barang lama:", error);
       toast({
         title: "Error",
         description: "Gagal memuat data barang lama",

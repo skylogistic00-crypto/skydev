@@ -125,7 +125,7 @@ export default function IntegratedFinancialReport() {
       }
 
       // Build a map for quick lookup
-      const coaMap = new Map(
+      const coaMap = new Map<string, any>(
         coaData?.map((coa) => [coa.account_code, coa]) || [],
       );
 

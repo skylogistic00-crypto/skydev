@@ -497,7 +497,7 @@ export default function StockEngineForm() {
       // Reload data
       loadItemNames();
       loadBrands();
-      loadCOA();
+      loadCOAAccounts();
     } catch (error: any) {
       // Step 8: Error Handler
       if (error.detail && Array.isArray(error.detail)) {
