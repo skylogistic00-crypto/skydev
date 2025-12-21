@@ -30,6 +30,8 @@ import {
   FileSpreadsheet,
   Calculator,
   Briefcase,
+  TrendingDown,
+  Trash2,
 } from "lucide-react";
 
 function Home() {
@@ -171,6 +173,38 @@ function Home() {
       path: "/hrd-dashboard",
       color: "bg-blue-600",
       roles: ["super_admin", "hr_manager", "hr_staff"],
+    },
+    {
+      title: "COA Engine",
+      description: "Kelola chart of accounts",
+      icon: Settings,
+      path: "/coa-engine",
+      color: "bg-indigo-600",
+      roles: ["super_admin", "accounting_manager"],
+    },
+    {
+      title: "Fixed Assets",
+      description: "Kelola aset tetap perusahaan",
+      icon: Building2,
+      path: "/fixed-assets",
+      color: "bg-teal-600",
+      roles: ["super_admin", "accounting_manager"],
+    },
+    {
+      title: "Depreciation",
+      description: "Kelola penyusutan aset",
+      icon: TrendingDown,
+      path: "/depreciation",
+      color: "bg-amber-600",
+      roles: ["super_admin", "accounting_manager"],
+    },
+    {
+      title: "Asset Disposal",
+      description: "Penghapusan aset tetap",
+      icon: Trash2,
+      path: "/asset-disposal",
+      color: "bg-rose-600",
+      roles: ["super_admin", "accounting_manager"],
     },
   ];
 

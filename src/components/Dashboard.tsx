@@ -14,6 +14,10 @@ import {
   FileSpreadsheet,
   Scale,
   PieChart,
+  Settings,
+  Building2,
+  TrendingDown,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -24,6 +28,7 @@ import Navigation from "./Navigation";
 import PurchaseRequestForm from "./PurchaseRequestForm";
 import SupplierForm from "./SupplierForm";
 import PermohonanDanaForm from "./PermohonanDanaForm";
+
 import { Button } from "./ui/button";
 import { canClick,canEdit } from "@/utils/roleAccess";
 import {
@@ -178,6 +183,8 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
+
 
           {currentView === "overview" ? (
             <>
@@ -597,6 +604,89 @@ export default function Dashboard() {
                   </div>
                   <div className="text-slate-400 text-sm font-medium">
                     Penerimaan & Pengeluaran Kas
+                  </div>
+                </div>
+              </div>
+
+              {/* Second Row - COA Engine and Asset Management Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+                <div
+                  onClick={() => navigate("/coa-engine")}
+                  className="bg-gradient-to-br from-[#2d3250] to-[#1f2235] rounded-2xl p-6 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                  style={{
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <Settings className="text-indigo-400 w-10 h-10" />
+                    <ArrowUpRight className="text-slate-400 w-6 h-6" />
+                  </div>
+                  <div className="text-white text-4xl font-bold mb-2">
+                    COA Engine
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium">
+                    Chart of Accounts Management
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => navigate("/fixed-assets")}
+                  className="bg-gradient-to-br from-[#2d3250] to-[#1f2235] rounded-2xl p-6 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                  style={{
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <Building2 className="text-teal-400 w-10 h-10" />
+                    <ArrowUpRight className="text-slate-400 w-6 h-6" />
+                  </div>
+                  <div className="text-white text-4xl font-bold mb-2">
+                    Fixed Assets
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium">
+                    Kelola Aset Tetap
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => navigate("/depreciation")}
+                  className="bg-gradient-to-br from-[#2d3250] to-[#1f2235] rounded-2xl p-6 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                  style={{
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <TrendingDown className="text-amber-400 w-10 h-10" />
+                    <ArrowUpRight className="text-slate-400 w-6 h-6" />
+                  </div>
+                  <div className="text-white text-4xl font-bold mb-2">
+                    Depreciation
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium">
+                    Penyusutan Aset
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => navigate("/asset-disposal")}
+                  className="bg-gradient-to-br from-[#2d3250] to-[#1f2235] rounded-2xl p-6 shadow-xl hover:scale-105 transition-all cursor-pointer"
+                  style={{
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <Trash2 className="text-rose-400 w-10 h-10" />
+                    <ArrowUpRight className="text-slate-400 w-6 h-6" />
+                  </div>
+                  <div className="text-white text-4xl font-bold mb-2">
+                    Asset Disposal
+                  </div>
+                  <div className="text-slate-400 text-sm font-medium">
+                    Penghapusan Aset
                   </div>
                 </div>
               </div>

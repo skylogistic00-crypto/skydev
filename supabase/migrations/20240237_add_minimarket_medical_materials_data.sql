@@ -1,3 +1,7 @@
+-- DISABLED: This migration only restores seed data and should not run on schema reset
+DO $$ BEGIN RAISE NOTICE 'Migration 20240237 disabled - data seeding only'; END $$;
+
+/*
 -- Tambah COA untuk kategori baru
 INSERT INTO chart_of_accounts (account_code, account_name, account_type, normal_balance, level, parent_code, is_header, is_active, description)
 VALUES 
@@ -75,3 +79,4 @@ ON CONFLICT (service_category, service_type) DO UPDATE SET
   revenue_account_code = EXCLUDED.revenue_account_code,
   cogs_account_code = EXCLUDED.cogs_account_code,
   description = EXCLUDED.description;
+*/

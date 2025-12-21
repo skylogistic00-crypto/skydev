@@ -1,4 +1,4 @@
--- Update payroll RLS policies to use role_name instead of role
+-- Update payroll RLS policies to use role column
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view payroll" ON payroll;
@@ -6,7 +6,7 @@ DROP POLICY IF EXISTS "HR can insert payroll" ON payroll;
 DROP POLICY IF EXISTS "HR can update payroll" ON payroll;
 DROP POLICY IF EXISTS "HR can delete payroll" ON payroll;
 
--- Recreate policies with role_name
+-- Recreate policies with role column
 CREATE POLICY "Users can view payroll"
   ON payroll FOR SELECT
   USING (
@@ -19,7 +19,7 @@ CREATE POLICY "Users can view payroll"
     EXISTS (
       SELECT 1 FROM users
       WHERE id = auth.uid()
-      AND role_name IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
+      AND role IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
     )
   );
 
@@ -29,7 +29,7 @@ CREATE POLICY "HR can insert payroll"
     EXISTS (
       SELECT 1 FROM users
       WHERE id = auth.uid()
-      AND role_name IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
+      AND role IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
     )
   );
 
@@ -39,7 +39,7 @@ CREATE POLICY "HR can update payroll"
     EXISTS (
       SELECT 1 FROM users
       WHERE id = auth.uid()
-      AND role_name IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
+      AND role IN ('super_admin', 'admin', 'hr_manager', 'hr_staff')
     )
   );
 
@@ -49,6 +49,6 @@ CREATE POLICY "HR can delete payroll"
     EXISTS (
       SELECT 1 FROM users
       WHERE id = auth.uid()
-      AND role_name IN ('super_admin', 'admin', 'hr_manager')
+      AND role IN ('super_admin', 'admin', 'hr_manager')
     )
   );

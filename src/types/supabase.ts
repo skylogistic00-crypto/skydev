@@ -781,6 +781,235 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_depreciation: {
+        Row: {
+          accumulated_depreciation: number | null
+          asset_id: string
+          book_value: number | null
+          created_at: string | null
+          created_by: string | null
+          depreciation_amount: number
+          depreciation_method: string | null
+          id: string
+          journal_entry_id: string | null
+          notes: string | null
+          period: string
+          period_month: number
+          period_year: number
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accumulated_depreciation?: number | null
+          asset_id: string
+          book_value?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          depreciation_amount: number
+          depreciation_method?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          period: string
+          period_month: number
+          period_year: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accumulated_depreciation?: number | null
+          asset_id?: string
+          book_value?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          depreciation_amount?: number
+          depreciation_method?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          period?: string
+          period_month?: number
+          period_year?: number
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_depreciation_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_wms_reversal_audit"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "view_general_ledger"
+            referencedColumns: ["journal_id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "vw_journal_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_depreciation_schedule: {
+        Row: {
+          amount: number
+          asset_id: string | null
+          created_at: string | null
+          id: string
+          period: string
+          posted: boolean | null
+        }
+        Insert: {
+          amount: number
+          asset_id?: string | null
+          created_at?: string | null
+          id?: string
+          period: string
+          posted?: boolean | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string | null
+          created_at?: string | null
+          id?: string
+          period?: string
+          posted?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_depreciation_schedule_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_disposals: {
+        Row: {
+          asset_id: string | null
+          book_value: number | null
+          created_at: string | null
+          disposal_amount: number | null
+          disposal_date: string | null
+          gain_loss: number | null
+          id: string
+        }
+        Insert: {
+          asset_id?: string | null
+          book_value?: number | null
+          created_at?: string | null
+          disposal_amount?: number | null
+          disposal_date?: string | null
+          gain_loss?: number | null
+          id?: string
+        }
+        Update: {
+          asset_id?: string | null
+          book_value?: number | null
+          created_at?: string | null
+          disposal_amount?: number | null
+          disposal_date?: string | null
+          gain_loss?: number | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_disposals_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          acquisition_cost: number | null
+          acquisition_date: string | null
+          asset_category: string
+          asset_name: string
+          coa_account_code: string | null
+          created_at: string | null
+          created_by: string | null
+          current_book_value: number | null
+          depreciation_method: string | null
+          depreciation_start_date: string | null
+          description: string | null
+          id: string
+          location: string | null
+          salvage_value: number | null
+          serial_number: string | null
+          status: string | null
+          total_depreciation: number | null
+          updated_at: string | null
+          useful_life_years: number | null
+        }
+        Insert: {
+          acquisition_cost?: number | null
+          acquisition_date?: string | null
+          asset_category: string
+          asset_name: string
+          coa_account_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_book_value?: number | null
+          depreciation_method?: string | null
+          depreciation_start_date?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          salvage_value?: number | null
+          serial_number?: string | null
+          status?: string | null
+          total_depreciation?: number | null
+          updated_at?: string | null
+          useful_life_years?: number | null
+        }
+        Update: {
+          acquisition_cost?: number | null
+          acquisition_date?: string | null
+          asset_category?: string
+          asset_name?: string
+          coa_account_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_book_value?: number | null
+          depreciation_method?: string | null
+          depreciation_start_date?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          salvage_value?: number | null
+          serial_number?: string | null
+          status?: string | null
+          total_depreciation?: number | null
+          updated_at?: string | null
+          useful_life_years?: number | null
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           attendance_date: string
@@ -1216,6 +1445,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bank_mutations_staging: {
+        Row: {
+          amount: number | null
+          category: string | null
+          confidence: number | null
+          created_at: string | null
+          credit_account_code: string | null
+          debit_account_code: string | null
+          description: string | null
+          direction: string | null
+          id: string
+          mutation_date: string | null
+          payment_type: string | null
+          reconciliation_status: string | null
+          review_status: string | null
+          skip_employee_advance: boolean | null
+          source: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          credit_account_code?: string | null
+          debit_account_code?: string | null
+          description?: string | null
+          direction?: string | null
+          id?: string
+          mutation_date?: string | null
+          payment_type?: string | null
+          reconciliation_status?: string | null
+          review_status?: string | null
+          skip_employee_advance?: boolean | null
+          source?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          credit_account_code?: string | null
+          debit_account_code?: string | null
+          description?: string | null
+          direction?: string | null
+          id?: string
+          mutation_date?: string | null
+          payment_type?: string | null
+          reconciliation_status?: string | null
+          review_status?: string | null
+          skip_employee_advance?: boolean | null
+          source?: string | null
+        }
+        Relationships: []
       }
       bank_statements: {
         Row: {
@@ -1984,7 +2267,11 @@ export type Database = {
           account_name: string
           account_type: string
           allow_manual_posting: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
+          created_from_intent: string | null
           credit: number | null
           debit: number | null
           description: string | null
@@ -1992,12 +2279,14 @@ export type Database = {
           flow_type: string | null
           id: string
           is_active: boolean | null
+          is_depreciable: boolean | null
           is_header: boolean | null
           is_postable: boolean | null
           level: number
           normal_balance: string | null
           parent_code: string | null
           parent_id: string | null
+          status: string | null
           trans_type: string | null
           updated_at: string | null
           usage_role: string | null
@@ -2008,7 +2297,11 @@ export type Database = {
           account_name: string
           account_type: string
           allow_manual_posting?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
+          created_from_intent?: string | null
           credit?: number | null
           debit?: number | null
           description?: string | null
@@ -2016,12 +2309,14 @@ export type Database = {
           flow_type?: string | null
           id?: string
           is_active?: boolean | null
+          is_depreciable?: boolean | null
           is_header?: boolean | null
           is_postable?: boolean | null
           level?: number
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
+          status?: string | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -2032,7 +2327,11 @@ export type Database = {
           account_name?: string
           account_type?: string
           allow_manual_posting?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
+          created_from_intent?: string | null
           credit?: number | null
           debit?: number | null
           description?: string | null
@@ -2040,12 +2339,14 @@ export type Database = {
           flow_type?: string | null
           id?: string
           is_active?: boolean | null
+          is_depreciable?: boolean | null
           is_header?: boolean | null
           is_postable?: boolean | null
           level?: number
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
+          status?: string | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -2130,6 +2431,60 @@ export type Database = {
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
+        }
+        Relationships: []
+      }
+      chart_of_accounts_staging: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          account_type: string | null
+          created_at: string | null
+          description: string | null
+          error_message: string | null
+          id: string
+          is_active: boolean | null
+          is_header: boolean | null
+          level: number | null
+          normal_balance: string | null
+          parent_code: string | null
+          raw_payload: Json | null
+          source: string | null
+          status: string | null
+        }
+        Insert: {
+          account_code?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_header?: boolean | null
+          level?: number | null
+          normal_balance?: string | null
+          parent_code?: string | null
+          raw_payload?: Json | null
+          source?: string | null
+          status?: string | null
+        }
+        Update: {
+          account_code?: string | null
+          account_name?: string | null
+          account_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_header?: boolean | null
+          level?: number | null
+          normal_balance?: string | null
+          parent_code?: string | null
+          raw_payload?: Json | null
+          source?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -2244,6 +2599,54 @@ export type Database = {
         }
         Relationships: []
       }
+      coa_intent_rules: {
+        Row: {
+          account_type: string | null
+          approval_status: string | null
+          confidence_base: number | null
+          created_at: string | null
+          default_account_name: string | null
+          default_parent_code: string | null
+          direction: string | null
+          id: string
+          intent_code: string
+          intent_name: string
+          is_asset: boolean | null
+          is_depreciable: boolean | null
+          keywords: string[]
+        }
+        Insert: {
+          account_type?: string | null
+          approval_status?: string | null
+          confidence_base?: number | null
+          created_at?: string | null
+          default_account_name?: string | null
+          default_parent_code?: string | null
+          direction?: string | null
+          id?: string
+          intent_code: string
+          intent_name: string
+          is_asset?: boolean | null
+          is_depreciable?: boolean | null
+          keywords: string[]
+        }
+        Update: {
+          account_type?: string | null
+          approval_status?: string | null
+          confidence_base?: number | null
+          created_at?: string | null
+          default_account_name?: string | null
+          default_parent_code?: string | null
+          direction?: string | null
+          id?: string
+          intent_code?: string
+          intent_name?: string
+          is_asset?: boolean | null
+          is_depreciable?: boolean | null
+          keywords?: string[]
+        }
+        Relationships: []
+      }
       coa_mapping: {
         Row: {
           account_code: string
@@ -2334,6 +2737,75 @@ export type Database = {
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
+          trans_type?: string | null
+          updated_at?: string | null
+          usage_role?: string | null
+        }
+        Relationships: []
+      }
+      coa_suggestions: {
+        Row: {
+          action_taken: string | null
+          approved_at: string | null
+          approved_by: string | null
+          confidence: number | null
+          created_at: string | null
+          description: string
+          financial_category: string | null
+          flow_type: string | null
+          id: string
+          intent: string | null
+          intent_code: string | null
+          parent_account: string | null
+          reasoning: string | null
+          selected_account_code: string | null
+          status: string | null
+          suggested_account_code: string | null
+          suggested_account_name: string | null
+          trans_type: string | null
+          updated_at: string | null
+          usage_role: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          description: string
+          financial_category?: string | null
+          flow_type?: string | null
+          id?: string
+          intent?: string | null
+          intent_code?: string | null
+          parent_account?: string | null
+          reasoning?: string | null
+          selected_account_code?: string | null
+          status?: string | null
+          suggested_account_code?: string | null
+          suggested_account_name?: string | null
+          trans_type?: string | null
+          updated_at?: string | null
+          usage_role?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          description?: string
+          financial_category?: string | null
+          flow_type?: string | null
+          id?: string
+          intent?: string | null
+          intent_code?: string | null
+          parent_account?: string | null
+          reasoning?: string | null
+          selected_account_code?: string | null
+          status?: string | null
+          suggested_account_code?: string | null
+          suggested_account_name?: string | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -3152,6 +3624,30 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      depreciation_period_lock: {
+        Row: {
+          completed_at: string | null
+          period: string
+          reversed_at: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          period: string
+          reversed_at?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          period?: string
+          reversed_at?: string | null
+          started_at?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -4517,6 +5013,53 @@ export type Database = {
           },
         ]
       }
+      fixed_assets: {
+        Row: {
+          account_code: string | null
+          accumulated_depreciation: number | null
+          acquisition_cost: number | null
+          asset_name: string | null
+          created_at: string | null
+          id: string
+          last_depreciation_date: string | null
+          residual_value: number | null
+          status: string | null
+          useful_life_years: number | null
+        }
+        Insert: {
+          account_code?: string | null
+          accumulated_depreciation?: number | null
+          acquisition_cost?: number | null
+          asset_name?: string | null
+          created_at?: string | null
+          id?: string
+          last_depreciation_date?: string | null
+          residual_value?: number | null
+          status?: string | null
+          useful_life_years?: number | null
+        }
+        Update: {
+          account_code?: string | null
+          accumulated_depreciation?: number | null
+          acquisition_cost?: number | null
+          asset_name?: string | null
+          created_at?: string | null
+          id?: string
+          last_depreciation_date?: string | null
+          residual_value?: number | null
+          status?: string | null
+          useful_life_years?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_account_code_fkey"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_code"]
+          },
+        ]
+      }
       general_journal: {
         Row: {
           created_at: string | null
@@ -4687,13 +5230,6 @@ export type Database = {
             foreignKeyName: "fk_gl_journal"
             columns: ["journal_id"]
             isOneToOne: false
-            referencedRelation: "vw_cash_flow_report"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "fk_gl_journal"
-            columns: ["journal_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -4717,13 +5253,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_general_ledger"
             referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "general_ledger_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "vw_cash_flow_report"
-            referencedColumns: ["journal_entry_id"]
           },
           {
             foreignKeyName: "general_ledger_journal_entry_id_fkey"
@@ -5205,13 +5734,6 @@ export type Database = {
             foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
-            referencedRelation: "vw_cash_flow_report"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -5230,6 +5752,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number | null
+          bank_mutation_id: string | null
+          id: string
+          invoice_id: string | null
+          invoice_type: string | null
+          payment_date: string | null
+        }
+        Insert: {
+          amount?: number | null
+          bank_mutation_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_type?: string | null
+          payment_date?: string | null
+        }
+        Update: {
+          amount?: number | null
+          bank_mutation_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_type?: string | null
+          payment_date?: string | null
+        }
+        Relationships: []
       }
       item_brand_mapping: {
         Row: {
@@ -5380,6 +5929,7 @@ export type Database = {
           posting_date: string | null
           reference: string | null
           reference_id: string | null
+          reference_number: string | null
           reference_type: string | null
           sales_transactions_id: string | null
           service_type: string | null
@@ -5450,6 +6000,7 @@ export type Database = {
           posting_date?: string | null
           reference?: string | null
           reference_id?: string | null
+          reference_number?: string | null
           reference_type?: string | null
           sales_transactions_id?: string | null
           service_type?: string | null
@@ -5520,6 +6071,7 @@ export type Database = {
           posting_date?: string | null
           reference?: string | null
           reference_id?: string | null
+          reference_number?: string | null
           reference_type?: string | null
           sales_transactions_id?: string | null
           service_type?: string | null
@@ -5557,6 +6109,13 @@ export type Database = {
             columns: ["stock_adjustment_id"]
             isOneToOne: false
             referencedRelation: "stock_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_stock_adj"
+            columns: ["stock_adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "stock_adjustments_with_supplier"
             referencedColumns: ["id"]
           },
           {
@@ -5639,13 +6198,6 @@ export type Database = {
             foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
-            referencedRelation: "vw_cash_flow_report"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -5712,13 +6264,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_general_ledger"
             referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_id_fkey"
-            columns: ["journal_id"]
-            isOneToOne: false
-            referencedRelation: "vw_cash_flow_report"
-            referencedColumns: ["journal_entry_id"]
           },
           {
             foreignKeyName: "journal_entry_lines_journal_id_fkey"
@@ -7340,6 +7885,39 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_invoices: {
+        Row: {
+          id: string
+          invoice_date: string | null
+          invoice_no: string | null
+          outstanding_amount: number | null
+          paid_amount: number | null
+          status: string | null
+          total_amount: number | null
+          vendor_name: string | null
+        }
+        Insert: {
+          id?: string
+          invoice_date?: string | null
+          invoice_no?: string | null
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          status?: string | null
+          total_amount?: number | null
+          vendor_name?: string | null
+        }
+        Update: {
+          id?: string
+          invoice_date?: string | null
+          invoice_no?: string | null
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          status?: string | null
+          total_amount?: number | null
+          vendor_name?: string | null
+        }
+        Relationships: []
+      }
       purchase_requests: {
         Row: {
           barcode: string | null
@@ -7705,6 +8283,39 @@ export type Database = {
           permissions?: Json | null
           role_id?: number
           role_name?: string
+        }
+        Relationships: []
+      }
+      sales_invoices: {
+        Row: {
+          customer_name: string | null
+          id: string
+          invoice_date: string | null
+          invoice_no: string | null
+          outstanding_amount: number | null
+          paid_amount: number | null
+          status: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          customer_name?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_no?: string | null
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          customer_name?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_no?: string | null
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          status?: string | null
+          total_amount?: number | null
         }
         Relationships: []
       }
@@ -8307,6 +8918,7 @@ export type Database = {
           inventory_account_code: string | null
           inventory_account_id: string | null
           is_pajak: boolean | null
+          item_arrival_date: string | null
           item_name: string
           item_quantity: number | null
           jenis_barang: string | null
@@ -8372,6 +8984,7 @@ export type Database = {
           inventory_account_code?: string | null
           inventory_account_id?: string | null
           is_pajak?: boolean | null
+          item_arrival_date?: string | null
           item_name: string
           item_quantity?: number | null
           jenis_barang?: string | null
@@ -8437,6 +9050,7 @@ export type Database = {
           inventory_account_code?: string | null
           inventory_account_id?: string | null
           is_pajak?: boolean | null
+          item_arrival_date?: string | null
           item_name?: string
           item_quantity?: number | null
           jenis_barang?: string | null
@@ -10591,13 +11205,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "vehicle_rentals_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       vehicle_tax_results: {
@@ -10671,65 +11278,53 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          asset_id: string | null
+          brand: string
+          chassis_number: string | null
           color: string | null
-          condition_notes: string | null
           created_at: string | null
-          entity_id: string | null
+          engine_number: string | null
+          fuel_type: string | null
           id: string
-          insurance_expiry: string | null
-          kir_expiry: string | null
-          license_plate: string
-          model_id: string | null
-          odometer: number | null
-          photos: Json | null
-          status: string | null
-          stnk_expiry: string | null
+          model: string | null
+          plate_number: string
           updated_at: string | null
-          vin_number: string | null
-          year: number | null
+          year_made: number | null
         }
         Insert: {
+          asset_id?: string | null
+          brand: string
+          chassis_number?: string | null
           color?: string | null
-          condition_notes?: string | null
           created_at?: string | null
-          entity_id?: string | null
+          engine_number?: string | null
+          fuel_type?: string | null
           id?: string
-          insurance_expiry?: string | null
-          kir_expiry?: string | null
-          license_plate: string
-          model_id?: string | null
-          odometer?: number | null
-          photos?: Json | null
-          status?: string | null
-          stnk_expiry?: string | null
+          model?: string | null
+          plate_number: string
           updated_at?: string | null
-          vin_number?: string | null
-          year?: number | null
+          year_made?: number | null
         }
         Update: {
+          asset_id?: string | null
+          brand?: string
+          chassis_number?: string | null
           color?: string | null
-          condition_notes?: string | null
           created_at?: string | null
-          entity_id?: string | null
+          engine_number?: string | null
+          fuel_type?: string | null
           id?: string
-          insurance_expiry?: string | null
-          kir_expiry?: string | null
-          license_plate?: string
-          model_id?: string | null
-          odometer?: number | null
-          photos?: Json | null
-          status?: string | null
-          stnk_expiry?: string | null
+          model?: string | null
+          plate_number?: string
           updated_at?: string | null
-          vin_number?: string | null
-          year?: number | null
+          year_made?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "vehicles_model_id_fkey"
-            columns: ["model_id"]
+            foreignKeyName: "vehicles_asset_id_fkey"
+            columns: ["asset_id"]
             isOneToOne: false
-            referencedRelation: "vehicle_models"
+            referencedRelation: "assets"
             referencedColumns: ["id"]
           },
         ]
@@ -11026,6 +11621,14 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_flow_monthly: {
+        Row: {
+          cash_in: number | null
+          cash_out: number | null
+          month: string | null
+        }
+        Relationships: []
+      }
       cash_receipts: {
         Row: {
           amount: number | null
@@ -11092,6 +11695,33 @@ export type Database = {
           transaction_date?: string | null
           transaction_type?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      stock_adjustments_with_supplier: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          item_name: string | null
+          qty_change: number | null
+          reason: string | null
+          stock_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          item_name?: string | null
+          qty_change?: number | null
+          reason?: string | null
+          stock_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          item_name?: string | null
+          qty_change?: number | null
+          reason?: string | null
+          stock_id?: string | null
         }
         Relationships: []
       }
@@ -11234,33 +11864,87 @@ export type Database = {
           },
         ]
       }
-      vw_cash_flow_report: {
+      vw_cash_flow_by_bank: {
         Row: {
-          cash_in: number | null
-          cash_movement: number | null
-          cash_out: number | null
+          account_code: string | null
+          account_name: string | null
+          kas_keluar: number | null
+          kas_masuk: number | null
+          period: string | null
+          saldo_berjalan: number | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_detail: {
+        Row: {
           description: string | null
           entry_date: string | null
-          jenis_transaksi: string | null
-          journal_entry_id: string | null
+          id: string | null
         }
         Insert: {
-          cash_in?: never
-          cash_movement?: never
-          cash_out?: never
           description?: string | null
-          entry_date?: never
-          jenis_transaksi?: string | null
-          journal_entry_id?: string | null
+          entry_date?: string | null
+          id?: string | null
         }
         Update: {
-          cash_in?: never
-          cash_movement?: never
-          cash_out?: never
           description?: string | null
-          entry_date?: never
-          jenis_transaksi?: string | null
-          journal_entry_id?: string | null
+          entry_date?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_direct: {
+        Row: {
+          kas_keluar: number | null
+          kas_masuk: number | null
+          net_cash_flow: number | null
+          period: string | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_indirect: {
+        Row: {
+          laba_bersih: number | null
+          penyusutan: number | null
+          period: string | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_per_bank: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          bulan: number | null
+          kas_keluar: number | null
+          kas_masuk: number | null
+          net_cash_flow: number | null
+          tahun: number | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_report: {
+        Row: {
+          bulan: number | null
+          kas_keluar: number | null
+          kas_masuk: number | null
+          net_cash_flow: number | null
+          tahun: number | null
+        }
+        Relationships: []
+      }
+      vw_cash_flow_summary: {
+        Row: {
+          kas_keluar: number | null
+          kas_masuk: number | null
+          net_cash_flow: number | null
+        }
+        Relationships: []
+      }
+      vw_cash_reconciliation: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          saldo_gl: number | null
         }
         Relationships: []
       }
@@ -11635,6 +12319,10 @@ export type Database = {
         Returns: undefined
       }
       apply_tax_engine: { Args: { p_id: string }; Returns: Json }
+      auto_match_bank_mutation: {
+        Args: { p_mutation_id: string }
+        Returns: undefined
+      }
       balance_sheet: {
         Args: { report_date: string }
         Returns: {
@@ -12056,6 +12744,7 @@ export type Database = {
           sub_category: string
         }[]
       }
+      normalize_account_type: { Args: { input: string }; Returns: string }
       post_bank_statement_as_journal: {
         Args: { p_id: string; p_user?: string }
         Returns: undefined
@@ -12102,6 +12791,8 @@ export type Database = {
         Returns: Json
       }
       reverse_journal: { Args: { journal_id: string }; Returns: undefined }
+      rpc_validate_and_commit_coa: { Args: never; Returns: Json }
+      run_monthly_depreciation: { Args: { p_date: string }; Returns: undefined }
       set_app_user: { Args: { uid: string }; Returns: undefined }
       set_transaction_no_tax: {
         Args: { p_id: string; p_user?: string }

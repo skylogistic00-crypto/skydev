@@ -21,6 +21,9 @@ import {
   Briefcase,
   ScanText,
   MessageCircle,
+  Settings,
+  TrendingDown,
+  Trash2,
 } from "lucide-react";
 
 export default function Navigation() {
