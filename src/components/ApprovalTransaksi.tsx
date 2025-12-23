@@ -309,6 +309,8 @@ export default function ApprovalTransaksi({
               ? "Pembelian Barang"
               : "Pembelian Jasa",
           approval_status: "approved",
+          entity_id: transaction.entity_id,
+          created_by: transaction.created_by,
         });
 
       if (journalError) throw journalError;

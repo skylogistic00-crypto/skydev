@@ -44,6 +44,8 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [extractedData, setExtractedData] = useState<OCRResult | null>(null);
+  const [step, setStep] = useState<1 | 2 | 3 | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -71,6 +73,9 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
       return;
     }
 
+    setStep(1);
+    setStatusMessage("Upload 1/3 - Mengunggah gambar ke server...");
+
     setFile(selectedFile);
     if (showPreview) {
       const reader = new FileReader();
@@ -79,6 +84,46 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
       };
       reader.readAsDataURL(selectedFile);
     }
+  };
+
+  const compressImage = (file: File, maxWidth = 1280, maxHeight = 1280, quality = 0.8): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = width * ratio;
+          height = height * ratio;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Failed to compress image"));
+              return;
+            }
+            resolve(blob);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   const handleProcessOCR = async () => {
@@ -92,12 +137,15 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
     }
 
     setLoading(true);
+    setStep(1);
+    setStatusMessage("Upload 1/3 - Mengunggah gambar ke server...");
+
     try {
-      // 1. Upload file to Supabase Storage bucket "ocr-receipts"
+      const compressedBlob = await compressImage(file);
       const fileName = `receipt_${Date.now()}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("ocr-receipts")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressedBlob, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
@@ -105,6 +153,9 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
       }
 
       console.log("File uploaded to ocr-receipts:", uploadData.path);
+
+      setStep(2);
+      setStatusMessage("Proses 2/3 - Memproses OCR, mohon tunggu 10-20 detik...");
 
       // 2. Generate signed URL (valid for 1 hour = 3600 seconds)
       const { data: signedData, error: signedError } = await supabase.storage
@@ -175,6 +226,9 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
 
       console.log("OCR results saved to database:", ocrData);
 
+      setStep(3);
+      setStatusMessage("Mengisi Form 3/3 - Mengisi data transaksi dari hasil OCR...");
+
       // 5. Build deskripsi with OCR summary
       let deskripsi = "";
       if (documentType === "salary_slip") {
@@ -215,6 +269,8 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
       // Reset file state but keep extracted data visible
       setFile(null);
       setPreview(null);
+      setStatusMessage(null);
+      setStep(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -222,9 +278,13 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
       console.error("OCR Error:", err);
       toast({
         title: "❌ OCR Gagal",
-        description: err.message || "Gagal memproses OCR. Silakan upload ulang gambar.",
+        description:
+          err.message ||
+          "Gagal memproses OCR. Proses bisa memakan waktu 10–20 detik. Jika gagal terus, coba ulangi dengan foto yang lebih jelas atau ukuran lebih kecil.",
         variant: "destructive",
       });
+      setStatusMessage("Terjadi kesalahan saat memproses OCR. Silakan coba lagi.");
+      setStep(null);
     } finally {
       setLoading(false);
     }
@@ -272,6 +332,14 @@ const OCRScanner: React.FC<OCRScannerProps> = ({
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {statusMessage && (
+        <div className="border rounded-lg p-3 bg-blue-50 text-sm text-blue-800">
+          <p className="font-medium">
+            {step ? `${step}/3` : ""} {statusMessage}
+          </p>
+        </div>
+      )}
 
       {showPreview && preview && (
         <div className="border rounded-lg p-4 bg-gray-50">

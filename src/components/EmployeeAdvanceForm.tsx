@@ -51,6 +51,29 @@ import {
 } from "@/components/ui/dialog";
 import OCRScanner from "@/components/OCRScanner";
 
+/* =========================
+   SANITIZER (LOCAL)
+========================= */
+function sanitizePayload<T extends Record<string, any>>(payload: T): T {
+  const clean: any = {};
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v === "" || v === undefined) {
+      clean[k] = null;
+      return;
+    }
+    if (typeof v === "string") {
+      const t = v.trim();
+      clean[k] = t === "" ? null : t;
+      return;
+    }
+    clean[k] = v;
+  });
+  return clean;
+}
+
+/* =========================
+   TYPES
+========================= */
 interface Employee {
   id: string;
   full_name: string;
@@ -74,9 +97,13 @@ interface Advance {
   finance_approval?: string;
 }
 
+/* =========================
+   COMPONENT
+========================= */
 export default function EmployeeAdvanceForm() {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+
   const [isLoading, setIsLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
@@ -95,12 +122,14 @@ export default function EmployeeAdvanceForm() {
     reference_number: "",
   });
 
-  // Form states
+  /* =========================
+     FORM STATES
+  ========================= */
   const [advanceForm, setAdvanceForm] = useState({
     employee_id: "",
     employee_name: "",
     amount: 0,
-    advance_date: new Date().toISOString().split("T")[0],
+    advance_date: new Date().toISOString().slice(0, 10),
     notes: "",
     bukti_url: "",
   });
@@ -130,6 +159,9 @@ export default function EmployeeAdvanceForm() {
     bukti_url: "",
   });
 
+  /* =========================
+     LOAD DATA
+  ========================= */
   useEffect(() => {
     fetchEmployees();
     fetchAdvances();
@@ -143,13 +175,7 @@ export default function EmployeeAdvanceForm() {
       .from("users")
       .select("id, full_name")
       .order("full_name");
-
-    if (error) {
-      console.error("Error fetching employees:", error);
-      return;
-    }
-
-    setEmployees(data || []);
+    if (!error) setEmployees(data || []);
   };
 
   const fetchAdvances = async () => {
@@ -502,12 +528,11 @@ export default function EmployeeAdvanceForm() {
         });
       }
 
-      // Reset form
       setAdvanceForm({
         employee_id: "",
         employee_name: "",
         amount: 0,
-        advance_date: new Date().toISOString().split("T")[0],
+        advance_date: new Date().toISOString().slice(0, 10),
         notes: "",
         payment_method: "Kas",
         bank_account_id: "",
@@ -516,11 +541,10 @@ export default function EmployeeAdvanceForm() {
       });
 
       fetchAdvances();
-    } catch (error: any) {
-      console.error("Error creating advance:", error);
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -528,6 +552,9 @@ export default function EmployeeAdvanceForm() {
     }
   };
 
+  /* =========================
+     CREATE SETTLEMENT
+  ========================= */
   const handleCreateSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -595,11 +622,10 @@ export default function EmployeeAdvanceForm() {
       });
 
       fetchAdvances();
-    } catch (error: any) {
-      console.error("Error creating settlement:", error);
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -607,13 +633,27 @@ export default function EmployeeAdvanceForm() {
     }
   };
 
+  /* =========================
+     CREATE RETURN
+  ========================= */
   const handleCreateReturn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Insert return record
-      const { data: returnData, error: returnError } = await supabase
+      const payload = sanitizePayload({
+        advance_id: returnForm.advance_id,
+        amount: returnForm.amount,
+        return_date: returnForm.return_date,
+        payment_method: returnForm.payment_method,
+        notes: returnForm.notes,
+        created_by: user?.id,
+      });
+
+      if (!payload.advance_id) throw new Error("Uang muka wajib dipilih");
+      if (payload.amount <= 0) throw new Error("Jumlah harus > 0");
+
+      const { data: returnData, error } = await supabase
         .from("employee_advance_returns")
         .insert({
           advance_id: returnForm.advance_id,
@@ -627,13 +667,12 @@ export default function EmployeeAdvanceForm() {
         .select()
         .single();
 
-      if (returnError) throw returnError;
+      if (error) throw error;
 
-      // Create journal entry
       const { error: journalError } = await supabase.functions.invoke(
         "supabase-functions-employee-advance-journal",
         {
-          body: {
+          body: sanitizePayload({
             type: "return",
             return_id: returnData.id,
             advance_id: returnForm.advance_id,
@@ -642,7 +681,7 @@ export default function EmployeeAdvanceForm() {
             date: returnForm.return_date,
             coa_account_code: selectedAdvance?.coa_account_code,
             bukti_url: returnForm.bukti_url,
-          },
+          }),
         }
       );
 
@@ -666,11 +705,10 @@ export default function EmployeeAdvanceForm() {
       });
 
       fetchAdvances();
-    } catch (error: any) {
-      console.error("Error creating return:", error);
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: err.message,
         variant: "destructive",
       });
     } finally {
@@ -708,38 +746,22 @@ export default function EmployeeAdvanceForm() {
     );
   };
 
+  /* =========================
+     RENDER
+  ========================= */
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Uang Muka Karyawan / Kas Bon</h1>
-          <p className="text-slate-600 mt-1">
-            Kelola uang muka karyawan dengan jurnal otomatis
-          </p>
-        </div>
-      </div>
+      <h1 className="text-3xl font-bold">Uang Muka Karyawan</h1>
 
-      <Tabs defaultValue="create" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="create">
-            <Plus className="h-4 w-4 mr-2" />
-            Buat Uang Muka
-          </TabsTrigger>
-          <TabsTrigger value="settlement">
-            <Receipt className="h-4 w-4 mr-2" />
-            Serahkan Struk
-          </TabsTrigger>
-          <TabsTrigger value="return">
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Kembalikan Sisa
-          </TabsTrigger>
-          <TabsTrigger value="list">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Daftar Uang Muka
-          </TabsTrigger>
+      <Tabs defaultValue="create">
+        <TabsList className="grid grid-cols-4">
+          <TabsTrigger value="create">Buat</TabsTrigger>
+          <TabsTrigger value="settlement">Realisasi</TabsTrigger>
+          <TabsTrigger value="return">Pengembalian</TabsTrigger>
+          <TabsTrigger value="list">Daftar</TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Create Advance */}
+        {/* CREATE */}
         <TabsContent value="create">
           <Card>
             <CardHeader>
