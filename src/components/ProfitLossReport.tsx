@@ -37,118 +37,167 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { navigateBack } from "@/utils/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LabaRugiDetail {
   account_code: string;
   account_name: string;
   account_type: string;
   display_amount: number;
+  transactions?: TransactionDetail[];
+}
+
+interface TransactionDetail {
+  id: string;
+  date: string;
+  description: string;
+  debit: number;
+  credit: number;
+  reference_number?: string;
 }
 
 export default function ProfitLossReport() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const [revenues, setRevenues] = useState<LabaRugiDetail[]>([]);
   const [cogs, setCogs] = useState<LabaRugiDetail[]>([]);
   const [expenses, setExpenses] = useState<LabaRugiDetail[]>([]);
 
-  const [filterType, setFilterType] = useState<"month" | "year" | "custom">(
-    "month",
-  );
-  const [dateFrom, setDateFrom] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      .toISOString()
-      .split("T")[0],
-  );
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split("T")[0]);
-
   useEffect(() => {
     fetchProfitLossData();
-  }, [dateFrom, dateTo]);
-
-  const handleFilterChange = (type: "month" | "year" | "custom") => {
-    setFilterType(type);
-    const now = new Date();
-
-    if (type === "month") {
-      setDateFrom(
-        new Date(now.getFullYear(), now.getMonth(), 1)
-          .toISOString()
-          .split("T")[0],
-      );
-      setDateTo(
-        new Date(now.getFullYear(), now.getMonth() + 1, 0)
-          .toISOString()
-          .split("T")[0],
-      );
-    } else if (type === "year") {
-      setDateFrom(
-        new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0],
-      );
-      setDateTo(
-        new Date(now.getFullYear(), 11, 31).toISOString().split("T")[0],
-      );
-    }
-  };
+  }, []);
 
   const fetchProfitLossData = async () => {
     setLoading(true);
 
+    console.log("🚀 fetchData() called - Starting to fetch profit loss data");
+    
     try {
-      // Fetch data from vw_profit_loss_complete view with full COA details
-      const { data, error } = await supabase
-        .from("vw_profit_loss_complete")
-        .select(
-          "account_id, account_code, account_name, account_type, balance",
-        );
+      // Step 1: Fetch ALL journal_entries (without entity_id filter)
+      const { data: journalData, error: journalError } = await supabase
+        .from("journal_entries")
+        .select("id, account_code, account_name, debit, credit, entry_date, description, reference_number")
+        .order("entry_date", { ascending: true });
 
-      if (error) throw error;
+      if (journalError) {
+        console.error("❌ Error fetching journal_entries:", journalError);
+        throw journalError;
+      }
 
-      console.log("📊 Raw data from vw_profit_loss_complete:", data);
+      console.log("📊 Journal Entries Data:", journalData?.length || 0);
+      console.log("📊 Sample journal data:", journalData?.slice(0, 3));
 
-      // Categorize accounts by account_type
+      // Step 2: Group journal entries by account_code
+      const accountMap = new Map<string, {
+        account_code: string;
+        account_name: string;
+        transactions: TransactionDetail[];
+        totalDebit: number;
+        totalCredit: number;
+      }>();
+
+      journalData?.forEach((row: any) => {
+        const key = row.account_code;
+        
+        if (!accountMap.has(key)) {
+          accountMap.set(key, {
+            account_code: row.account_code,
+            account_name: row.account_name,
+            transactions: [],
+            totalDebit: 0,
+            totalCredit: 0,
+          });
+        }
+
+        const account = accountMap.get(key)!;
+        account.transactions.push({
+          id: row.id,
+          date: row.entry_date,
+          description: row.description || row.reference_number || '-',
+          debit: Number(row.debit) || 0,
+          credit: Number(row.credit) || 0,
+          reference_number: row.reference_number,
+        });
+        account.totalDebit += Number(row.debit) || 0;
+        account.totalCredit += Number(row.credit) || 0;
+      });
+
+      // Step 3: Categorize accounts based on account_code prefix
       const revenueAccounts: LabaRugiDetail[] = [];
-      const cogsAccounts: LabaRugiDetail[] = [];
-      const expenseAccounts: LabaRugiDetail[] = [];
+      const cogsAccountsData: LabaRugiDetail[] = [];
+      const expenseAccountsData: LabaRugiDetail[] = [];
 
-      data?.forEach((row: any) => {
-        const balance = Number(row.balance) || 0;
+      accountMap.forEach((account) => {
+        console.log("🔍 Processing account:", account.account_code, account.account_name, {
+          totalDebit: account.totalDebit,
+          totalCredit: account.totalCredit,
+          transactionCount: account.transactions.length
+        });
 
-        // Skip zero balances
-        if (balance === 0) return;
-
-        const item: LabaRugiDetail = {
-          account_code: row.account_code,
-          account_name: row.account_name,
-          account_type: row.account_type,
-          display_amount: Math.abs(balance),
-        };
-
-        if (row.account_type === "Pendapatan") {
-          revenueAccounts.push(item);
-        } else if (row.account_type === "Beban Pokok Penjualan") {
-          cogsAccounts.push(item);
-        } else if (row.account_type === "Beban Operasional") {
-          expenseAccounts.push(item);
+        // Calculate saldo based on account type
+        let saldo = 0;
+        let accountType = "";
+        
+        if (account.account_code.startsWith("4-")) {
+          // PENDAPATAN: Credit - Debit
+          saldo = account.totalCredit - account.totalDebit;
+          accountType = "Pendapatan";
+          
+          revenueAccounts.push({
+            account_code: account.account_code,
+            account_name: account.account_name,
+            account_type: accountType,
+            display_amount: Math.abs(saldo),
+            transactions: account.transactions,
+          });
+        } else if (account.account_code.startsWith("5-")) {
+          // BEBAN POKOK PENJUALAN: Debit - Credit
+          saldo = account.totalDebit - account.totalCredit;
+          accountType = "Beban Pokok Penjualan";
+          
+          cogsAccountsData.push({
+            account_code: account.account_code,
+            account_name: account.account_name,
+            account_type: accountType,
+            display_amount: Math.abs(saldo),
+            transactions: account.transactions,
+          });
+        } else if (account.account_code.startsWith("6-")) {
+          // BEBAN OPERASIONAL: Debit - Credit
+          saldo = account.totalDebit - account.totalCredit;
+          accountType = "Beban Operasional";
+          
+          expenseAccountsData.push({
+            account_code: account.account_code,
+            account_name: account.account_name,
+            account_type: accountType,
+            display_amount: Math.abs(saldo),
+            transactions: account.transactions,
+          });
         }
       });
 
       setRevenues(revenueAccounts);
-      setCogs(cogsAccounts);
-      setExpenses(expenseAccounts);
+      setCogs(cogsAccountsData);
+      setExpenses(expenseAccountsData);
 
       console.log("📊 Categorized data:", {
-        revenues: revenueAccounts,
-        cogs: cogsAccounts,
-        expenses: expenseAccounts,
-        totalRows: data?.length || 0,
+        revenues: revenueAccounts.length,
+        cogs: cogsAccountsData.length,
+        expenses: expenseAccountsData.length,
+        totalRows: journalData?.length || 0,
       });
+
+      console.log("📊 Revenue accounts detail:", revenueAccounts);
+      console.log("📊 COGS accounts detail:", cogsAccountsData);
+      console.log("📊 Expense accounts detail:", expenseAccountsData);
 
       toast({
         title: "✅ Laporan diperbarui",
-        description: `Data laporan berhasil dimuat (${data?.length || 0} baris)`,
+        description: `Data laporan berhasil dimuat (${journalData?.length || 0} transaksi)`,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Gagal memuat data laporan";
@@ -192,36 +241,96 @@ export default function ProfitLossReport() {
       ["LAPORAN LABA RUGI"],
       [`Periode: ${dateFrom} s/d ${dateTo}`],
       [""],
-      ["Akun", "Saldo"],
+      ["Kode Akun", "Nama Akun", "Tanggal", "Deskripsi", "Saldo"],
       [""],
       ["PENDAPATAN"],
-      ...revenues.map((acc) => [
-        `${acc.account_code} - ${acc.account_name}`,
-        acc.display_amount.toFixed(0),
-      ]),
-      ["", `Total Pendapatan: ${totalRevenue.toFixed(0)}`],
-      [""],
-      ["BEBAN POKOK PENJUALAN"],
-      ...cogs.map((acc) => [
-        `${acc.account_code} - ${acc.account_name}`,
-        acc.display_amount.toFixed(0),
-      ]),
-      ["", `Total HPP: ${totalCOGS.toFixed(0)}`],
-      ["", `LABA KOTOR: ${grossProfit.toFixed(0)}`],
-      [""],
-      ["BEBAN OPERASIONAL"],
-      ...expenses.map((acc) => [
-        `${acc.account_code} - ${acc.account_name}`,
-        acc.display_amount.toFixed(0),
-      ]),
-      ["", `Total Beban Operasional: ${totalExpenses.toFixed(0)}`],
-      [""],
-      ["LABA BERSIH", netProfit.toFixed(0)],
-    ]
+    ];
+
+    revenues.forEach((acc) => {
+      if (acc.transactions && acc.transactions.length > 0) {
+        acc.transactions.forEach((trx) => {
+          csv.push([
+            acc.account_code,
+            acc.account_name,
+            new Date(trx.date).toLocaleDateString('id-ID'),
+            trx.description,
+            (trx.credit - trx.debit).toFixed(0),
+          ]);
+        });
+      } else {
+        csv.push([
+          acc.account_code,
+          acc.account_name,
+          "-",
+          "-",
+          acc.display_amount.toFixed(0),
+        ]);
+      }
+    });
+
+    csv.push(["", "", "", "Total Pendapatan:", totalRevenue.toFixed(0)]);
+    csv.push([""]);
+    csv.push(["BEBAN POKOK PENJUALAN"]);
+
+    cogs.forEach((acc) => {
+      if (acc.transactions && acc.transactions.length > 0) {
+        acc.transactions.forEach((trx) => {
+          csv.push([
+            acc.account_code,
+            acc.account_name,
+            new Date(trx.date).toLocaleDateString('id-ID'),
+            trx.description,
+            (trx.debit - trx.credit).toFixed(0),
+          ]);
+        });
+      } else {
+        csv.push([
+          acc.account_code,
+          acc.account_name,
+          "-",
+          "-",
+          acc.display_amount.toFixed(0),
+        ]);
+      }
+    });
+
+    csv.push(["", "", "", "Total Beban Pokok Penjualan:", totalCOGS.toFixed(0)]);
+    csv.push([""]);
+    csv.push(["LABA KOTOR", "", "", "", grossProfit.toFixed(0)]);
+    csv.push([""]);
+    csv.push(["BEBAN OPERASIONAL"]);
+
+    expenses.forEach((acc) => {
+      if (acc.transactions && acc.transactions.length > 0) {
+        acc.transactions.forEach((trx) => {
+          csv.push([
+            acc.account_code,
+            acc.account_name,
+            new Date(trx.date).toLocaleDateString('id-ID'),
+            trx.description,
+            (trx.debit - trx.credit).toFixed(0),
+          ]);
+        });
+      } else {
+        csv.push([
+          acc.account_code,
+          acc.account_name,
+          "-",
+          "-",
+          acc.display_amount.toFixed(0),
+        ]);
+      }
+    });
+
+    csv.push(["", "", "", "Total Beban Operasional:", totalExpenses.toFixed(0)]);
+    csv.push([""]);
+    csv.push(["LABA BERSIH", "", "", "", netProfit.toFixed(0)]);
+
+    const csvContent = csv
       .map((row) => row.join(","))
       .join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -257,67 +366,19 @@ export default function ProfitLossReport() {
           </div>
         </CardHeader>
         <CardContent className="p-4">
-          {/* Filter */}
-          <div className="grid md:grid-cols-5 gap-3 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="space-y-2">
-              <Label>Filter Waktu</Label>
-              <Select
-                value={filterType}
-                onValueChange={(v: any) => handleFilterChange(v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month">Per Bulan</SelectItem>
-                  <SelectItem value="year">Per Tahun</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dateFrom">Dari Tanggal</Label>
-              <Input
-                id="dateFrom"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                disabled={filterType !== "custom"}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dateTo">Sampai Tanggal</Label>
-              <Input
-                id="dateTo"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                disabled={filterType !== "custom"}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={fetchProfitLossData}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-            </div>
-            <div className="flex items-end gap-2">
-              <Button
-                onClick={exportToCSV}
-                variant="outline"
-                className="flex-1"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Excel
-              </Button>
-              <Button variant="outline" className="flex-1">
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </Button>
-            </div>
+          {/* Export Buttons */}
+          <div className="flex justify-end items-center gap-2 mb-6">
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Excel
+            </Button>
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
           </div>
 
           {loading ? (
@@ -338,6 +399,8 @@ export default function ProfitLossReport() {
                     <TableRow className="bg-gray-50">
                       <TableHead>Kode Akun</TableHead>
                       <TableHead>Nama Akun</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Deskripsi</TableHead>
                       <TableHead className="text-right">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -345,7 +408,7 @@ export default function ProfitLossReport() {
                     {revenues.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={5}
                           className="text-center text-slate-500"
                         >
                           Tidak ada data pendapatan
@@ -353,21 +416,41 @@ export default function ProfitLossReport() {
                       </TableRow>
                     ) : (
                       revenues.map((acc) => (
-                        <TableRow key={acc.account_code}>
-                          <TableCell className="font-mono">
-                            {acc.account_code}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {acc.account_name}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatRupiah(acc.display_amount)}
-                          </TableCell>
-                        </TableRow>
+                        acc.transactions && acc.transactions.length > 0 ? (
+                          acc.transactions.map((trx, idx) => (
+                            <TableRow key={`${acc.account_code}-${trx.id}`}>
+                              {idx === 0 && (
+                                <>
+                                  <TableCell className="font-mono" rowSpan={acc.transactions!.length}>
+                                    {acc.account_code}
+                                  </TableCell>
+                                  <TableCell className="font-medium" rowSpan={acc.transactions!.length}>
+                                    {acc.account_name}
+                                  </TableCell>
+                                </>
+                              )}
+                              <TableCell>{new Date(trx.date).toLocaleDateString('id-ID')}</TableCell>
+                              <TableCell className="text-sm">{trx.description}</TableCell>
+                              <TableCell className="text-right">
+                                {formatRupiah(trx.credit - trx.debit)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow key={acc.account_code}>
+                            <TableCell className="font-mono">{acc.account_code}</TableCell>
+                            <TableCell className="font-medium">{acc.account_name}</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatRupiah(acc.display_amount)}
+                            </TableCell>
+                          </TableRow>
+                        )
                       ))
                     )}
                     <TableRow className="bg-green-50 font-bold">
-                      <TableCell colSpan={2}>Total Pendapatan</TableCell>
+                      <TableCell colSpan={4}>Total Pendapatan</TableCell>
                       <TableCell className="text-right text-green-700">
                         {formatRupiah(totalRevenue)}
                       </TableCell>
@@ -388,6 +471,8 @@ export default function ProfitLossReport() {
                     <TableRow className="bg-gray-50">
                       <TableHead>Kode Akun</TableHead>
                       <TableHead>Nama Akun</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Deskripsi</TableHead>
                       <TableHead className="text-right">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -395,7 +480,7 @@ export default function ProfitLossReport() {
                     {cogs.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={5}
                           className="text-center text-slate-500"
                         >
                           Tidak ada data beban pokok penjualan
@@ -403,23 +488,41 @@ export default function ProfitLossReport() {
                       </TableRow>
                     ) : (
                       cogs.map((acc) => (
-                        <TableRow key={acc.account_code}>
-                          <TableCell className="font-mono">
-                            {acc.account_code}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {acc.account_name}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatRupiah(acc.display_amount)}
-                          </TableCell>
-                        </TableRow>
+                        acc.transactions && acc.transactions.length > 0 ? (
+                          acc.transactions.map((trx, idx) => (
+                            <TableRow key={`${acc.account_code}-${trx.id}`}>
+                              {idx === 0 && (
+                                <>
+                                  <TableCell className="font-mono" rowSpan={acc.transactions!.length}>
+                                    {acc.account_code}
+                                  </TableCell>
+                                  <TableCell className="font-medium" rowSpan={acc.transactions!.length}>
+                                    {acc.account_name}
+                                  </TableCell>
+                                </>
+                              )}
+                              <TableCell>{new Date(trx.date).toLocaleDateString('id-ID')}</TableCell>
+                              <TableCell className="text-sm">{trx.description}</TableCell>
+                              <TableCell className="text-right">
+                                {formatRupiah(trx.debit - trx.credit)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow key={acc.account_code}>
+                            <TableCell className="font-mono">{acc.account_code}</TableCell>
+                            <TableCell className="font-medium">{acc.account_name}</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatRupiah(acc.display_amount)}
+                            </TableCell>
+                          </TableRow>
+                        )
                       ))
                     )}
                     <TableRow className="bg-orange-50 font-bold">
-                      <TableCell colSpan={2}>
-                        Total Beban Pokok Penjualan
-                      </TableCell>
+                      <TableCell colSpan={4}>Total Beban Pokok Penjualan</TableCell>
                       <TableCell className="text-right text-orange-700">
                         {formatRupiah(totalCOGS)}
                       </TableCell>
@@ -452,6 +555,8 @@ export default function ProfitLossReport() {
                     <TableRow className="bg-gray-50">
                       <TableHead>Kode Akun</TableHead>
                       <TableHead>Nama Akun</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Deskripsi</TableHead>
                       <TableHead className="text-right">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -459,7 +564,7 @@ export default function ProfitLossReport() {
                     {expenses.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={5}
                           className="text-center text-slate-500"
                         >
                           Tidak ada data beban operasional
@@ -467,21 +572,41 @@ export default function ProfitLossReport() {
                       </TableRow>
                     ) : (
                       expenses.map((acc) => (
-                        <TableRow key={acc.account_code}>
-                          <TableCell className="font-mono">
-                            {acc.account_code}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {acc.account_name}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatRupiah(acc.display_amount)}
-                          </TableCell>
-                        </TableRow>
+                        acc.transactions && acc.transactions.length > 0 ? (
+                          acc.transactions.map((trx, idx) => (
+                            <TableRow key={`${acc.account_code}-${trx.id}`}>
+                              {idx === 0 && (
+                                <>
+                                  <TableCell className="font-mono" rowSpan={acc.transactions!.length}>
+                                    {acc.account_code}
+                                  </TableCell>
+                                  <TableCell className="font-medium" rowSpan={acc.transactions!.length}>
+                                    {acc.account_name}
+                                  </TableCell>
+                                </>
+                              )}
+                              <TableCell>{new Date(trx.date).toLocaleDateString('id-ID')}</TableCell>
+                              <TableCell className="text-sm">{trx.description}</TableCell>
+                              <TableCell className="text-right">
+                                {formatRupiah(trx.debit - trx.credit)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow key={acc.account_code}>
+                            <TableCell className="font-mono">{acc.account_code}</TableCell>
+                            <TableCell className="font-medium">{acc.account_name}</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatRupiah(acc.display_amount)}
+                            </TableCell>
+                          </TableRow>
+                        )
                       ))
                     )}
                     <TableRow className="bg-red-50 font-bold">
-                      <TableCell colSpan={2}>Total Beban Operasional</TableCell>
+                      <TableCell colSpan={4}>Total Beban Operasional</TableCell>
                       <TableCell className="text-right text-red-700">
                         {formatRupiah(totalExpenses)}
                       </TableCell>

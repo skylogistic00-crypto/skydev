@@ -1140,13 +1140,16 @@ export default function TransaksiKeuanganForm() {
         },
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
 
       if (data?.suggestions) {
         setJurnalUmumSuggestions(String(data.suggestions));
       }
-    } catch (error) {
-      console.error("Error fetching jurnal umum suggestions:", error as Error);
+    } catch (err) {
+      console.error("Error fetching jurnal umum suggestions:", err);
       toast({
         title: "Error",
         description: "Gagal mengambil saran jurnal umum",

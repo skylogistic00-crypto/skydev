@@ -146,6 +146,10 @@ export default function FinancialDashboard() {
         .eq("payment_type", "Pengeluaran Kas")
         .eq("approval_status", "approved");
 
+      if (errorDisbursements) {
+        console.error("❌ Error fetching disbursements:", errorDisbursements);
+      }
+
       // Calculate totals
       const totalPenjualanBarang = (salesBarang || []).reduce((sum, t) => sum + (t.total_amount || 0), 0);
       const totalPenjualanJasa = (salesJasa || []).reduce((sum, t) => sum + (t.total_amount || 0), 0);

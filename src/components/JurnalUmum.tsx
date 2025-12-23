@@ -315,6 +315,10 @@ export default function JurnalUmum() {
 
     setIsSubmitting(true);
     try {
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
       // Insert into general_journal
       const { data: journalData, error: journalError } = await supabase
         .from("general_journal")
@@ -322,12 +326,15 @@ export default function JurnalUmum() {
           transaction_date: tanggalTransaksi,
           reference_no: nomorReferensi || null,
           description: deskripsiTransaksiUtama || null,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
+          created_by: userData.user?.id,
         })
         .select()
         .single();
 
-      if (journalError) throw journalError;
+      if (journalError) {
+        console.error("Journal insert error:", journalError);
+        throw journalError;
+      }
 
       // Insert journal lines
       const lines = jurnalRows.map((row) => {
@@ -348,7 +355,10 @@ export default function JurnalUmum() {
         .from("general_journal_lines")
         .insert(lines);
 
-      if (linesError) throw linesError;
+      if (linesError) {
+        console.error("Journal lines insert error:", linesError);
+        throw linesError;
+      }
 
       toast({
         title: "Jurnal berhasil disimpan",
