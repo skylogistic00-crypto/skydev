@@ -2272,6 +2272,8 @@ export type Database = {
           approved_by: string | null
           created_at: string | null
           created_from_intent: string | null
+          credit: number | null
+          debit: number | null
           description: string | null
           entity_id: string | null
           flow_type: string | null
@@ -2284,10 +2286,7 @@ export type Database = {
           normal_balance: string | null
           parent_code: string | null
           parent_id: string | null
-          saldo: number | null
           status: string | null
-          total_credit: number | null
-          total_debit: number | null
           trans_type: string | null
           updated_at: string | null
           usage_role: string | null
@@ -2303,6 +2302,8 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_from_intent?: string | null
+          credit?: number | null
+          debit?: number | null
           description?: string | null
           entity_id?: string | null
           flow_type?: string | null
@@ -2315,10 +2316,7 @@ export type Database = {
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
-          saldo?: number | null
           status?: string | null
-          total_credit?: number | null
-          total_debit?: number | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -2334,6 +2332,8 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_from_intent?: string | null
+          credit?: number | null
+          debit?: number | null
           description?: string | null
           entity_id?: string | null
           flow_type?: string | null
@@ -2346,10 +2346,7 @@ export type Database = {
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
-          saldo?: number | null
           status?: string | null
-          total_credit?: number | null
-          total_debit?: number | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null

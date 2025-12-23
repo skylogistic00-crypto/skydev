@@ -25,6 +25,10 @@ import AdminSetup from "@/components/AdminSetup";
 import COAManagement from "@/components/COAManagement";
 import BarangLamaReport from "@/components/BarangLamaReport";
 import COAMappingManager from "@/components/COAMappingManager";
+import COAEngine from "@/components/COAEngine";
+import FixedAssets from "@/components/FixedAssets";
+import Depreciation from "@/components/Depreciation";
+import AssetDisposal from "@/components/AssetDisposal";
 const IntegratedFinancialReport = lazy(() => import("@/components/IntegratedFinancialReport"));
 const ProfitLossReport = lazy(() => import("@/components/ProfitLossReport"));
 const BalanceSheetReport = lazy(() => import("@/components/BalanceSheetReport"));
@@ -62,6 +66,8 @@ const CheckUserOCRData = lazy(() => import("@/components/CheckUserOCRData"));
 const EmployeeAdvanceForm = lazy(() => import("@/components/EmployeeAdvanceForm"));
 const GeneralLedgerView = lazy(() => import("@/components/GeneralLedgerView"));
 const TrialBalanceView = lazy(() => import("@/components/TrialBalanceView"));
+const BankReconciliation = lazy(() => import("@/pages/BankReconciliation"));
+const BankMutationReview = lazy(() => import("@/pages/BankMutationReview"));
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -566,6 +572,62 @@ function AppRoutesContent() {
         }
       />
       <Route
+        path="/coa-engine"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "super_admin",
+              "accounting_manager",
+              "accounting_staff",
+            ]}
+          >
+            <COAEngine />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fixed-assets"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "super_admin",
+              "accounting_manager",
+              "accounting_staff",
+            ]}
+          >
+            <FixedAssets />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/depreciation"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "super_admin",
+              "accounting_manager",
+              "accounting_staff",
+            ]}
+          >
+            <Depreciation />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/asset-disposal"
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "super_admin",
+              "accounting_manager",
+              "accounting_staff",
+            ]}
+          >
+            <AssetDisposal />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/report-barang-lama"
         element={
           <ProtectedRoute
@@ -915,6 +977,8 @@ function AppRoutesContent() {
 
       <Route path="/chat-ai" element={<ChatAI />} />
       <Route path="/ocr-extractor" element={<OCRExtractor />} />
+      <Route path="/bank-reconciliation" element={<BankReconciliation />} />
+      <Route path="/bank-mutation-review" element={<BankMutationReview />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

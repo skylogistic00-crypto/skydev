@@ -1,5 +1,5 @@
--- Fix RLS policies for employee_advances to use role_name instead of role
--- The users table uses role_name column, not role
+-- Fix RLS policies for employee_advances to use role column
+-- The users table uses role column (not role_name)
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Finance can view all advances" ON employee_advances;
@@ -13,7 +13,7 @@ USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -23,7 +23,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -33,7 +33,7 @@ USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -47,7 +47,7 @@ USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -63,7 +63,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -77,7 +77,7 @@ USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
 
@@ -93,6 +93,6 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-    AND users.role_name IN ('admin', 'finance', 'accounting_staff', 'super_admin')
+    AND users.role IN ('admin', 'finance', 'accounting_staff', 'super_admin')
   )
 );
