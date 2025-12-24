@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 // Helper function to determine account type based on intent code
 // Must match check constraint: 'Aset', 'Kewajiban', 'Ekuitas', 'Pendapatan', 'Beban Pokok Penjualan', 'Beban Operasional', 'Pendapatan & Beban Lain-lain'
-function getAccountType(intentCode: string): string {
+function getAccountType(intentCode: string, accountCode?: string): string {
   const mapping: Record<string, string> = {
     "SALARY": "Beban Operasional",
     "EXPENSE": "Beban Operasional",
@@ -26,8 +26,27 @@ function getAccountType(intentCode: string): string {
     "HUTANG": "Kewajiban",
     "PINJAMAN": "Kewajiban",
     "DEBT": "Kewajiban",
+    "BANK_TRANSACTION": "Aset",
+    "BANK_ACCOUNT": "Aset",
+    "CASH_ACCOUNT": "Aset",
   };
-  return mapping[intentCode] || "Beban Operasional";
+  
+  // If intent_code has a mapping, use it
+  if (mapping[intentCode]) {
+    return mapping[intentCode];
+  }
+  
+  // Fallback: determine from account_code prefix
+  if (accountCode) {
+    if (accountCode.startsWith("1-")) return "Aset";
+    if (accountCode.startsWith("2-")) return "Kewajiban";
+    if (accountCode.startsWith("3-")) return "Ekuitas";
+    if (accountCode.startsWith("4-")) return "Pendapatan";
+    if (accountCode.startsWith("5-")) return "Beban Pokok Penjualan";
+    if (accountCode.startsWith("6-")) return "Beban Operasional";
+  }
+  
+  return "Beban Operasional";
 }
 
 // Helper function to determine normal balance based on account type
@@ -243,7 +262,7 @@ Deno.serve(async (req) => {
     console.log("Final account code:", finalAccountCode);
 
     // Insert into chart_of_accounts
-    const accountType = getAccountType(suggestion.intent_code);
+    const accountType = getAccountType(suggestion.intent_code, finalAccountCode);
     const insertData = {
       account_code: finalAccountCode,
       account_name: suggestion.suggested_account_name,

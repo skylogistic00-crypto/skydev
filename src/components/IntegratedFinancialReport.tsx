@@ -35,6 +35,7 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -87,6 +88,7 @@ export default function IntegratedFinancialReport() {
   const [filteredData, setFilteredData] = useState<FinancialReportData[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loadingJournal, setLoadingJournal] = useState(false);
+  const [deletingRef, setDeletingRef] = useState<string | null>(null);
   const [coaAccounts, setCOAAccounts] = useState<COAAccount[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [loadingGL, setLoadingGL] = useState(false);
@@ -276,7 +278,6 @@ export default function IntegratedFinancialReport() {
       const { data: journalData, error: journalError } = await supabase
         .from("journal_entries")
         .select("*")
-        .order("created_at", { ascending: false })
         .order("entry_date", { ascending: false });
 
       if (journalError) {
@@ -288,19 +289,12 @@ export default function IntegratedFinancialReport() {
         return;
       }
 
-      // Fetch COA data to get account names
       const { data: coaData, error: coaError } = await supabase
         .from("chart_of_accounts")
         .select("account_code, account_name");
 
       if (coaError) {
-        toast({
-          title: "Error",
-          description: `Gagal memuat chart of accounts: ${coaError.message}`,
-          variant: "destructive",
-        });
-        setJournalEntries(journalData || []);
-        return;
+        console.error("Error fetching COA:", coaError);
       }
 
       // Create a map for quick lookup
@@ -314,40 +308,27 @@ export default function IntegratedFinancialReport() {
           // Determine jenis_transaksi based on reference_type
           let jenisTransaksi = '-';
           
-          // Check for employee advance types (check exact match first)
-          if (entry.reference_type === 'employee_advance_advance') {
-            jenisTransaksi = 'Uang Muka';
-          } else if (entry.reference_type === 'employee_advance_settlement') {
-            jenisTransaksi = 'Penyelesaian Uang Muka';
-          } else if (entry.reference_type === 'employee_advance_return') {
-            jenisTransaksi = 'Pengembalian Uang Muka';
-          }
-          // Check for other transaction types
-          else if (entry.reference_type?.includes('cash_disbursement')) {
-            jenisTransaksi = 'Pengeluaran Kas';
-          } else if (entry.reference_type?.includes('cash_receipt')) {
-            jenisTransaksi = 'Penerimaan Kas';
-          } else if (entry.reference_type?.includes('bank_mutation')) {
-            jenisTransaksi = 'Mutasi Bank';
-          } else if (entry.reference_type?.includes('purchase')) {
+          if (entry.reference_type === 'cash_disbursement') {
+            jenisTransaksi = 'Pengeluaran';
+          } else if (entry.reference_type === 'cash_receipts') {
+            jenisTransaksi = 'Penerimaan';
+          } else if (entry.reference_type === 'purchase_transactions') {
             jenisTransaksi = 'Pembelian';
-          } else if (entry.reference_type?.includes('sales')) {
+          } else if (entry.reference_type === 'sales_transactions') {
             jenisTransaksi = 'Penjualan';
-          } else if (entry.reference_type?.includes('general_journal')) {
-            jenisTransaksi = 'Jurnal Umum';
-          }
-          
-          // Use jenis_transaksi from database if available
-          if (entry.jenis_transaksi) {
+          } else if (entry.reference_type === 'internal_usage') {
+            jenisTransaksi = 'Pemakaian Internal';
+          } else if (entry.reference_type === 'employee_advances') {
+            jenisTransaksi = 'Kasbon Karyawan';
+          } else if (entry.jenis_transaksi) {
             jenisTransaksi = entry.jenis_transaksi;
           }
-          
+
           return {
             ...entry,
-            debit_account_name:
-              coaMap.get(entry.debit_account) || entry.debit_account,
-            credit_account_name:
-              coaMap.get(entry.credit_account) || entry.credit_account,
+            debit_account_name: coaMap.get(entry.debit_account) || "-",
+            credit_account_name: coaMap.get(entry.credit_account) || "-",
+            tanggal: entry.entry_date,
             jenis_transaksi: jenisTransaksi,
           };
         }) || [];
@@ -361,6 +342,116 @@ export default function IntegratedFinancialReport() {
       });
     } finally {
       setLoadingJournal(false);
+    }
+  };
+
+  const deleteJournalEntry = async (journalRef: string, referenceType?: string, referenceId?: string) => {
+    if (!journalRef || journalRef === 'NO-REF') {
+      toast({
+        title: "Error",
+        description: "Journal reference tidak valid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus journal entry dengan ref: ${journalRef}?\n\nData sumber transaksi juga akan dihapus.`)) {
+      return;
+    }
+
+    setDeletingRef(journalRef);
+    try {
+      // Get the journal entry to find reference info
+      const { data: journalData } = await supabase
+        .from("journal_entries")
+        .select("reference_type, reference_id")
+        .eq("journal_ref", journalRef)
+        .limit(1)
+        .single();
+
+      console.log("Journal Data:", journalData);
+      console.log("Params - referenceType:", referenceType, "referenceId:", referenceId);
+
+      const refType = referenceType || journalData?.reference_type;
+      const refId = referenceId || journalData?.reference_id;
+
+      console.log("Resolved - refType:", refType, "refId:", refId);
+
+      if (refType && refId) {
+        let sourceTable = '';
+        
+        // Map reference_type to actual table name
+        if (refType.includes('cash_disbursement') || refType === 'CASH_DISBURSEMENT') {
+          sourceTable = 'cash_disbursement';
+        } else if (refType.includes('cash_receipt') || refType === 'CASH_RECEIPTS') {
+          sourceTable = 'cash_receipts';
+        } else if (refType.includes('purchase') || refType === 'PURCHASE') {
+          sourceTable = 'purchase_transactions';
+        } else if (refType.includes('sales') || refType === 'SALES') {
+          sourceTable = 'sales_transactions';
+        } else if (refType.includes('bank_mutation') || refType === 'BANK_MUTATION') {
+          sourceTable = 'bank_mutations';
+        } else if (refType.includes('employee_advance') || refType === 'EMPLOYEE_ADVANCE') {
+          sourceTable = 'employee_advances';
+        } else if (refType.includes('internal_usage') || refType === 'INTERNAL_USAGE') {
+          sourceTable = 'internal_usage';
+        } else if (refType.includes('general_journal') || refType === 'GENERAL_JOURNAL') {
+          sourceTable = 'general_journal';
+        }
+
+        console.log("Source table:", sourceTable);
+
+        if (sourceTable) {
+          console.log("Deleting by ID:", refId);
+          
+          const { error: sourceError, data: deletedData } = await supabase
+            .from(sourceTable)
+            .delete()
+            .eq('id', refId)
+            .select();
+
+          console.log("Delete result:", { deletedData, sourceError });
+
+          if (sourceError) {
+            console.warn(`Warning: Could not delete source from ${sourceTable}:`, sourceError.message);
+            toast({
+              title: "Warning",
+              description: `Gagal menghapus data sumber: ${sourceError.message}`,
+              variant: "destructive",
+            });
+          } else {
+            console.log(`Successfully deleted source from ${sourceTable}`, deletedData);
+          }
+        } else {
+          console.log("No source table matched for refType:", refType);
+        }
+      } else {
+        console.log("No delete attempt - refType:", refType, "refId:", refId);
+      }
+
+      // Then delete the journal entries
+      const { error } = await supabase
+        .from("journal_entries")
+        .delete()
+        .eq("journal_ref", journalRef);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Journal entry dan data sumber berhasil dihapus",
+      });
+
+      // Refresh data
+      await fetchJournalEntries();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Gagal menghapus journal entry: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingRef(null);
     }
   };
 
@@ -943,13 +1034,14 @@ export default function IntegratedFinancialReport() {
                       <TableHead>Bukti</TableHead>
                       <TableHead className="text-right">Debit</TableHead>
                       <TableHead className="text-right">Kredit</TableHead>
+                      <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {journalEntries.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={8}
+                          colSpan={9}
                           className="text-center py-8 text-gray-500"
                         >
                           Tidak ada data
@@ -1011,6 +1103,21 @@ export default function IntegratedFinancialReport() {
                                 </TableCell>
                                 <TableCell className="text-right font-mono">
                                   -
+                                </TableCell>
+                                <TableCell className="text-center" rowSpan={creditEntry ? 2 : 1}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteJournalEntry(ref, debitEntry.reference_type, debitEntry.reference_id)}
+                                    disabled={deletingRef === ref}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    {deletingRef === ref ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             );

@@ -117,40 +117,51 @@ function extractFinancialCategory(description: string): string | null {
 function findMatchingCOA(description: string, coaAccounts: COAAccount[]): COAAccount | null {
   const lowerDesc = description.toLowerCase();
   
-  // Direct match by account name
-  const directMatch = coaAccounts.find(acc => 
-    acc.is_postable !== false && 
-    lowerDesc.includes(acc.account_name.toLowerCase())
+  // Sort by length to prioritize longer (more specific) matches
+  const sortedAccounts = [...coaAccounts].sort((a, b) => 
+    b.account_name.length - a.account_name.length
   );
-  if (directMatch) return directMatch;
   
-  // Match by financial category
-  const category = extractFinancialCategory(description);
-  if (category && FINANCIAL_CATEGORIES[category]) {
-    const parentCode = FINANCIAL_CATEGORIES[category].parent;
-    const categoryMatch = coaAccounts.find(acc => 
-      acc.is_postable !== false &&
-      acc.account_code.startsWith(parentCode.split("-")[0]) &&
-      acc.account_name.toLowerCase().includes(category.toLowerCase())
-    );
-    if (categoryMatch) return categoryMatch;
-  }
+  // Only match if there's a very specific match
+  const directMatch = sortedAccounts.find(acc => {
+    if (acc.is_postable === false) return false;
+    
+    const accNameLower = acc.account_name.toLowerCase();
+    
+    // EXACT match only - no partial matching
+    // This prevents "Bank" from matching "Bank Syariah Indonesia"
+    return lowerDesc === accNameLower;
+  });
   
-  return null;
+  return directMatch || null;
 }
 
 function getNextAccountCode(parentCode: string, coaAccounts: COAAccount[]): string {
-  const prefix = parentCode.split("-")[0];
+  const [prefix, parentNumStr] = parentCode.split("-");
+  const parentNumber = parseInt(parentNumStr || "0");
+  
+  // Find all DIRECT child accounts under this parent
+  // For parent 1-1000, we want 1-1001, 1-1002, etc (range 1001-1999)
+  // NOT 1-2000, 1-3000 (those are different parent categories)
+  
+  const maxRangeEnd = Math.floor(parentNumber / 1000) * 1000 + 999;
+  
   const existingCodes = coaAccounts
-    .filter(acc => acc.account_code.startsWith(prefix + "-"))
-    .map(acc => {
-      const parts = acc.account_code.split("-");
-      return parts[1] ? parseInt(parts[1]) : 0;
+    .filter(acc => {
+      const [accPrefix, accNumStr] = acc.account_code.split("-");
+      const accNum = parseInt(accNumStr || "0");
+      
+      // Same prefix AND within the same thousand range as parent
+      return accPrefix === prefix && 
+             accNum > parentNumber && 
+             accNum <= maxRangeEnd;
     })
-    .filter(num => !isNaN(num))
+    .map(acc => parseInt(acc.account_code.split("-")[1] || "0"))
     .sort((a, b) => b - a);
   
-  const nextNumber = (existingCodes[0] || parseInt(parentCode.split("-")[1] || "0")) + 100;
+  // Next number should be close to parent, increment by 1
+  const nextNumber = existingCodes.length > 0 ? existingCodes[0] + 1 : parentNumber + 1;
+  
   return `${prefix}-${nextNumber.toString().padStart(4, "0")}`;
 }
 
@@ -236,50 +247,61 @@ Deno.serve(async (req) => {
       `${acc.account_code} - ${acc.account_name} (${acc.account_type})`
     ).join("\n");
 
-    // Smart AI Prompt with strict rules
+    // Smart AI Prompt with intelligent account name extraction
     const prompt = `Anda adalah asisten akuntansi Indonesia profesional. Analisis deskripsi transaksi berikut.
 
-ATURAN WAJIB:
-1. COA adalah KATEGORI FINANSIAL, bukan item atau aset spesifik
-2. JANGAN PERNAH buat COA berdasarkan: nama produk, nomor plat kendaraan, nomor seri, merk barang
-3. PRIORITASKAN menggunakan akun COA yang SUDAH ADA
-4. Hanya sarankan akun BARU jika kategori finansial benar-benar belum ada
-5. Jika confidence < 0.7, WAJIB set action_taken = "needs_review"
+ATURAN UTAMA:
+1. Jika ada akun COA yang PERSIS SAMA dengan deskripsi, gunakan akun tersebut (action_taken = "reused")
+2. Jika TIDAK ADA akun yang persis sama, BUAT AKUN BARU dengan nama berdasarkan deskripsi transaksi (action_taken = "auto_created")
+3. Ekstrak nama akun yang SPESIFIK dari deskripsi transaksi untuk akun baru
 
-CONTOH BENAR:
-- "Bensin mobil B1234ABC" → Gunakan "Beban Transportasi" yang sudah ada
-- "Beli laptop Dell XPS 15" → Gunakan "Peralatan Kantor" yang sudah ada
-- "Gaji karyawan bulan Mei" → Gunakan "Beban Gaji" yang sudah ada
+ATURAN PENAMAAN AKUN BARU:
+- Hilangkan kata-kata umum seperti "Rekening", "Transfer", "dari", "ke" dari nama akun
+- Nama akun harus jelas dan spesifik
+- Contoh: "Rekening Bank Syariah Indonesia" → "Bank Syariah Indonesia"
+- Contoh: "Pembukaan rekening Bank Mandiri" → "Bank Mandiri"
+- Contoh: "Tabungan BRI Cabang Jakarta" → "Bank BRI Cabang Jakarta"
+- Contoh: "Gaji Karyawan" → gunakan "Beban Gaji" jika sudah ada, atau "Beban Gaji" jika baru
 
-CONTOH SALAH (JANGAN LAKUKAN):
-- "Bensin mobil B1234ABC" → JANGAN buat akun "Bensin Mobil B1234ABC"
-- "Beli laptop Dell XPS 15" → JANGAN buat akun "Laptop Dell XPS 15"
+ATURAN PARENT ACCOUNT:
+- WAJIB tentukan parent_account yang TEPAT berdasarkan jenis akun
+- Bank/Rekening → parent: "1-1000" (Kas dan Bank)
+- Kas/Tunai → parent: "1-1000" (Kas dan Bank)
+- Piutang → parent: "1-2000" (Piutang Usaha)
+- Persediaan → parent: "1-3000" (Persediaan)
+- Aset Tetap → parent: "1-5000" (Aset Tetap)
+- Hutang → parent: "2-1000" (Hutang Usaha)
+- Modal → parent: "3-0000" (Modal)
+- Pendapatan → parent: "4-0000" (Pendapatan Usaha)
+- HPP → parent: "5-0000" (Harga Pokok Penjualan)
+- Beban Gaji → parent: "6-1000" (Beban Gaji & Tunjangan)
+- Beban Operasional → parent: "6-2000" (Beban Operasional)
 
 Deskripsi Transaksi: "${description}"
 
 Daftar COA yang tersedia:
 ${coaList}
 
-${existingMatch ? `\n🔍 REKOMENDASI: Akun "${existingMatch.account_name}" (${existingMatch.account_code}) sudah tersedia dan cocok.` : ""}
+${existingMatch ? `\n🔍 MATCH PERSIS DITEMUKAN: Akun "${existingMatch.account_name}" (${existingMatch.account_code}) persis sama dengan deskripsi. Gunakan ini.` : ""}
 ${financialCategory ? `\n📁 KATEGORI TERDETEKSI: ${financialCategory}` : ""}
 
 Berikan respons dalam format JSON:
 {
   "intent": "deskripsi intent transaksi dalam bahasa Indonesia",
-  "financial_category": "kategori finansial (misal: Beban Gaji, Beban Utilitas, Pendapatan Jasa, dll)",
-  "intent_code": "kode intent (SALARY, EXPENSE, REVENUE, PURCHASE, dll)",
-  "selected_account_code": "kode akun COA yang dipilih (dari daftar yang ada atau baru)",
-  "suggested_account_name": "nama akun",
-  "action_taken": "reused | auto_created | needs_review",
+  "financial_category": "kategori finansial",
+  "intent_code": "kode intent (BANK_ACCOUNT, CASH_ACCOUNT, EXPENSE, REVENUE, ASSET, dll)",
+  "selected_account_code": "${existingMatch ? existingMatch.account_code : 'BARU (akan digenerate otomatis)'}",
+  "suggested_account_name": "${existingMatch ? existingMatch.account_name : 'NAMA SPESIFIK dari deskripsi'}",
+  "action_taken": "${existingMatch ? 'reused' : 'auto_created'}",
   "confidence": angka 0-1,
   "reasoning": "penjelasan singkat",
-  "parent_account": "kode parent jika membuat akun baru"
+  "parent_account": "${existingMatch && existingMatch.parent_code ? existingMatch.parent_code : 'WAJIB isi dengan parent code yang tepat (contoh: 1-1000 untuk Bank, 1-2000 untuk Piutang, 6-1000 untuk Beban Gaji)'}"
 }
 
 PENTING: 
-- Jika ada akun cocok, gunakan action_taken = "reused"
-- Jika harus buat baru DAN confidence >= 0.7, gunakan action_taken = "auto_created"
-- Jika ragu atau confidence < 0.7, gunakan action_taken = "needs_review"`;
+- Jika existingMatch ditemukan, WAJIB gunakan action_taken = "reused" dan gunakan data dari existingMatch
+- Jika TIDAK ada existingMatch, suggested_account_name WAJIB diambil dari deskripsi transaksi (bukan nama generik)
+- parent_account WAJIB diisi dengan kode yang tepat sesuai jenis akun (lihat aturan parent account di atas)`;
 
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -290,7 +312,7 @@ PENTING:
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Anda adalah asisten akuntansi Indonesia profesional. COA adalah kategori finansial, BUKAN item spesifik. Prioritaskan REUSE akun yang ada. Selalu respons dalam format JSON yang valid." },
+          { role: "system", content: "Anda adalah asisten akuntansi Indonesia profesional. Jika ada akun COA yang persis sama dengan deskripsi, gunakan akun tersebut (reused). Jika tidak ada, buat akun baru dengan nama spesifik dari deskripsi (bukan nama generik seperti 'Bank' atau 'Kas' saja). Selalu respons dalam format JSON yang valid." },
           { role: "user", content: prompt }
         ],
         temperature: 0.2,
@@ -334,7 +356,7 @@ PENTING:
       );
     }
 
-    // SMART LOGIC: Override action_taken based on confidence
+    // SMART LOGIC: Override action_taken based on existingMatch and confidence
     let actionTaken = analysis.action_taken || "needs_review";
     const confidence = parseFloat(analysis.confidence) || 0;
     
@@ -343,17 +365,36 @@ PENTING:
       actionTaken = "needs_review";
     }
     
-    // Rule: If we found an existing match, force reused
+    // Rule: If we found an exact match, force reused
     if (existingMatch && actionTaken !== "needs_review") {
       actionTaken = "reused";
       analysis.selected_account_code = existingMatch.account_code;
       analysis.suggested_account_name = existingMatch.account_name;
+      if (existingMatch.parent_code) {
+        analysis.parent_account = existingMatch.parent_code;
+      }
+    }
+    // Rule: If NO exact match found, force auto_created
+    else if (!existingMatch && actionTaken !== "needs_review") {
+      actionTaken = "auto_created";
+      // Use AI's suggested_account_name from the description
+      // Do NOT override with generic names
     }
     
     // Rule: If auto_created, calculate the next account code
     let suggestedAccountCode = analysis.selected_account_code || analysis.suggested_account_code;
     if (actionTaken === "auto_created" && analysis.parent_account) {
       suggestedAccountCode = getNextAccountCode(analysis.parent_account, coaAccounts || []);
+    }
+    
+    // CRITICAL FIX: If account code is selected but parent_account is missing, fetch it from DB
+    if (suggestedAccountCode && !analysis.parent_account) {
+      const selectedCOA = (coaAccounts || []).find((acc: COAAccount) => 
+        acc.account_code === suggestedAccountCode
+      );
+      if (selectedCOA && selectedCOA.parent_code) {
+        analysis.parent_account = selectedCOA.parent_code;
+      }
     }
 
     // Save suggestion to database
@@ -391,6 +432,10 @@ PENTING:
         actionTaken = "reused";
         suggestedAccountCode = vehicleCOA.account_code;
         analysis.suggested_account_name = vehicleCOA.account_name;
+        // CRITICAL FIX: Set parent_account from existing COA
+        if (vehicleCOA.parent_code) {
+          analysis.parent_account = vehicleCOA.parent_code;
+        }
       }
     }
 

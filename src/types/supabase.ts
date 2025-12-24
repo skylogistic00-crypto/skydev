@@ -2095,7 +2095,7 @@ export type Database = {
           ocr_data: Json | null
           ocr_id: string | null
           payee_name: string
-          payment_method: string
+          payment_method: string | null
           reference_number: number | null
           rejection_reason: string | null
           status: string | null
@@ -2139,7 +2139,7 @@ export type Database = {
           ocr_data?: Json | null
           ocr_id?: string | null
           payee_name: string
-          payment_method: string
+          payment_method?: string | null
           reference_number?: number | null
           rejection_reason?: string | null
           status?: string | null
@@ -2183,7 +2183,7 @@ export type Database = {
           ocr_data?: Json | null
           ocr_id?: string | null
           payee_name?: string
-          payment_method?: string
+          payment_method?: string | null
           reference_number?: number | null
           rejection_reason?: string | null
           status?: string | null
@@ -2272,8 +2272,6 @@ export type Database = {
           approved_by: string | null
           created_at: string | null
           created_from_intent: string | null
-          credit: number | null
-          debit: number | null
           description: string | null
           entity_id: string | null
           flow_type: string | null
@@ -2286,7 +2284,10 @@ export type Database = {
           normal_balance: string | null
           parent_code: string | null
           parent_id: string | null
+          saldo: number | null
           status: string | null
+          total_credit: number | null
+          total_debit: number | null
           trans_type: string | null
           updated_at: string | null
           usage_role: string | null
@@ -2302,8 +2303,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_from_intent?: string | null
-          credit?: number | null
-          debit?: number | null
           description?: string | null
           entity_id?: string | null
           flow_type?: string | null
@@ -2316,7 +2315,10 @@ export type Database = {
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
+          saldo?: number | null
           status?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -2332,8 +2334,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_from_intent?: string | null
-          credit?: number | null
-          debit?: number | null
           description?: string | null
           entity_id?: string | null
           flow_type?: string | null
@@ -2346,7 +2346,10 @@ export type Database = {
           normal_balance?: string | null
           parent_code?: string | null
           parent_id?: string | null
+          saldo?: number | null
           status?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
@@ -12847,6 +12850,12 @@ export type Database = {
       }
     }
     Enums: {
+      account_type_enum:
+        | "Aset"
+        | "Kewajiban"
+        | "Ekuitas"
+        | "Pendapatan"
+        | "Beban Operasional"
       airwaybill_status:
         | "ARRIVED"
         | "IN_CUSTOMS"
@@ -12854,6 +12863,7 @@ export type Database = {
         | "DELIVERED"
         | "CANCELLED"
       customs_status: "PENDING" | "RELEASED" | "HOLD" | "CLEARED" | "REJECTED"
+      flow_type_enum: "bank" | "cash"
       import_type:
         | "DIRECT"
         | "CONSOLIDATED"
@@ -12876,6 +12886,7 @@ export type Database = {
       mutation_channel: "va" | "transfer" | "card" | "cash"
       mutation_type: "credit" | "debit"
       payment_status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "INVOICE_SENT"
+      trans_type_enum: "asset" | "liability" | "equity" | "revenue" | "expense"
       user_status: "active" | "inactive" | "suspended"
     }
     CompositeTypes: {
@@ -13020,6 +13031,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type_enum: [
+        "Aset",
+        "Kewajiban",
+        "Ekuitas",
+        "Pendapatan",
+        "Beban Operasional",
+      ],
       airwaybill_status: [
         "ARRIVED",
         "IN_CUSTOMS",
@@ -13028,6 +13046,7 @@ export const Constants = {
         "CANCELLED",
       ],
       customs_status: ["PENDING", "RELEASED", "HOLD", "CLEARED", "REJECTED"],
+      flow_type_enum: ["bank", "cash"],
       import_type: [
         "DIRECT",
         "CONSOLIDATED",
@@ -13052,6 +13071,7 @@ export const Constants = {
       mutation_channel: ["va", "transfer", "card", "cash"],
       mutation_type: ["credit", "debit"],
       payment_status: ["UNPAID", "PARTIALLY_PAID", "PAID", "INVOICE_SENT"],
+      trans_type_enum: ["asset", "liability", "equity", "revenue", "expense"],
       user_status: ["active", "inactive", "suspended"],
     },
   },

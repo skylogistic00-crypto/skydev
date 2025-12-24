@@ -465,6 +465,8 @@ export default function ApprovalTransaksi({
         tanggal: transaction.transaction_date,
         kategori: transaction.category,
         jenis_transaksi: "Penerimaan Kas",
+        reference_type: "cash_receipts",
+        reference_id: transaction.id,
         approval_status: "approved",
       });
 
@@ -537,6 +539,8 @@ export default function ApprovalTransaksi({
         credit_account: cashAccountCode,
         description: transaction.description || "Pengeluaran Kas",
         source_type: "cash_disbursement",
+        reference_type: "cash_disbursement",
+        reference_id: transaction.id,
         kategori: transaction.category,
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",
@@ -561,6 +565,8 @@ export default function ApprovalTransaksi({
         credit_account: cashAccountCode,
         description: transaction.description || "Pengeluaran Kas",
         source_type: "cash_disbursement",
+        reference_type: "cash_disbursement",
+        reference_id: transaction.id,
         kategori: transaction.category,
         sumber_pengeluaran: sumberPengeluaran,
         jenis_transaksi: "Pengeluaran Kas",

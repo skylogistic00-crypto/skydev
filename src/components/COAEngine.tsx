@@ -43,6 +43,7 @@ export default function COAEngine() {
   const [loadingList, setLoadingList] = useState(false);
   const [editedAccountCode, setEditedAccountCode] = useState("");
   const [codeValidationError, setCodeValidationError] = useState<string | null>(null);
+  const [nameValidationError, setNameValidationError] = useState<string | null>(null);
 
   const isAdmin = 
     (userProfile as any)?.role_name === "super_admin" || 
@@ -196,6 +197,7 @@ export default function COAEngine() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setNameValidationError(null);
 
     try {
       const { data, error: functionError } = await supabase.functions.invoke(
@@ -210,6 +212,21 @@ export default function COAEngine() {
       if (data.error) {
         setError(data.error);
       } else {
+        // Check if account_name already exists in chart_of_accounts
+        const { data: existingAccount, error: checkError } = await supabase
+          .from('chart_of_accounts')
+          .select('account_name')
+          .eq('account_name', data.suggested_account_name)
+          .maybeSingle();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (existingAccount) {
+          setNameValidationError(`Akun "${data.suggested_account_name}" sudah ada dalam daftar COA yang tersedia`);
+        }
+
         setResult(data);
         setEditedAccountCode(data.suggested_account_code || "");
         setCodeValidationError(null);
@@ -223,6 +240,12 @@ export default function COAEngine() {
 
   const handleApprove = async () => {
     if (!result?.id) return;
+
+    // CRITICAL: Check if account name already exists
+    if (nameValidationError) {
+      alert("Tidak dapat membuat akun COA. Akun dengan nama tersebut sudah ada!");
+      return;
+    }
 
     // Validate edited account code if it has been changed
     if (editedAccountCode !== result.suggested_account_code) {
@@ -434,9 +457,15 @@ export default function COAEngine() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Account Name
                   </label>
-                  <div className="p-3 bg-gray-50 rounded-md text-sm">
+                  <div className={`p-3 rounded-md text-sm ${nameValidationError ? 'bg-red-50 border border-red-300' : 'bg-gray-50'}`}>
                     {result.suggested_account_name || "-"}
                   </div>
+                  {nameValidationError && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{nameValidationError}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
@@ -504,7 +533,7 @@ export default function COAEngine() {
                 <div className="pt-4 border-t">
                   <Button
                     onClick={handleApprove}
-                    disabled={approving || !!codeValidationError}
+                    disabled={approving || !!codeValidationError || !!nameValidationError}
                     variant="default"
                     className="w-full"
                   >
