@@ -1,8 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createSupabaseAdminClient } from "@shared/supabase-client.ts";
 import { corsHeaders } from "@shared/cors.ts";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface DisbursementRequest {
   advance_id: string;
@@ -18,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createSupabaseAdminClient();
     
     // Check if body exists
     const bodyText = await req.text();
@@ -123,58 +120,10 @@ Deno.serve(async (req) => {
     // Generate journal reference
     const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create journal entries (Debit: Uang Muka Karyawan, Credit: Kas/Bank)
-    const journalEntries = [
-      {
-        transaction_date: disbursement_date,
-        journal_ref: journalRef,
-        account_id: uangMukaAccount.id,
-        account_code: uangMukaAccount.account_code,
-        account_name: uangMukaAccount.account_name,
-        account_type: uangMukaAccount.account_type,
-        debit: advance.amount,
-        credit: 0,
-        debit_account: uangMukaAccount.account_code,
-        credit_account: disbursementAccount.account_code,
-        description: `Pencairan Uang Muka - ${advance.employee_name} (${advance.advance_number})`,
-        source_type: "employee_advance_disbursement",
-        jenis_transaksi: "Uang Muka",
-        bukti_url: advance.bukti_url || null,
-        approval_status: "approved",
-      },
-      {
-        transaction_date: disbursement_date,
-        journal_ref: journalRef,
-        account_id: disbursementAccount.id,
-        account_code: disbursementAccount.account_code,
-        account_name: disbursementAccount.account_name,
-        account_type: disbursementAccount.account_type,
-        debit: 0,
-        credit: advance.amount,
-        debit_account: uangMukaAccount.account_code,
-        credit_account: disbursementAccount.account_code,
-        description: `Pencairan Uang Muka - ${advance.employee_name} (${advance.advance_number})`,
-        source_type: "employee_advance_disbursement",
-        jenis_transaksi: "Uang Muka",
-        bukti_url: advance.bukti_url || null,
-        approval_status: "approved",
-      },
-    ];
+    // Journal creation is handled by SQL trigger on employee_advances (same pattern as cash_and_bank_receipts & cash_disbursement).
+    // So this edge function must NOT insert into journal_entries to avoid duplicates.
 
-    // Insert journal entries
-    const { error: journalError } = await supabase
-      .from("journal_entries")
-      .insert(journalEntries);
-
-    if (journalError) {
-      console.error("❌ Journal entry error:", journalError);
-      return new Response(
-        JSON.stringify({ error: "Failed to create journal entries: " + journalError.message }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
-
-    // Update advance status to disbursed
+    // Update advance status; journal creation will be handled by DB trigger (approval-based)
     const { error: updateError } = await supabase
       .from("employee_advances")
       .update({
@@ -183,7 +132,12 @@ Deno.serve(async (req) => {
         disbursement_account_id,
         disbursement_date,
         reference_number,
-        journal_ref: journalRef,
+
+        debit_account_code: uangMukaAccount.account_code,
+        debit_account_name: uangMukaAccount.account_name,
+        credit_account_code: disbursementAccount.account_code,
+        credit_account_name: disbursementAccount.account_name,
+
         updated_at: new Date().toISOString(),
       })
       .eq("id", advance_id);
@@ -200,7 +154,7 @@ Deno.serve(async (req) => {
         success: true,
         advance_id,
         journal_ref: journalRef,
-        message: "Uang muka berhasil dicairkan dan jurnal telah dibuat",
+        message: "Uang muka berhasil dicairkan",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

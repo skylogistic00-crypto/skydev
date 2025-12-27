@@ -36,6 +36,7 @@ import {
   ChevronDown,
   ChevronRight,
   Trash2,
+  Eye,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -277,8 +278,8 @@ export default function IntegratedFinancialReport() {
     try {
       const { data: journalData, error: journalError } = await supabase
         .from("journal_entries")
-        .select("*")
-        .order("entry_date", { ascending: false });
+        .select("*, tanggal, account_code, account_name, debit, credit, transaction_date, journal_ref, source_id")
+        .order("tanggal", { ascending: false });
 
       if (journalError) {
         toast({
@@ -326,9 +327,10 @@ export default function IntegratedFinancialReport() {
 
           return {
             ...entry,
-            debit_account_name: coaMap.get(entry.debit_account) || "-",
-            credit_account_name: coaMap.get(entry.credit_account) || "-",
-            tanggal: entry.entry_date,
+            debit_account_name:
+              entry.debit_account_name || coaMap.get(entry.debit_account) || "-",
+            credit_account_name:
+              entry.credit_account_name || coaMap.get(entry.credit_account) || "-",
             jenis_transaksi: jenisTransaksi,
           };
         }) || [];
@@ -345,104 +347,95 @@ export default function IntegratedFinancialReport() {
     }
   };
 
-  const deleteJournalEntry = async (journalRef: string, referenceType?: string, referenceId?: string) => {
-    if (!journalRef || journalRef === 'NO-REF') {
+  const deleteJournalEntry = async (journalRef?: string | null, referenceType?: string, referenceId?: string) => {
+    const ref = (journalRef || "").trim();
+
+    if (!ref) {
       toast({
         title: "Error",
-        description: "Journal reference tidak valid",
+        description: "Journal reference kosong. Tidak bisa menghapus karena journal_ref tidak tersedia.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!confirm(`Apakah Anda yakin ingin menghapus journal entry dengan ref: ${journalRef}?\n\nData sumber transaksi juga akan dihapus.`)) {
+    const entriesToDelete = journalEntries.filter((e: any) => (e.journal_ref || "").trim() === ref);
+
+    const refTypeFromRows = Array.from(
+      new Set(entriesToDelete.map((e: any) => e.reference_type).filter(Boolean)),
+    ) as string[];
+
+    const refIdFromRows = Array.from(
+      new Set(entriesToDelete.map((e: any) => e.reference_id).filter(Boolean)),
+    ) as string[];
+
+    const sourceIdFromRows = Array.from(
+      new Set(entriesToDelete.map((e: any) => e.source_id).filter(Boolean)),
+    ) as string[];
+
+    const sourceIds = sourceIdFromRows.length > 0 ? sourceIdFromRows : refIdFromRows;
+
+    if (
+      !confirm(
+        `Apakah Anda yakin ingin menghapus semua journal_entries dengan journal_ref: ${ref}?\n\n` +
+          `Akan menghapus ${entriesToDelete.length} baris journal entries.\n` +
+          `Juga akan mencoba menghapus data sumber jika source_id / reference_id tersedia.`,
+      )
+    ) {
       return;
     }
 
-    setDeletingRef(journalRef);
+    setDeletingRef(ref);
     try {
-      // Get the journal entry to find reference info
-      const { data: journalData } = await supabase
-        .from("journal_entries")
-        .select("reference_type, reference_id")
-        .eq("journal_ref", journalRef)
-        .limit(1)
-        .single();
+      const resolvedRefType = referenceType || refTypeFromRows[0];
 
-      console.log("Journal Data:", journalData);
-      console.log("Params - referenceType:", referenceType, "referenceId:", referenceId);
+      if (resolvedRefType && sourceIds.length > 0) {
+        let sourceTable = "";
 
-      const refType = referenceType || journalData?.reference_type;
-      const refId = referenceId || journalData?.reference_id;
+        const refTypeLower = String(resolvedRefType).toLowerCase();
 
-      console.log("Resolved - refType:", refType, "refId:", refId);
-
-      if (refType && refId) {
-        let sourceTable = '';
-        
-        // Map reference_type to actual table name
-        if (refType.includes('cash_disbursement') || refType === 'CASH_DISBURSEMENT') {
-          sourceTable = 'cash_disbursement';
-        } else if (refType.includes('cash_receipt') || refType === 'CASH_RECEIPTS') {
-          sourceTable = 'cash_receipts';
-        } else if (refType.includes('purchase') || refType === 'PURCHASE') {
-          sourceTable = 'purchase_transactions';
-        } else if (refType.includes('sales') || refType === 'SALES') {
-          sourceTable = 'sales_transactions';
-        } else if (refType.includes('bank_mutation') || refType === 'BANK_MUTATION') {
-          sourceTable = 'bank_mutations';
-        } else if (refType.includes('employee_advance') || refType === 'EMPLOYEE_ADVANCE') {
-          sourceTable = 'employee_advances';
-        } else if (refType.includes('internal_usage') || refType === 'INTERNAL_USAGE') {
-          sourceTable = 'internal_usage';
-        } else if (refType.includes('general_journal') || refType === 'GENERAL_JOURNAL') {
-          sourceTable = 'general_journal';
+        if (refTypeLower.includes("cash_disbursement") || resolvedRefType === "CASH_DISBURSEMENT") {
+          sourceTable = "cash_disbursement";
+        } else if (refTypeLower.includes("cash_receipt") || resolvedRefType === "CASH_RECEIPTS") {
+          sourceTable = "cash_receipts";
+        } else if (refTypeLower.includes("purchase") || resolvedRefType === "PURCHASE") {
+          sourceTable = "purchase_transactions";
+        } else if (refTypeLower.includes("sales") || resolvedRefType === "SALES") {
+          sourceTable = "sales_transactions";
+        } else if (refTypeLower.includes("bank_mutation") || resolvedRefType === "BANK_MUTATION") {
+          sourceTable = "bank_mutations";
+        } else if (refTypeLower.includes("employee_advance") || resolvedRefType === "EMPLOYEE_ADVANCE") {
+          sourceTable = "employee_advances";
+        } else if (refTypeLower.includes("internal_usage") || resolvedRefType === "INTERNAL_USAGE") {
+          sourceTable = "internal_usage";
+        } else if (refTypeLower.includes("general_journal") || resolvedRefType === "GENERAL_JOURNAL") {
+          sourceTable = "general_journal";
         }
 
-        console.log("Source table:", sourceTable);
-
         if (sourceTable) {
-          console.log("Deleting by ID:", refId);
-          
-          const { error: sourceError, data: deletedData } = await supabase
+          const { error: sourceError } = await supabase
             .from(sourceTable)
             .delete()
-            .eq('id', refId)
-            .select();
-
-          console.log("Delete result:", { deletedData, sourceError });
+            .in("id", sourceIds);
 
           if (sourceError) {
-            console.warn(`Warning: Could not delete source from ${sourceTable}:`, sourceError.message);
             toast({
               title: "Warning",
               description: `Gagal menghapus data sumber: ${sourceError.message}`,
               variant: "destructive",
             });
-          } else {
-            console.log(`Successfully deleted source from ${sourceTable}`, deletedData);
           }
-        } else {
-          console.log("No source table matched for refType:", refType);
         }
-      } else {
-        console.log("No delete attempt - refType:", refType, "refId:", refId);
       }
 
-      // Then delete the journal entries
-      const { error } = await supabase
-        .from("journal_entries")
-        .delete()
-        .eq("journal_ref", journalRef);
-
+      const { error } = await supabase.from("journal_entries").delete().eq("journal_ref", ref);
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Journal entry dan data sumber berhasil dihapus",
+        description: "Journal entries (group journal_ref) dan data sumber berhasil dihapus",
       });
 
-      // Refresh data
       await fetchJournalEntries();
     } catch (error: any) {
       toast({
@@ -515,21 +508,18 @@ export default function IntegratedFinancialReport() {
     const transactions: GLTransaction[] = [];
 
     journalEntries.forEach((entry) => {
-      if (entry.debit_account === accountCode) {
+      const code = entry.account_code || entry.accountCode || "";
+      if (!code) return;
+
+      const debitVal = Number(entry.debit || 0);
+      const creditVal = Number(entry.credit || 0);
+
+      if (code === accountCode) {
         transactions.push({
-          date: entry.entry_date,
-          description: entry.description || entry.entry_number,
-          debit: entry.debit,
-          credit: 0,
-          entry_id: entry.id,
-        });
-      }
-      if (entry.credit_account === accountCode) {
-        transactions.push({
-          date: entry.entry_date,
-          description: entry.description || entry.entry_number,
-          debit: 0,
-          credit: entry.credit,
+          date: entry.transaction_date || entry.tanggal || entry.entry_date,
+          description: entry.description || entry.entry_number || entry.journal_ref,
+          debit: debitVal,
+          credit: creditVal,
           entry_id: entry.id,
         });
       }
@@ -572,42 +562,8 @@ export default function IntegratedFinancialReport() {
     // Calculate totals for this account (including children for level 1 & 2)
     const { totalDebit, totalCredit } = calculateAccountTotals(account.account_code, level);
     
-    // Calculate balance based on account type
-    // ASET (1): Debit - Credit (bisa minus jika kredit > debit)
-    // KEWAJIBAN (2): Credit - Debit (bisa minus jika debit > kredit)
-    // EKUITAS (3): Credit - Debit (bisa minus jika debit > kredit)
-    // PENDAPATAN (4): Credit - Debit (bisa minus jika debit > kredit)
-    // BEBAN POKOK PENJUALAN (5): Debit - Credit (bisa minus jika kredit > debit)
-    // BEBAN OPERASIONAL (6): Debit - Credit (bisa minus jika kredit > debit)
-    // PENDAPATAN & BEBAN LAIN-LAIN (7): Credit - Debit (bisa minus jika debit > kredit)
-    const accountPrefix = account.account_code.charAt(0);
-    let balance = 0;
-    
-    if (accountPrefix === '1') {
-      // ASET: Debit - Credit (minus jika kredit > debit)
-      balance = totalDebit - totalCredit;
-    } else if (accountPrefix === '5') {
-      // BEBAN POKOK PENJUALAN: Debit - Credit (minus jika kredit > debit)
-      balance = totalDebit - totalCredit;
-    } else if (accountPrefix === '2') {
-      // KEWAJIBAN: Credit - Debit (minus jika debit > kredit)
-      balance = totalCredit - totalDebit;
-    } else if (accountPrefix === '3') {
-      // EKUITAS: Credit - Debit (minus jika debit > kredit)
-      balance = totalCredit - totalDebit;
-    } else if (accountPrefix === '4') {
-      // PENDAPATAN: Credit - Debit (minus jika debit > kredit)
-      balance = totalCredit - totalDebit;
-    } else if (accountPrefix === '6') {
-      // BEBAN OPERASIONAL: Debit - Credit (minus jika kredit > debit)
-      balance = totalDebit - totalCredit;
-    } else if (accountPrefix === '7') {
-      // PENDAPATAN & BEBAN LAIN-LAIN: Credit - Debit (minus jika debit > kredit)
-      balance = totalCredit - totalDebit;
-    } else {
-      // Default: Debit - Credit
-      balance = totalDebit - totalCredit;
-    }
+    // Balance: match Journal Entries concept (Saldo = Debit - Kredit)
+    const balance = totalDebit - totalCredit;
 
     return (
       <div key={account.id}>
@@ -630,37 +586,17 @@ export default function IntegratedFinancialReport() {
           {!hasChildren && <span className="mr-2 w-4"></span>}
           <span className="font-mono mr-4">{account.account_code}</span>
           <span className="flex-1">{account.account_name}</span>
-          {(totalDebit > 0 || totalCredit > 0) && (
-            <>
-              {level === 1 ? (
-                <>
-                  <span className="font-mono text-right w-32 mr-4"></span>
-                  <span className="font-mono text-right w-32 mr-4"></span>
-                  <span className={`font-mono text-right w-32 ${balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {balance < 0 ? '-' : ''}{formatRupiah(Math.abs(balance))}
-                  </span>
-                </>
-              ) : level === 3 ? (
-                <>
-                  <span className="font-mono text-right w-32 mr-4">
-                    {formatRupiah(totalDebit)}
-                  </span>
-                  <span className="font-mono text-right w-32 mr-4">
-                    {formatRupiah(totalCredit)}
-                  </span>
-                  <span className={`font-mono text-right w-32 ${balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {balance < 0 ? '-' : ''}{formatRupiah(Math.abs(balance))}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-mono text-right w-32 mr-4"></span>
-                  <span className="font-mono text-right w-32 mr-4"></span>
-                  <span className="font-mono text-right w-32"></span>
-                </>
-              )}
-            </>
-          )}
+          <>
+            <span className="font-mono text-right w-32 mr-4">
+              {totalDebit !== 0 ? formatRupiah(totalDebit) : "-"}
+            </span>
+            <span className="font-mono text-right w-32 mr-4">
+              {totalCredit !== 0 ? formatRupiah(totalCredit) : "-"}
+            </span>
+            <span className="font-mono text-right w-32">
+              {formatRupiah(Math.abs(balance))}
+            </span>
+          </>
         </div>
 
         {level === 3 && isExpanded && transactions.length > 0 && (
@@ -682,34 +618,7 @@ export default function IntegratedFinancialReport() {
                   const runningDebit = previousTransactions.reduce((sum, t) => sum + t.debit, 0);
                   const runningCredit = previousTransactions.reduce((sum, t) => sum + t.credit, 0);
                   
-                  const accountPrefix = account.account_code.charAt(0);
-                  let runningBalance = 0;
-                  
-                  if (accountPrefix === '1') {
-                    // ASET: Debit - Credit (minus jika kredit > debit)
-                    runningBalance = runningDebit - runningCredit;
-                  } else if (accountPrefix === '5') {
-                    // BEBAN POKOK PENJUALAN: Debit - Credit (minus jika kredit > debit)
-                    runningBalance = runningDebit - runningCredit;
-                  } else if (accountPrefix === '2') {
-                    // KEWAJIBAN: Credit - Debit (minus jika debit > kredit)
-                    runningBalance = runningCredit - runningDebit;
-                  } else if (accountPrefix === '3') {
-                    // EKUITAS: Credit - Debit (minus jika debit > kredit)
-                    runningBalance = runningCredit - runningDebit;
-                  } else if (accountPrefix === '4') {
-                    // PENDAPATAN: Credit - Debit (minus jika debit > kredit)
-                    runningBalance = runningCredit - runningDebit;
-                  } else if (accountPrefix === '6') {
-                    // BEBAN OPERASIONAL: Debit - Credit (minus jika kredit > debit)
-                    runningBalance = runningDebit - runningCredit;
-                  } else if (accountPrefix === '7') {
-                    // PENDAPATAN & BEBAN LAIN-LAIN: Credit - Debit (minus jika debit > kredit)
-                    runningBalance = runningCredit - runningDebit;
-                  } else {
-                    // Default: Debit - Credit
-                    runningBalance = runningDebit - runningCredit;
-                  }
+                  const runningBalance = runningDebit - runningCredit;
                   
                   return (
                     <TableRow key={`${trans.entry_id}-${idx}`}>
@@ -723,8 +632,8 @@ export default function IntegratedFinancialReport() {
                       <TableCell className="text-right font-mono text-sm">
                         {trans.credit > 0 ? formatRupiah(trans.credit) : "-"}
                       </TableCell>
-                      <TableCell className={`text-right font-mono text-sm ${runningBalance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {runningBalance < 0 ? '-' : ''}{formatRupiah(Math.abs(runningBalance))}
+                      <TableCell className="text-right font-mono text-sm">
+                        {formatRupiah(Math.abs(runningBalance))}
                       </TableCell>
                     </TableRow>
                   );
@@ -832,7 +741,187 @@ export default function IntegratedFinancialReport() {
           </div>
         </div>
       </div>
+
+      {/* Journal Entries Table */}
       <Card className="max-w-7xl mx-auto rounded-2xl shadow-md">
+        <CardHeader className="p-4">
+          <CardTitle className="text-2xl">Journal Entries</CardTitle>
+          <CardDescription>Data Journal Entries</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4">
+          {loadingJournal ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">
+                  Data Journal Entries ({journalEntries.length} entries)
+                </h3>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-100">
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Jenis Transaksi</TableHead>
+                      <TableHead>Kode Akun</TableHead>
+                      <TableHead>Nama Akun</TableHead>
+                      <TableHead>Deskripsi</TableHead>
+                      <TableHead>Bukti</TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Kredit</TableHead>
+                      <TableHead className="text-center">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {journalEntries.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={9}
+                          className="text-center py-8 text-gray-500"
+                        >
+                          Tidak ada data
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      // Show all journal_entries rows (no grouping)
+                      journalEntries.map((entry: any) => {
+                        const dateVal = entry.transaction_date || entry.tanggal || entry.entry_date;
+                        const isDebit = (entry.debit || 0) > 0;
+                        const isCredit = (entry.credit || 0) > 0;
+
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell className="text-sm">
+                              {dateVal ? new Date(dateVal).toLocaleDateString("id-ID") : "-"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {entry.transaction_type || entry.jenis_transaksi || "-"}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {entry.account_code || entry.debit_account_code || entry.credit_account_code || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {entry.account_name || entry.debit_account_name || entry.credit_account_name || "-"}
+                            </TableCell>
+                            <TableCell className="text-sm">{entry.description || "-"}</TableCell>
+                            <TableCell className="text-sm">
+                              {entry.bukti || entry.bukti_url ? (
+                                <a
+                                  href={(entry.bukti_url || entry.bukti) as string}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  aria-label="Lihat bukti"
+                                  title="Lihat bukti"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {isDebit ? formatRupiah(entry.debit || 0) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {isCredit ? formatRupiah(entry.credit || 0) : "-"}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteJournalEntry(entry.journal_ref, entry.reference_type, entry.reference_id)}
+                                disabled={!entry.journal_ref || deletingRef === entry.journal_ref}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                {deletingRef === (entry.journal_ref || "NO-REF") ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                  <tfoot>
+                    <TableRow className="bg-gray-50 font-semibold">
+                      <TableCell colSpan={6} className="text-right">
+                        Total
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatRupiah(
+                          journalEntries.reduce(
+                            (sum: number, entry: any) => sum + Number(entry.debit || 0),
+                            0,
+                          )
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatRupiah(
+                          journalEntries.reduce(
+                            (sum: number, entry: any) => sum + Number(entry.credit || 0),
+                            0,
+                          )
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center" />
+                    </TableRow>
+                  </tfoot>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* General Ledger (Buku Besar) */}
+      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
+        <CardHeader className="p-4">
+          <CardTitle className="text-2xl">General Ledger (Buku Besar)</CardTitle>
+          <CardDescription>
+            Struktur Akun Berdasarkan COA dengan Transaksi per Akun
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4">
+          {loadingGL ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-100 flex items-center py-2 px-4 font-bold border-b">
+                <span className="mr-2 w-4"></span>
+                <span className="font-mono mr-4 w-32">Kode Akun</span>
+                <span className="flex-1">Nama Akun</span>
+                <span className="text-right w-32 mr-4">Total Debit</span>
+                <span className="text-right w-32 mr-4">Total Kredit</span>
+                <span className="text-right w-32">Saldo</span>
+              </div>
+              {coaAccounts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Tidak ada data COA
+                </div>
+              ) : (
+                <div>
+                  {coaAccounts.filter(acc => acc.level === 1).map((account) =>
+                    renderGLAccount(account, 1)
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Laporan Keuangan Table */}
+      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
         <CardHeader className="p-4">
           <CardTitle className="text-2xl">Laporan Keuangan</CardTitle>
           <CardDescription>Data Laporan Keuangan</CardDescription>
@@ -998,233 +1087,6 @@ export default function IntegratedFinancialReport() {
                   </TableBody>
                 </Table>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Journal Entries Table */}
-      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
-        <CardHeader className="p-4">
-          <CardTitle className="text-2xl">Journal Entries</CardTitle>
-          <CardDescription>Data Journal Entries</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4">
-          {loadingJournal ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">
-                  Data Journal Entries ({journalEntries.length} entries)
-                </h3>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-100">
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Jenis Transaksi</TableHead>
-                      <TableHead>Kode Akun</TableHead>
-                      <TableHead>Nama Akun</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Bukti</TableHead>
-                      <TableHead className="text-right">Debit</TableHead>
-                      <TableHead className="text-right">Kredit</TableHead>
-                      <TableHead className="text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {journalEntries.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={9}
-                          className="text-center py-8 text-gray-500"
-                        >
-                          Tidak ada data
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      // Group by journal_ref and display debit first, then credit
-                      (() => {
-                        const groupedByRef: Record<string, any[]> = {};
-                        
-                        journalEntries.forEach((entry: any) => {
-                          const ref = entry.journal_ref || 'NO-REF';
-                          if (!groupedByRef[ref]) {
-                            groupedByRef[ref] = [];
-                          }
-                          groupedByRef[ref].push(entry);
-                        });
-
-                        const rows: JSX.Element[] = [];
-                        
-                        Object.entries(groupedByRef).forEach(([ref, entries]) => {
-                          // Find debit and credit entries
-                          const debitEntry = entries.find((e: any) => (e.debit || 0) > 0);
-                          const creditEntry = entries.find((e: any) => (e.credit || 0) > 0);
-                          
-                          // Display debit row first
-                          if (debitEntry) {
-                            rows.push(
-                              <TableRow key={`${ref}-debit`}>
-                                <TableCell className="text-sm">
-                                  {debitEntry.entry_date ? new Date(debitEntry.entry_date).toLocaleDateString('id-ID') : '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {debitEntry.jenis_transaksi || '-'}
-                                </TableCell>
-                                <TableCell className="font-mono">
-                                  {debitEntry.debit_account || '-'}
-                                </TableCell>
-                                <TableCell>
-                                  {debitEntry.debit_account_name || '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {debitEntry.description || '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {debitEntry.bukti_url ? (
-                                    <a 
-                                      href={debitEntry.bukti_url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      Lihat
-                                    </a>
-                                  ) : '-'}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {formatRupiah(debitEntry.debit || 0)}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  -
-                                </TableCell>
-                                <TableCell className="text-center" rowSpan={creditEntry ? 2 : 1}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteJournalEntry(ref, debitEntry.reference_type, debitEntry.reference_id)}
-                                    disabled={deletingRef === ref}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    {deletingRef === ref ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          }
-                          
-                          // Display credit row second
-                          if (creditEntry) {
-                            rows.push(
-                              <TableRow key={`${ref}-credit`}>
-                                <TableCell className="text-sm">
-                                  {creditEntry.entry_date ? new Date(creditEntry.entry_date).toLocaleDateString('id-ID') : '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {creditEntry.jenis_transaksi || '-'}
-                                </TableCell>
-                                <TableCell className="font-mono">
-                                  {creditEntry.credit_account || '-'}
-                                </TableCell>
-                                <TableCell>
-                                  {creditEntry.credit_account_name || '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {creditEntry.description || '-'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {creditEntry.bukti_url ? (
-                                    <a 
-                                      href={creditEntry.bukti_url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      Lihat
-                                    </a>
-                                  ) : '-'}
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  -
-                                </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {formatRupiah(creditEntry.credit || 0)}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          }
-                        });
-
-                        return rows;
-                      })()
-                    )}
-                  </TableBody>
-                  <tfoot>
-                    <TableRow className="bg-gray-50 font-semibold">
-                      <TableCell colSpan={5} className="text-right">Total</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatRupiah(
-                          journalEntries.reduce((sum: number, entry: any) => sum + (entry.debit || 0), 0)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatRupiah(
-                          journalEntries.reduce((sum: number, entry: any) => sum + (entry.credit || 0), 0)
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  </tfoot>
-                </Table>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* General Ledger (Buku Besar) */}
-      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
-        <CardHeader className="p-4">
-          <CardTitle className="text-2xl">General Ledger (Buku Besar)</CardTitle>
-          <CardDescription>
-            Struktur Akun Berdasarkan COA dengan Transaksi per Akun
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4">
-          {loadingGL ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-gray-100 flex items-center py-2 px-4 font-bold border-b">
-                <span className="mr-2 w-4"></span>
-                <span className="font-mono mr-4 w-32">Kode Akun</span>
-                <span className="flex-1">Nama Akun</span>
-                <span className="text-right w-32 mr-4">Total Debit</span>
-                <span className="text-right w-32 mr-4">Total Kredit</span>
-                <span className="text-right w-32">Saldo</span>
-              </div>
-              {coaAccounts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  Tidak ada data COA
-                </div>
-              ) : (
-                <div>
-                  {coaAccounts.filter(acc => acc.level === 1).map((account) =>
-                    renderGLAccount(account, 1)
-                  )}
-                </div>
-              )}
             </div>
           )}
         </CardContent>

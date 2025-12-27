@@ -1953,8 +1953,8 @@ export type Database = {
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
+          bank_account: string | null
           bukti: string | null
-          category: string | null
           coa_cash_code: string | null
           coa_cash_id: string | null
           coa_contra_code: string | null
@@ -1977,6 +1977,7 @@ export type Database = {
           payment_method: string | null
           reference_number: string | null
           source_destination: string | null
+          source_table: string | null
           transaction_date: string
           transaction_type: string
           updated_at: string | null
@@ -1992,8 +1993,8 @@ export type Database = {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bank_account?: string | null
           bukti?: string | null
-          category?: string | null
           coa_cash_code?: string | null
           coa_cash_id?: string | null
           coa_contra_code?: string | null
@@ -2016,6 +2017,7 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           source_destination?: string | null
+          source_table?: string | null
           transaction_date: string
           transaction_type?: string
           updated_at?: string | null
@@ -2031,8 +2033,8 @@ export type Database = {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bank_account?: string | null
           bukti?: string | null
-          category?: string | null
           coa_cash_code?: string | null
           coa_cash_id?: string | null
           coa_contra_code?: string | null
@@ -2055,6 +2057,7 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           source_destination?: string | null
+          source_table?: string | null
           transaction_date?: string
           transaction_type?: string
           updated_at?: string | null
@@ -2065,7 +2068,7 @@ export type Database = {
         Row: {
           account_code: string | null
           account_name: string | null
-          amount: number
+          amount: number | null
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
@@ -2083,7 +2086,11 @@ export type Database = {
           cost_center_id: string | null
           created_at: string | null
           created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
           currency_code: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           description: string
           document_number: string | null
           evidence_url: string | null
@@ -2094,22 +2101,24 @@ export type Database = {
           notes: string | null
           ocr_data: Json | null
           ocr_id: string | null
-          payee_name: string
+          payee_name: string | null
           payment_method: string | null
-          reference_number: number | null
+          reference_number: string | null
           rejection_reason: string | null
+          source_table: string | null
           status: string | null
           tanggal: string | null
           tax_amount: number | null
           tax_code: string | null
           tax_type: string | null
-          transaction_date: string
+          transaction_date: string | null
+          transaction_type: string | null
           updated_at: string | null
         }
         Insert: {
           account_code?: string | null
           account_name?: string | null
-          amount: number
+          amount?: number | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -2127,7 +2136,11 @@ export type Database = {
           cost_center_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
           currency_code?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description: string
           document_number?: string | null
           evidence_url?: string | null
@@ -2138,22 +2151,24 @@ export type Database = {
           notes?: string | null
           ocr_data?: Json | null
           ocr_id?: string | null
-          payee_name: string
+          payee_name?: string | null
           payment_method?: string | null
-          reference_number?: number | null
+          reference_number?: string | null
           rejection_reason?: string | null
+          source_table?: string | null
           status?: string | null
           tanggal?: string | null
           tax_amount?: number | null
           tax_code?: string | null
           tax_type?: string | null
-          transaction_date: string
+          transaction_date?: string | null
+          transaction_type?: string | null
           updated_at?: string | null
         }
         Update: {
           account_code?: string | null
           account_name?: string | null
-          amount?: number
+          amount?: number | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -2171,7 +2186,11 @@ export type Database = {
           cost_center_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
           currency_code?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string
           document_number?: string | null
           evidence_url?: string | null
@@ -2182,16 +2201,18 @@ export type Database = {
           notes?: string | null
           ocr_data?: Json | null
           ocr_id?: string | null
-          payee_name?: string
+          payee_name?: string | null
           payment_method?: string | null
-          reference_number?: number | null
+          reference_number?: string | null
           rejection_reason?: string | null
+          source_table?: string | null
           status?: string | null
           tanggal?: string | null
           tax_amount?: number | null
           tax_code?: string | null
           tax_type?: string | null
-          transaction_date?: string
+          transaction_date?: string | null
+          transaction_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3933,9 +3954,14 @@ export type Database = {
         Row: {
           advance_id: string | null
           amount: number
+          bukti: string | null
           bukti_url: string | null
           created_at: string | null
           created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           id: string
           journal_entry_id: string | null
           notes: string | null
@@ -3945,9 +3971,14 @@ export type Database = {
         Insert: {
           advance_id?: string | null
           amount: number
+          bukti?: string | null
           bukti_url?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           id?: string
           journal_entry_id?: string | null
           notes?: string | null
@@ -3957,9 +3988,14 @@ export type Database = {
         Update: {
           advance_id?: string | null
           amount?: number
+          bukti?: string | null
           bukti_url?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           id?: string
           journal_entry_id?: string | null
           notes?: string | null
@@ -3994,10 +4030,15 @@ export type Database = {
         Row: {
           advance_id: string | null
           amount: number
+          bukti: string | null
           bukti_url: string | null
           category: string | null
           created_at: string | null
           created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           description: string | null
           expense_account_code: string
           expense_account_name: string | null
@@ -4015,10 +4056,15 @@ export type Database = {
         Insert: {
           advance_id?: string | null
           amount: number
+          bukti?: string | null
           bukti_url?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
           expense_account_code: string
           expense_account_name?: string | null
@@ -4036,10 +4082,15 @@ export type Database = {
         Update: {
           advance_id?: string | null
           amount?: number
+          bukti?: string | null
           bukti_url?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
           expense_account_code?: string
           expense_account_name?: string | null
@@ -4083,10 +4134,15 @@ export type Database = {
           advance_date: string
           advance_number: string
           amount: number
+          bukti: string | null
           bukti_url: string | null
           coa_account_code: string
           created_at: string | null
           created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           disbursement_account_id: string | null
           disbursement_date: string | null
           disbursement_method: string | null
@@ -4106,10 +4162,15 @@ export type Database = {
           advance_date?: string
           advance_number: string
           amount: number
+          bukti?: string | null
           bukti_url?: string | null
           coa_account_code: string
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           disbursement_account_id?: string | null
           disbursement_date?: string | null
           disbursement_method?: string | null
@@ -4129,10 +4190,15 @@ export type Database = {
           advance_date?: string
           advance_number?: string
           amount?: number
+          bukti?: string | null
           bukti_url?: string | null
           coa_account_code?: string
           created_at?: string | null
           created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           disbursement_account_id?: string | null
           disbursement_date?: string | null
           disbursement_method?: string | null
@@ -5892,12 +5958,14 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           account_type: string | null
+          amount: number | null
           approval_log: Json | null
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
           attachment_url: string | null
           bank_mutation_id: string | null
+          bukti: string | null
           bukti_url: string | null
           code_booking: string | null
           confidence_score: number | null
@@ -5905,9 +5973,13 @@ export type Database = {
           created_by: string | null
           credit: number | null
           credit_account: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
           date: string | null
           debit: number | null
           debit_account: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           description: string | null
           disbursement_id: string | null
           entry_date: string | null
@@ -5952,6 +6024,7 @@ export type Database = {
           total_debit: number | null
           transaction_date: string | null
           transaction_id: string | null
+          transaction_type: string | null
           updated_at: string | null
           vehicle_type: string | null
           void_date: string | null
@@ -5963,12 +6036,14 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
+          amount?: number | null
           approval_log?: Json | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
           attachment_url?: string | null
           bank_mutation_id?: string | null
+          bukti?: string | null
           bukti_url?: string | null
           code_booking?: string | null
           confidence_score?: number | null
@@ -5976,9 +6051,13 @@ export type Database = {
           created_by?: string | null
           credit?: number | null
           credit_account?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
           date?: string | null
           debit?: number | null
           debit_account?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
@@ -6023,6 +6102,7 @@ export type Database = {
           total_debit?: number | null
           transaction_date?: string | null
           transaction_id?: string | null
+          transaction_type?: string | null
           updated_at?: string | null
           vehicle_type?: string | null
           void_date?: string | null
@@ -6034,12 +6114,14 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
+          amount?: number | null
           approval_log?: Json | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
           attachment_url?: string | null
           bank_mutation_id?: string | null
+          bukti?: string | null
           bukti_url?: string | null
           code_booking?: string | null
           confidence_score?: number | null
@@ -6047,9 +6129,13 @@ export type Database = {
           created_by?: string | null
           credit?: number | null
           credit_account?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
           date?: string | null
           debit?: number | null
           debit_account?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
@@ -6094,6 +6180,7 @@ export type Database = {
           total_debit?: number | null
           transaction_date?: string | null
           transaction_id?: string | null
+          transaction_type?: string | null
           updated_at?: string | null
           vehicle_type?: string | null
           void_date?: string | null
@@ -11632,75 +11719,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cash_receipts: {
-        Row: {
-          amount: number | null
-          approval_status: string | null
-          approved_at: string | null
-          approved_by: string | null
-          bukti: string | null
-          category: string | null
-          coa_cash_code: string | null
-          coa_contra_code: string | null
-          created_at: string | null
-          description: string | null
-          id: string | null
-          journal_ref: string | null
-          ocr_data: Json | null
-          payment_method: string | null
-          reference_number: string | null
-          source_destination: string | null
-          tanggal: string | null
-          transaction_date: string | null
-          transaction_type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount?: number | null
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          bukti?: string | null
-          category?: string | null
-          coa_cash_code?: string | null
-          coa_contra_code?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          journal_ref?: string | null
-          ocr_data?: Json | null
-          payment_method?: string | null
-          reference_number?: string | null
-          source_destination?: string | null
-          tanggal?: string | null
-          transaction_date?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number | null
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          bukti?: string | null
-          category?: string | null
-          coa_cash_code?: string | null
-          coa_contra_code?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          journal_ref?: string | null
-          ocr_data?: Json | null
-          payment_method?: string | null
-          reference_number?: string | null
-          source_destination?: string | null
-          tanggal?: string | null
-          transaction_date?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       stock_adjustments_with_supplier: {
         Row: {
           created_at: string | null
@@ -12403,10 +12421,6 @@ export type Database = {
       generate_advance_number: { Args: never; Returns: string }
       generate_booking_reference: { Args: never; Returns: string }
       generate_contract_number: { Args: never; Returns: string }
-      generate_journal: {
-        Args: { p_disbursement_id: string }
-        Returns: undefined
-      }
       generate_journal_disabled: {
         Args: { disbursement_id: string }
         Returns: undefined
@@ -12752,19 +12766,10 @@ export type Database = {
         Args: { p_id: string; p_user?: string }
         Returns: undefined
       }
-      post_cash_disbursement: {
-        Args: { disbursement_id: string }
-        Returns: string
-      }
-      post_cash_disbursement_to_journal: {
-        Args: { p_disbursement_id: string }
-        Returns: Json
-      }
       post_journal_bank_mutation: {
         Args: { p_bank_mutation_id: string }
         Returns: undefined
       }
-      post_journal_cash_disbursement: { Args: { p_id: string }; Returns: Json }
       post_journal_to_general_ledger: {
         Args: { p_journal_id: string }
         Returns: undefined

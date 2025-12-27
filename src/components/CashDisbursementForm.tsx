@@ -85,6 +85,8 @@ export default function CashDisbursementForm({ onSuccess }) {
       amount: Number(amount),
       tax_amount: taxAmount ? Number(taxAmount) : 0,
 
+      transaction_type: "Pengeluaran",
+
       // 🔒 KAS ONLY
       coa_cash_id: cashAccountId,
       coa_expense_id: expenseAccountId,

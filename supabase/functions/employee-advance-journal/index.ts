@@ -65,18 +65,41 @@ Deno.serve(async (req) => {
       throw new Error("Employee advance COA account not found (1-1500)");
     }
 
-    // Resolve COA for cash account (default to 1-1220 Bank Mandiri)
+    // Resolve COA for cash/bank account.
+    // IMPORTANT: for Penambahan Uang Muka (is_addition), use the original bank/kas used by the advance
+    // so debit/credit accounts remain consistent across additions.
     let cashCOA = null;
-    if (payload.credit_account_id) {
-      cashCOA = await getAccountCOA(supabaseClient, payload.credit_account_id);
-    } else if (payload.credit_account_code) {
-      cashCOA = await getAccountCOAByCode(supabaseClient, payload.credit_account_code);
-    } else if (payload.cash_account_id) {
-      cashCOA = await getAccountCOA(supabaseClient, payload.cash_account_id);
-    } else if (payload.cash_account_code) {
-      cashCOA = await getAccountCOAByCode(supabaseClient, payload.cash_account_code);
-    } else {
-      cashCOA = await getAccountCOAByCode(supabaseClient, "1-1220");
+
+    if (payload.type === "advance" && payload.is_addition && payload.advance_id) {
+      const { data: existingAdvance, error: existingAdvanceErr } = await supabaseClient
+        .from("employee_advances")
+        .select("credit_account_code")
+        .eq("id", payload.advance_id)
+        .maybeSingle();
+
+      if (existingAdvanceErr) throw existingAdvanceErr;
+
+      if (existingAdvance?.credit_account_code) {
+        cashCOA = await getAccountCOAByCode(supabaseClient, existingAdvance.credit_account_code);
+      }
+    }
+
+    if (!cashCOA) {
+      if (payload.credit_account_id) {
+        cashCOA = await getAccountCOA(supabaseClient, payload.credit_account_id);
+      } else if (payload.credit_account_code) {
+        cashCOA = await getAccountCOAByCode(supabaseClient, payload.credit_account_code);
+      } else if (payload.cash_account_id) {
+        cashCOA = await getAccountCOA(supabaseClient, payload.cash_account_id);
+      } else if (payload.cash_account_code) {
+        cashCOA = await getAccountCOAByCode(supabaseClient, payload.cash_account_code);
+      }
+    }
+
+    if (!cashCOA) {
+      throw new Error(
+        "Cash/Bank COA account not resolved. For penambahan uang muka, please ensure the advance has credit_account_code set."
+      );
     }
 
     if (!cashCOA) {
@@ -219,6 +242,12 @@ Deno.serve(async (req) => {
       jenisTransaksi = 'Pengembalian Uang Muka';
     }
 
+    const debitAccountName = debitEntry?.account_name;
+    const creditAccountName = payload.type === "advance" ? cashCOA.account_name : creditEntry?.account_name;
+
+    const transactionType = jenisTransaksi;
+    const bukti = payload.bukti_url;
+
     const journalInserts = journalEntries.map((entry) => ({
       journal_ref: journalRef,
       entry_date: payload.date,
@@ -229,12 +258,23 @@ Deno.serve(async (req) => {
       account_name: entry.account_name,
       debit: entry.debit,
       credit: entry.credit,
+
       debit_account: debitAccountCode,
       credit_account: creditAccountCode,
+
+      debit_account_code: debitAccountCode,
+      debit_account_name: debitAccountName,
+      credit_account_code: creditAccountCode,
+      credit_account_name: creditAccountName,
+
+      amount: payload.amount,
+      transaction_type: transactionType,
+      bukti,
+      bukti_url: payload.bukti_url,
+
       reference_type: `employee_advance_${payload.type}`,
       reference_id: payload.advance_id || payload.settlement_id || payload.return_id,
       jenis_transaksi: jenisTransaksi,
-      bukti_url: payload.bukti_url,
       status: "posted",
       created_by: user.id,
     }));

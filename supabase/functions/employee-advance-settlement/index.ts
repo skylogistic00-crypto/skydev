@@ -85,6 +85,12 @@ Deno.serve(async (req) => {
       payload.settlement_id?.slice(0, 8) || crypto.randomUUID().slice(0, 8)
     }`;
 
+    const debitAccountCode = expenseCOA.account_code;
+    const debitAccountName = expenseCOA.account_name;
+    const creditAccountCode = advanceCOA.account_code;
+    const creditAccountName = advanceCOA.account_name;
+    const bukti = payload.bukti_url || null;
+
     // Create journal entries directly: Debit Expense, Credit Uang Muka
     const journalEntries = [
       {
@@ -96,11 +102,21 @@ Deno.serve(async (req) => {
         account_type: expenseCOA.account_type,
         debit: amount,
         credit: 0,
-        debit_account: expenseCOA.account_code,
-        credit_account: advanceCOA.account_code,
+
+        debit_account: debitAccountCode,
+        credit_account: creditAccountCode,
+        debit_account_code: debitAccountCode,
+        debit_account_name: debitAccountName,
+        credit_account_code: creditAccountCode,
+        credit_account_name: creditAccountName,
+
+        amount,
+        transaction_type: "Uang Muka",
+
         description: journalDescription,
         source_type: "employee_advance_settlement",
         jenis_transaksi: "Uang Muka",
+        bukti,
         bukti_url: payload.bukti_url || null,
         approval_status: "approved",
       },
@@ -113,11 +129,21 @@ Deno.serve(async (req) => {
         account_type: advanceCOA.account_type,
         debit: 0,
         credit: amount,
-        debit_account: expenseCOA.account_code,
-        credit_account: advanceCOA.account_code,
+
+        debit_account: debitAccountCode,
+        credit_account: creditAccountCode,
+        debit_account_code: debitAccountCode,
+        debit_account_name: debitAccountName,
+        credit_account_code: creditAccountCode,
+        credit_account_name: creditAccountName,
+
+        amount,
+        transaction_type: "Uang Muka",
+
         description: journalDescription,
         source_type: "employee_advance_settlement",
         jenis_transaksi: "Uang Muka",
+        bukti,
         bukti_url: payload.bukti_url || null,
         approval_status: "approved",
       },

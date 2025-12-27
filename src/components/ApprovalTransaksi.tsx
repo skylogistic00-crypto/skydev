@@ -278,43 +278,42 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    // Create journal entries
-    const journalRef =
-      transaction.journal_ref ||
-      `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Debit: Expense/Inventory account
-    // Credit: Cash/Payable account
-    const debitAccount =
-      transaction.coa_expense_code || transaction.coa_inventory_code;
-    const creditAccount =
-      transaction.payment_method === "Tunai"
-        ? transaction.coa_cash_code
-        : transaction.coa_payable_code;
-
-    if (debitAccount && creditAccount) {
-      const { error: journalError } = await supabase
-        .from("journal_entries")
-        .insert({
-          journal_ref: journalRef,
-          debit_account: debitAccount,
-          credit_account: creditAccount,
-          debit: transaction.total_amount,
-          credit: transaction.total_amount,
-          description: `${transaction.transaction_type === "Barang" ? "Pembelian Barang" : "Pembelian Jasa"} - ${transaction.item_name}`,
-          tanggal: transaction.transaction_date,
-          kategori: transaction.transaction_type,
-          jenis_transaksi:
-            transaction.transaction_type === "Barang"
-              ? "Pembelian Barang"
-              : "Pembelian Jasa",
-          approval_status: "approved",
-          entity_id: transaction.entity_id,
-          created_by: transaction.created_by,
-        });
-
-      if (journalError) throw journalError;
-    }
+    // Journal entries must NOT be created from client.
+    // Posting should be handled by backend (RPC/Edge Function/DB trigger) to avoid duplicates.
+    // const journalRef =
+    //   transaction.journal_ref ||
+    //   `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    //
+    // const debitAccount =
+    //   transaction.coa_expense_code || transaction.coa_inventory_code;
+    // const creditAccount =
+    //   transaction.payment_method === "Tunai"
+    //     ? transaction.coa_cash_code
+    //     : transaction.coa_payable_code;
+    //
+    // if (debitAccount && creditAccount) {
+    //   const { error: journalError } = await supabase
+    //     .from("journal_entries")
+    //     .insert({
+    //       journal_ref: journalRef,
+    //       debit_account: debitAccount,
+    //       credit_account: creditAccount,
+    //       debit: transaction.total_amount,
+    //       credit: transaction.total_amount,
+    //       description: `${transaction.transaction_type === "Barang" ? "Pembelian Barang" : "Pembelian Jasa"} - ${transaction.item_name}`,
+    //       tanggal: transaction.transaction_date,
+    //       kategori: transaction.transaction_type,
+    //       jenis_transaksi:
+    //         transaction.transaction_type === "Barang"
+    //           ? "Pembelian Barang"
+    //           : "Pembelian Jasa",
+    //       approval_status: "approved",
+    //       entity_id: transaction.entity_id,
+    //       created_by: transaction.created_by,
+    //     });
+    //
+    //   if (journalError) throw journalError;
+    // }
 
     // Update purchase transaction status
     const { error: updateError } = await supabase
@@ -333,8 +332,9 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    // Create journal entries for expense (2 baris: Debit dan Credit)
-    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Journal entries must NOT be created from client.
+    // Posting should be handled by backend (RPC/Edge Function/DB trigger) to avoid duplicates.
+    // const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Akun Beban (Debit) dan Akun Kas (Credit)
     const expenseAccountCode = transaction.coa_expense_code || transaction.account_code || "6-1100";
@@ -366,51 +366,51 @@ export default function ApprovalTransaksi({
     }
     const sumberPengeluaran = transaction.kategori || transaction.service_category || transaction.category || "";
 
-    // Baris 1: DEBIT - Akun Beban
-    const { error: debitError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        account_code: expenseAccountCode,
-        account_name: expenseAccountName,
-        account_type: "Expense",
-        debit: transaction.nominal,
-        credit: 0,
-        debit_account: expenseAccountCode,
-        credit_account: cashAccountCode,
-        description: transaction.keterangan || "Pengeluaran Kas",
-        tanggal: transaction.tanggal,
-        kategori: transaction.kategori || transaction.service_category,
-        sumber_pengeluaran: sumberPengeluaran,
-        jenis_transaksi: "Pengeluaran Kas",
-        approval_status: "approved",
-        bukti_url: transaction.bukti || null,
-      });
+    // (disabled) client-side insert into journal_entries
+    // const { error: debitError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     account_code: expenseAccountCode,
+    //     account_name: expenseAccountName,
+    //     account_type: "Expense",
+    //     debit: transaction.nominal,
+    //     credit: 0,
+    //     debit_account: expenseAccountCode,
+    //     credit_account: cashAccountCode,
+    //     description: transaction.keterangan || "Pengeluaran Kas",
+    //     tanggal: transaction.tanggal,
+    //     kategori: transaction.kategori || transaction.service_category,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     jenis_transaksi: "Pengeluaran Kas",
+    //     approval_status: "approved",
+    //     bukti_url: transaction.bukti || null,
+    //   });
 
-    if (debitError) throw debitError;
+    // if (debitError) throw debitError;
 
-    // Baris 2: CREDIT - Akun Kas
-    const { error: creditError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        account_code: cashAccountCode,
-        account_name: cashAccountName,
-        account_type: "Asset",
-        debit: 0,
-        credit: transaction.nominal,
-        debit_account: expenseAccountCode,
-        credit_account: cashAccountCode,
-        description: transaction.keterangan || "Pengeluaran Kas",
-        tanggal: transaction.tanggal,
-        kategori: transaction.kategori || transaction.service_category,
-        sumber_pengeluaran: sumberPengeluaran,
-        jenis_transaksi: "Pengeluaran Kas",
-        approval_status: "approved",
-        bukti_url: transaction.bukti || null,
-      });
+    // Baris 2: CREDIT - Akun Kas (disabled)
+    // const { error: creditError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     account_code: cashAccountCode,
+    //     account_name: cashAccountName,
+    //     account_type: "Asset",
+    //     debit: 0,
+    //     credit: transaction.nominal,
+    //     debit_account: expenseAccountCode,
+    //     credit_account: cashAccountCode,
+    //     description: transaction.keterangan || "Pengeluaran Kas",
+    //     tanggal: transaction.tanggal,
+    //     kategori: transaction.kategori || transaction.service_category,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     jenis_transaksi: "Pengeluaran Kas",
+    //     approval_status: "approved",
+    //     bukti_url: transaction.bukti || null,
+    //   });
 
-    if (creditError) throw creditError;
+    // if (creditError) throw creditError;
 
     // Update kas_transaksi status
     const { error: updateError } = await supabase
@@ -429,8 +429,9 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    // Create journal entry for income
-    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Journal entries must NOT be created from client.
+    // Posting should be handled by backend (RPC/Edge Function/DB trigger) to avoid duplicates.
+    // const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // CRITICAL: Get cash account from cash_account_id first, then coa_cash_code - NO DEFAULT FALLBACK
     let cashAccountCode = transaction.coa_cash_code;
@@ -452,25 +453,25 @@ export default function ApprovalTransaksi({
       throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil). Tidak boleh menggunakan akun default 1-1100.");
     }
 
-    // For income: Debit cash account, Credit revenue account
-    const { error: journalError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        debit_account: cashAccountCode,
-        credit_account: transaction.coa_contra_code || "4-1000",
-        debit: transaction.amount,
-        credit: transaction.amount,
-        description: transaction.description || "Penerimaan Kas",
-        tanggal: transaction.transaction_date,
-        kategori: transaction.category,
-        jenis_transaksi: "Penerimaan Kas",
-        reference_type: "cash_receipts",
-        reference_id: transaction.id,
-        approval_status: "approved",
-      });
+    // (disabled) client-side insert into journal_entries
+    // const { error: journalError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     debit_account: cashAccountCode,
+    //     credit_account: transaction.coa_contra_code || "4-1000",
+    //     debit: transaction.amount,
+    //     credit: transaction.amount,
+    //     description: transaction.description || "Penerimaan Kas",
+    //     tanggal: transaction.transaction_date,
+    //     kategori: transaction.category,
+    //     jenis_transaksi: "Penerimaan Kas",
+    //     reference_type: "cash_receipts",
+    //     reference_id: transaction.id,
+    //     approval_status: "approved",
+    //   });
 
-    if (journalError) throw journalError;
+    // if (journalError) throw journalError;
 
     // Update cash_and_bank_receipts status
     const { error: updateError } = await supabase
@@ -524,57 +525,56 @@ export default function ApprovalTransaksi({
     }
     const sumberPengeluaran = transaction.kategori || transaction.category || "";
 
-    // Baris 1: DEBIT - Akun Beban
-    const { error: debitError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.transaction_date,
-        account_code: expenseAccountCode,
-        account_name: expenseAccountName,
-        account_type: "Expense",
-        debit: transaction.amount,
-        credit: 0,
-        debit_account: expenseAccountCode,
-        credit_account: cashAccountCode,
-        description: transaction.description || "Pengeluaran Kas",
-        source_type: "cash_disbursement",
-        reference_type: "cash_disbursement",
-        reference_id: transaction.id,
-        kategori: transaction.category,
-        sumber_pengeluaran: sumberPengeluaran,
-        jenis_transaksi: "Pengeluaran Kas",
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // (disabled) client-side insert into journal_entries
+    // const { error: debitError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.transaction_date,
+    //     account_code: expenseAccountCode,
+    //     account_name: expenseAccountName,
+    //     account_type: "Expense",
+    //     debit: transaction.amount,
+    //     credit: 0,
+    //     debit_account: expenseAccountCode,
+    //     credit_account: cashAccountCode,
+    //     description: transaction.description || "Pengeluaran Kas",
+    //     source_type: "cash_disbursement",
+    //     reference_type: "cash_disbursement",
+    //     reference_id: transaction.id,
+    //     kategori: transaction.category,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     jenis_transaksi: "Pengeluaran Kas",
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (debitError) throw debitError;
+    // if (debitError) throw debitError;
 
-    // Baris 2: CREDIT - Akun Kas
-    const { error: creditError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.transaction_date,
-        account_code: cashAccountCode,
-        account_name: cashAccountName,
-        account_type: "Asset",
-        debit: 0,
-        credit: transaction.amount,
-        debit_account: expenseAccountCode,
-        credit_account: cashAccountCode,
-        description: transaction.description || "Pengeluaran Kas",
-        source_type: "cash_disbursement",
-        reference_type: "cash_disbursement",
-        reference_id: transaction.id,
-        kategori: transaction.category,
-        sumber_pengeluaran: sumberPengeluaran,
-        jenis_transaksi: "Pengeluaran Kas",
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // const { error: creditError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.transaction_date,
+    //     account_code: cashAccountCode,
+    //     account_name: cashAccountName,
+    //     account_type: "Asset",
+    //     debit: 0,
+    //     credit: transaction.amount,
+    //     debit_account: expenseAccountCode,
+    //     credit_account: cashAccountCode,
+    //     description: transaction.description || "Pengeluaran Kas",
+    //     source_type: "cash_disbursement",
+    //     reference_type: "cash_disbursement",
+    //     reference_id: transaction.id,
+    //     kategori: transaction.category,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     jenis_transaksi: "Pengeluaran Kas",
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (creditError) throw creditError;
+    // if (creditError) throw creditError;
 
     // Update cash_disbursement status
     const { error: updateError } = await supabase
@@ -613,7 +613,9 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Journal entries must NOT be created from client.
+    // Posting should be handled by backend (RPC/Edge Function/DB trigger) to avoid duplicates.
+    // const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Bank Pendapatan: Debit Bank, Credit Revenue
     const bankAccountCode = transaction.selected_bank || transaction.account_code || "1-1200";
@@ -622,53 +624,52 @@ export default function ApprovalTransaksi({
     const revenueAccountName = transaction.credit_account_name || "Pendapatan";
     const sumberPenerimaan = transaction.kategori || transaction.sumber_penerimaan || "";
     
-    // Baris 1: DEBIT - Akun Bank
-    const { error: debitError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.tanggal,
-        account_code: bankAccountCode,
-        account_name: bankAccountName,
-        account_type: "Asset",
-        debit: transaction.nominal,
-        credit: 0,
-        description: transaction.description || "Pendapatan Bank",
-        source_type: "transaksi_keuangan",
-        debit_account: bankAccountCode,
-        credit_account: revenueAccountCode,
-        jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
-        kategori: transaction.kategori || transaction.sumber_penerimaan,
-        sumber_penerimaan: sumberPenerimaan,
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // (disabled) client-side insert into journal_entries
+    // const { error: debitError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.tanggal,
+    //     account_code: bankAccountCode,
+    //     account_name: bankAccountName,
+    //     account_type: "Asset",
+    //     debit: transaction.nominal,
+    //     credit: 0,
+    //     description: transaction.description || "Pendapatan Bank",
+    //     source_type: "transaksi_keuangan",
+    //     debit_account: bankAccountCode,
+    //     credit_account: revenueAccountCode,
+    //     jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
+    //     kategori: transaction.kategori || transaction.sumber_penerimaan,
+    //     sumber_penerimaan: sumberPenerimaan,
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (debitError) throw debitError;
+    // if (debitError) throw debitError;
 
-    // Baris 2: CREDIT - Akun Pendapatan
-    const { error: creditError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.tanggal,
-        account_code: revenueAccountCode,
-        account_name: revenueAccountName,
-        account_type: transaction.credit_account_type || "Revenue",
-        debit: 0,
-        credit: transaction.nominal,
-        description: transaction.description || "Pendapatan Bank",
-        source_type: "transaksi_keuangan",
-        debit_account: bankAccountCode,
-        credit_account: revenueAccountCode,
-        jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
-        kategori: transaction.kategori || transaction.sumber_penerimaan,
-        sumber_penerimaan: sumberPenerimaan,
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // const { error: creditError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.tanggal,
+    //     account_code: revenueAccountCode,
+    //     account_name: revenueAccountName,
+    //     account_type: transaction.credit_account_type || "Revenue",
+    //     debit: 0,
+    //     credit: transaction.nominal,
+    //     description: transaction.description || "Pendapatan Bank",
+    //     source_type: "transaksi_keuangan",
+    //     debit_account: bankAccountCode,
+    //     credit_account: revenueAccountCode,
+    //     jenis_transaksi: transaction.jenis_transaksi || "Pendapatan",
+    //     kategori: transaction.kategori || transaction.sumber_penerimaan,
+    //     sumber_penerimaan: sumberPenerimaan,
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (creditError) throw creditError;
+    // if (creditError) throw creditError;
 
     // Update transaction_cart status
     const { error: updateError } = await supabase
@@ -689,7 +690,9 @@ export default function ApprovalTransaksi({
     transaction: PendingTransaction,
     userId: string,
   ) => {
-    const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Journal entries must NOT be created from client.
+    // Posting should be handled by backend (RPC/Edge Function/DB trigger) to avoid duplicates.
+    // const journalRef = `JRN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Bank Pengeluaran: Debit Expense, Credit Bank
     const expenseAccountCode = transaction.account_code || transaction.expense_account || "6-1100";
@@ -698,53 +701,52 @@ export default function ApprovalTransaksi({
     const bankAccountName = transaction.credit_account_name || "Bank";
     const sumberPengeluaran = transaction.kategori || "";
     
-    // Baris 1: DEBIT - Akun Beban
-    const { error: debitError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.tanggal,
-        account_code: expenseAccountCode,
-        account_name: expenseAccountName,
-        account_type: transaction.account_type || "Expense",
-        debit: transaction.nominal,
-        credit: 0,
-        description: transaction.description || "Pengeluaran Bank",
-        source_type: "transaksi_keuangan",
-        debit_account: expenseAccountCode,
-        credit_account: bankAccountCode,
-        jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
-        kategori: transaction.kategori,
-        sumber_pengeluaran: sumberPengeluaran,
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // (disabled) client-side insert into journal_entries
+    // const { error: debitError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.tanggal,
+    //     account_code: expenseAccountCode,
+    //     account_name: expenseAccountName,
+    //     account_type: transaction.account_type || "Expense",
+    //     debit: transaction.nominal,
+    //     credit: 0,
+    //     description: transaction.description || "Pengeluaran Bank",
+    //     source_type: "transaksi_keuangan",
+    //     debit_account: expenseAccountCode,
+    //     credit_account: bankAccountCode,
+    //     jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
+    //     kategori: transaction.kategori,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (debitError) throw debitError;
+    // if (debitError) throw debitError;
 
-    // Baris 2: CREDIT - Akun Bank
-    const { error: creditError } = await supabase
-      .from("journal_entries")
-      .insert({
-        journal_ref: journalRef,
-        transaction_date: transaction.tanggal,
-        account_code: bankAccountCode,
-        account_name: bankAccountName,
-        account_type: "Asset",
-        debit: 0,
-        credit: transaction.nominal,
-        description: transaction.description || "Pengeluaran Bank",
-        source_type: "transaksi_keuangan",
-        debit_account: expenseAccountCode,
-        credit_account: bankAccountCode,
-        jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
-        kategori: transaction.kategori,
-        sumber_pengeluaran: sumberPengeluaran,
-        bukti_url: transaction.bukti || null,
-        approval_status: "approved",
-      });
+    // const { error: creditError } = await supabase
+    //   .from("journal_entries")
+    //   .insert({
+    //     journal_ref: journalRef,
+    //     transaction_date: transaction.tanggal,
+    //     account_code: bankAccountCode,
+    //     account_name: bankAccountName,
+    //     account_type: "Asset",
+    //     debit: 0,
+    //     credit: transaction.nominal,
+    //     description: transaction.description || "Pengeluaran Bank",
+    //     source_type: "transaksi_keuangan",
+    //     debit_account: expenseAccountCode,
+    //     credit_account: bankAccountCode,
+    //     jenis_transaksi: transaction.jenis_transaksi || "Pengeluaran",
+    //     kategori: transaction.kategori,
+    //     sumber_pengeluaran: sumberPengeluaran,
+    //     bukti_url: transaction.bukti || null,
+    //     approval_status: "approved",
+    //   });
 
-    if (creditError) throw creditError;
+    // if (creditError) throw creditError;
 
     // Update transaction_cart status
     const { error: updateError } = await supabase

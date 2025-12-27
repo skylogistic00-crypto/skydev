@@ -2562,8 +2562,14 @@ export default function TransaksiKeuanganForm() {
     }
 
     try {
+      const sourceTable =
+        transaction.source === "cash_receipts" ||
+        transaction.source === "cash_and_bank_receipts"
+          ? "cash_and_bank_receipts"
+          : transaction.source;
+
       const { error: deleteError } = await supabase
-        .from(transaction.source)
+        .from(sourceTable)
         .delete()
         .eq("id", transaction.id);
 
@@ -4459,16 +4465,25 @@ export default function TransaksiKeuanganForm() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        const isBankPayment = (paymentType || "").toLowerCase() !== "cash";
+
         const { error } = await supabase.from("cash_and_bank_receipts").insert({
           transaction_date: previewTanggal,
           transaction_type: "Penerimaan",
-          category: kategori || sumberPenerimaan,
           source_destination:
             sumberPenerimaan || customer || supplier || "Penerimaan Kas",
           amount: nominal,
           payment_method: paymentType === "cash" ? "Tunai" : "Bank",
+
+          // IMPORTANT: for Metode Pembayaran = Bank, backend expects bank_account
+          bank_account: isBankPayment ? (mainDebitLine?.account_code || null) : null,
+
           coa_cash_id: mainDebitLine?.account_code || "",
           coa_contra_code: mainCreditLine?.account_code || "4-1100",
+          debit_account_code: mainDebitLine?.account_code || "",
+          debit_account_name: mainDebitLine?.account_name || "",
+          credit_account_code: mainCreditLine?.account_code || "",
+          credit_account_name: mainCreditLine?.account_name || "",
           account_code: mainDebitLine?.account_code || "",
           account_name: mainDebitLine?.account_name || "",
           account_type_credit: selectedCreditAccountType || "",
@@ -4625,6 +4640,14 @@ export default function TransaksiKeuanganForm() {
               (coaExpenseAccountName || expenseLine?.account_name || null)
                 ?.toString()
                 .slice(0, 20) || null,
+
+            // Journal trigger fields - CRITICAL for journal entry creation
+            debit_account_code: coaExpenseAccountCode || expenseLine?.account_code || null,
+            debit_account_name: coaExpenseAccountName || expenseLine?.account_name || null,
+            credit_account_code: coaCashAccountCode || cashLine?.account_code || null,
+            credit_account_name: coaCashAccountName || cashLine?.account_name || null,
+            bank_account: isBankPayment ? (coaCashAccountCode || cashLine?.account_code || null) : null,
+            transaction_type: "Pengeluaran",
 
             // REQUIRED FIXES
             exchange_rate: 1, // wajib > 0
@@ -4798,74 +4821,12 @@ export default function TransaksiKeuanganForm() {
           data: { user },
         } = await supabase.auth.getUser();
 
-        // Create 2 journal entry lines as required
-        // Line 1: Debit entry
-        const { error: debitError } = await supabase
-          .from("journal_entries")
-          .insert({
-            journal_ref: journalRef,
-            debit_account: mainDebitLine.account_code,
-            credit_account: mainCreditLine.account_code,
-            account_code: mainDebitLine.account_code,
-            account_name: mainDebitLine.account_name,
-            account_type: debitAccountType,
-            debit: mainDebitLine.amount,
-            credit: 0,
-            description: previewMemo,
-            tanggal: previewTanggal,
-            kategori,
-            jenis_transaksi: jenisTransaksi,
-            payee_name: namaPengeluaran || supplier || customer || "",
-            payer_name: customer || supplier || "",
-            handled_by_user_id: user?.id || null,
-            sumber_penerimaan: jenisTransaksi.includes("Penerimaan")
-              ? mainCreditLine.account_name
-              : null,
-            sumber_pengeluaran: jenisTransaksi.includes("Pengeluaran")
-              ? mainCreditLine.account_name
-              : null,
-            attachment_url: uploadedFileUrl || null,
-            bukti_url: uploadedBuktiUrl || null,
-          });
-
-        if (debitError) {
-          console.error("Journal Entry Debit Error:", debitError);
-          throw new Error(`Journal Entry Debit: ${debitError.message}`);
-        }
-
-        // Line 2: Credit entry
-        const { error: creditError } = await supabase
-          .from("journal_entries")
-          .insert({
-            journal_ref: journalRef,
-            debit_account: mainDebitLine.account_code,
-            credit_account: mainCreditLine.account_code,
-            account_code: mainCreditLine.account_code,
-            account_name: mainCreditLine.account_name,
-            account_type: creditAccountType,
-            debit: 0,
-            credit: mainCreditLine.amount,
-            description: previewMemo,
-            tanggal: previewTanggal,
-            kategori,
-            jenis_transaksi: jenisTransaksi,
-            payee_name: namaPengeluaran || supplier || customer || "",
-            payer_name: customer || supplier || "",
-            handled_by_user_id: user?.id || null,
-            sumber_penerimaan: jenisTransaksi.includes("Penerimaan")
-              ? mainCreditLine.account_name
-              : null,
-            sumber_pengeluaran: jenisTransaksi.includes("Pengeluaran")
-              ? mainCreditLine.account_name
-              : null,
-            attachment_url: uploadedFileUrl || null,
-            bukti_url: uploadedBuktiUrl || null,
-          });
-
-        if (creditError) {
-          console.error("Journal Entry Credit Error:", creditError);
-          throw new Error(`Journal Entry Credit: ${creditError.message}`);
-        }
+        // NOTE: Do not insert into journal_entries from client.
+        // Journal posting must be handled by backend (trigger/RPC/edge function) to avoid duplicates.
+        console.warn(
+          "⚠️ Skipping client-side journal_entries insert. Configure backend posting for journal_ref:",
+          journalRef,
+        );
 
         console.log("Journal Entries saved (2 lines)");
       }
@@ -4888,61 +4849,12 @@ export default function TransaksiKeuanganForm() {
           data: { user },
         } = await supabase.auth.getUser();
 
-        // HPP Line 1: Debit HPP
-        const { error: hppDebitError } = await supabase
-          .from("journal_entries")
-          .insert({
-            journal_ref: journalRef,
-            debit_account: hppDebitLine.account_code,
-            credit_account: hppCreditLine.account_code,
-            account_code: hppDebitLine.account_code,
-            account_name: hppDebitLine.account_name,
-            account_type: hppDebitAccountType,
-            debit: hppDebitLine.amount,
-            credit: 0,
-            description: `HPP - ${previewMemo}`,
-            tanggal: previewTanggal,
-            kategori,
-            jenis_transaksi: jenisTransaksi,
-            payee_name: namaPengeluaran || supplier || customer || "",
-            payer_name: customer || supplier || "",
-            handled_by_user_id: user?.id || null,
-            attachment_url: uploadedBuktiUrl || null,
-          });
-
-        if (hppDebitError) {
-          console.error("HPP Debit Entry Error:", hppDebitError);
-          throw new Error(`HPP Debit Entry: ${hppDebitError.message}`);
-        }
-
-        // HPP Line 2: Credit Inventory
-        const { error: hppCreditError } = await supabase
-          .from("journal_entries")
-          .insert({
-            journal_ref: journalRef,
-            debit_account: hppDebitLine.account_code,
-            credit_account: hppCreditLine.account_code,
-            account_code: hppCreditLine.account_code,
-            account_name: hppCreditLine.account_name,
-            account_type: hppCreditAccountType,
-            debit: 0,
-            credit: hppCreditLine.amount,
-            description: `HPP - ${previewMemo}`,
-            tanggal: previewTanggal,
-            kategori,
-            jenis_transaksi: jenisTransaksi,
-            payee_name: namaPengeluaran || supplier || customer || "",
-            payer_name: customer || supplier || "",
-            handled_by_user_id: user?.id || null,
-            attachment_url: uploadedBuktiUrl || null,
-          });
-
-        if (hppCreditError) {
-          console.error("HPP Credit Entry Error:", hppCreditError);
-          throw new Error(`HPP Credit Entry: ${hppCreditError.message}`);
-        }
-
-        console.log("HPP Entries saved (2 lines)");
+        // NOTE: Do not insert HPP into journal_entries from client.
+        // Posting must be handled by backend (trigger/RPC/edge function) to avoid duplicates.
+        console.warn(
+          "⚠️ Skipping client-side HPP journal posting for journal_ref:",
+          journalRef,
+        );
       }
 
       // Step 4: Create Cash Book if needed (Penerimaan/Pengeluaran Kas)
@@ -5483,28 +5395,10 @@ export default function TransaksiKeuanganForm() {
             mainDebitLine.account_type,
           );
 
-          const { error } = await supabase.from("journal_entries").insert({
-            journal_ref: journalRef,
-            debit_account: mainDebitLine.account_code,
-            credit_account: mainCreditLine.account_code,
-            account_code: mainDebitLine.account_code,
-            account_name: mainDebitLine.account_name,
-            account_type: batchDebitAccountType,
-            debit: mainDebitLine.amount,
-            credit: mainCreditLine.amount,
-            description: journalData.memo,
-            tanggal: journalData.tanggal,
-            kategori: item.kategori,
-            jenis_transaksi: item.jenisTransaksi,
-            reference_type: item.jenisTransaksi?.toLowerCase().includes('penjualan') ? 'sales_transactions' : 
-                           item.jenisTransaksi?.toLowerCase().includes('pembelian') ? 'purchase_transactions' :
-                           item.jenisTransaksi?.toLowerCase().includes('pendapatan') ? 'cash_receipts' :
-                           'general_journal',
-            bukti_url: uploadedBuktiUrl,
-            approval_status: "approved",
-          });
-
-          if (error) throw new Error(`Journal Entry: ${error.message}`);
+          // NOTE: Do not insert into journal_entries from client.
+          // Journal posting must be handled by backend (trigger/RPC/edge function) to avoid duplicates.
+          // const { error } = await supabase.from("journal_entries").insert({ ... });
+          // if (error) throw new Error(`Journal Entry: ${error.message}`);
         }
 
         // Step 5: Save HPP entry if exists (for Penjualan) - skip if needs approval
@@ -5517,24 +5411,10 @@ export default function TransaksiKeuanganForm() {
             hppDebitLine.account_type,
           );
 
-          const { error } = await supabase.from("journal_entries").insert({
-            journal_ref: journalRef,
-            debit_account: hppDebitLine.account_code,
-            credit_account: hppCreditLine.account_code,
-            account_code: hppDebitLine.account_code,
-            account_name: hppDebitLine.account_name,
-            account_type: batchHppAccountType,
-            debit: hppDebitLine.amount,
-            credit: hppCreditLine.amount,
-            description: `HPP - ${journalData.memo}`,
-            tanggal: journalData.tanggal,
-            reference_type: 'sales_transactions',
-            kategori: item.kategori,
-            jenis_transaksi: item.jenisTransaksi,
-            approval_status: "approved",
-          });
-
-          if (error) throw new Error(`HPP Entry: ${error.message}`);
+          // NOTE: Do not insert into journal_entries from client.
+          // HPP posting must be handled by backend (trigger/RPC/edge function) to avoid duplicates.
+          // const { error } = await supabase.from("journal_entries").insert({ ... });
+          // if (error) throw new Error(`HPP Entry: ${error.message}`);
         }
 
         // Step 6: Create Cash Book if needed - skip if needs approval
@@ -5631,23 +5511,31 @@ export default function TransaksiKeuanganForm() {
             data: { user },
           } = await supabase.auth.getUser();
 
-          // Resolve COA IDs for cash disbursement - use the selected kas account from mainCreditLine
+          // Resolve COA IDs for cash disbursement
           const selectedKasCode = mainCreditLine?.account_code;
-          if (!selectedKasCode) {
-            throw new Error("Silakan pilih akun Kas yang spesifik (Kas Besar/Kas Kecil). Tidak boleh menggunakan akun default.");
-          }
           
-          const { data: coaCash } = await supabase
-            .from("chart_of_accounts")
-            .select("id, account_code, account_name, account_type")
-            .eq("account_code", selectedKasCode)
-            .single();
-
+          // Get expense account COA first
           const { data: coaExpense } = await supabase
             .from("chart_of_accounts")
             .select("id, account_code, account_name, account_type")
             .eq("account_code", selectedExpenseAccount)
             .single();
+          
+          // Get cash account COA only if Kas payment method
+          let coaCash = null;
+          if (normalizedPayment === "kas") {
+            if (!selectedKasCode) {
+              throw new Error("Silakan pilih akun Kas yang spesifik (Kas Besar/Kas Kecil). Tidak boleh menggunakan akun default.");
+            }
+            
+            const { data: cashData } = await supabase
+              .from("chart_of_accounts")
+              .select("id, account_code, account_name, account_type")
+              .eq("account_code", selectedKasCode)
+              .single();
+            
+            coaCash = cashData;
+          }
           
           // =======================
           // PENGELUARAN KAS
@@ -5698,6 +5586,12 @@ export default function TransaksiKeuanganForm() {
                 cash_account_id: coaCash?.id || null,
                 account_code: coaExpense?.account_code?.toString().slice(0, 20) || selectedExpenseAccount,
                 account_name: coaExpense?.account_name?.toString().slice(0, 50) || mainDebitLine?.account_name || "Beban",
+                // Mapping for journal entries trigger
+                debit_account_code: coaExpense?.account_code?.toString() || selectedExpenseAccount,
+                debit_account_name: coaExpense?.account_name?.toString() || mainDebitLine?.account_name || "Beban",
+                credit_account_code: coaCash?.account_code?.toString() || selectedKasAccount,
+                credit_account_name: coaCash?.account_name?.toString() || "Kas",
+                transaction_type: "Pengeluaran",
                 document_number: null,
                 notes: item.description,
                 created_by: user?.id,
@@ -5744,11 +5638,27 @@ export default function TransaksiKeuanganForm() {
               .eq("account_code", selectedBankCode)
               .single();
             
+            if (!coaBank) {
+              throw new Error(`Bank account tidak ditemukan untuk kode: ${selectedBankCode}`);
+            }
+            
+            if (!coaExpense) {
+              throw new Error(`Expense account tidak ditemukan untuk kode: ${selectedExpenseAccount}`);
+            }
+            
             console.log("🏦 BANK PENGELUARAN: Inserting to cash_disbursement...");
-            console.log("📋 PAYLOAD cash_disbursement:", {
+            console.log("📋 COA Expense:", coaExpense);
+            console.log("📋 COA Bank:", coaBank);
+            console.log("📋 selectedBankCode:", selectedBankCode);
+            console.log("📋 coaBank.account_code:", coaBank.account_code);
+            console.log("📋 coaBank.account_code.toString():", coaBank.account_code.toString());
+            console.log("📋 FULL PAYLOAD:", {
               transaction_date: txDate,
-              account_code: selectedExpenseAccount,
-              bank_account: selectedBankCode,
+              debit_account_code: coaExpense.account_code.toString(),
+              debit_account_name: coaExpense.account_name.toString(),
+              credit_account_code: coaBank.account_code.toString(),
+              credit_account_name: coaBank.account_name.toString(),
+              bank_account: coaBank.account_code.toString(),
               amount: item.nominal,
             });
             
@@ -5762,11 +5672,18 @@ export default function TransaksiKeuanganForm() {
                 category: item.kategori,
                 amount: Number(item.nominal),
                 payment_method: "Transfer Bank",
-                coa_cash_id: coaBank?.id || null,
-                coa_expense_id: coaExpense?.id || null,
-                bank_account_id: coaBank?.id || null,
-                account_code: coaExpense?.account_code?.toString().slice(0, 20) || selectedExpenseAccount,
-                account_name: coaExpense?.account_name?.toString().slice(0, 50) || mainDebitLine?.account_name || "Beban",
+                coa_cash_id: coaBank.id,
+                coa_expense_id: coaExpense.id,
+                bank_account_id: coaBank.id,
+                bank_account: coaBank.account_code.toString(),
+                account_code: coaExpense.account_code.toString().slice(0, 20),
+                account_name: coaExpense.account_name.toString().slice(0, 50),
+                // Mapping for journal entries trigger
+                debit_account_code: coaExpense.account_code.toString(),
+                debit_account_name: coaExpense.account_name.toString(),
+                credit_account_code: coaBank.account_code.toString(),
+                credit_account_name: coaBank.account_name.toString(),
+                transaction_type: "Pengeluaran",
                 document_number: null,
                 notes: item.description,
                 created_by: user?.id,
@@ -5842,12 +5759,15 @@ export default function TransaksiKeuanganForm() {
               .insert({
                 transaction_date: journalData.tanggal,
                 transaction_type: "Penerimaan",
-                category: item.kategori || item.sumberPenerimaan,
                 source_destination: item.sumberPenerimaan || item.customer || item.supplier || "Penerimaan Kas",
                 amount: normalizedInput.nominal,
                 payment_method: "Tunai",
                 coa_cash_id: debitLine?.account_code || "",
                 coa_contra_code: creditLine?.account_code || "4-1100",
+                debit_account_code: debitLine?.account_code || "",
+                debit_account_name: debitLine?.account_name || "",
+                credit_account_code: creditLine?.account_code || "",
+                credit_account_name: creditLine?.account_name || "",
                 account_code: debitLine?.account_code || "",
                 account_name: debitLine?.account_name || "",
                 account_type_credit: item.selectedCreditAccountType || "",
@@ -5933,7 +5853,6 @@ export default function TransaksiKeuanganForm() {
             .insert({
               transaction_date: journalData.tanggal,
               transaction_type: "Penerimaan",
-              category: item.kategori || item.sumberPenerimaan,
               source_destination:
                 item.sumberPenerimaan ||
                 item.customer ||
@@ -7308,7 +7227,7 @@ export default function TransaksiKeuanganForm() {
                           if (filterJenis) {
                             // Handle specific filter values
                             if (filterJenis === "cash_and_bank_receipts") {
-                              if (t.source !== "cash_receipts") return false;
+                              if (t.source !== "cash_and_bank_receipts") return false;
                             } else if (filterJenis === "cash_disbursement") {
                               if (t.source !== "cash_disbursement")
                                 return false;
@@ -8410,7 +8329,7 @@ export default function TransaksiKeuanganForm() {
                                     if (
                                       filterJenis === "cash_and_bank_receipts"
                                     ) {
-                                      if (t.source !== "cash_receipts")
+                                      if (t.source !== "cash_and_bank_receipts")
                                         return false;
                                     } else if (
                                       filterJenis === "cash_disbursement"

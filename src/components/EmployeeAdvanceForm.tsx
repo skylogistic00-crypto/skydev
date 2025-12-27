@@ -461,7 +461,10 @@ export default function EmployeeAdvanceForm() {
           .update({
             amount: newAmount,
             remaining_balance: newRemainingBalance,
-            notes: (existingNotes ? existingNotes + '\n' : '') + `[${new Date().toLocaleDateString()}] Penambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || 'No notes'}`,
+            notes:
+              (existingNotes ? existingNotes + "\n" : "") +
+              `[${new Date().toLocaleDateString()}] Penambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || "No notes"}`,
+
           })
           .eq("id", existingAdvances.id);
 
@@ -480,6 +483,12 @@ export default function EmployeeAdvanceForm() {
               description: advanceForm.notes,
               bukti_url: advanceForm.bukti_url,
               is_addition: true,
+
+              // Ensure credit side uses the selected payment account
+              credit_account_id:
+                advanceForm.payment_method === "Bank"
+                  ? advanceForm.bank_account_id
+                  : advanceForm.kas_account_id,
             },
           }
         );
@@ -514,6 +523,11 @@ export default function EmployeeAdvanceForm() {
             advance_date: advanceForm.advance_date,
             notes: advanceForm.notes,
             bukti_url: advanceForm.bukti_url,
+            bukti: advanceForm.bukti_url,
+
+            debit_account_code: "1-1500",
+            debit_account_name: "Uang Muka Karyawan",
+
             status: "draft",
             created_by: user?.id,
           })
@@ -560,6 +574,10 @@ export default function EmployeeAdvanceForm() {
     setIsLoading(true);
 
     try {
+      const selectedExpense = expenseAccounts.find(
+        (acc) => acc.account_code === settlementForm.expense_account_code
+      );
+
       // Insert settlement record (without journal)
       const { data: settlementData, error: settlementError } = await supabase
         .from("employee_advance_settlements")
@@ -568,6 +586,13 @@ export default function EmployeeAdvanceForm() {
           merchant: settlementForm.merchant,
           category: settlementForm.category,
           expense_account_code: settlementForm.expense_account_code,
+          expense_account_name: selectedExpense?.account_name || null,
+
+          debit_account_code: settlementForm.expense_account_code,
+          debit_account_name: selectedExpense?.account_name || null,
+          credit_account_code: "1-1500",
+          credit_account_name: "Uang Muka Karyawan",
+
           amount: settlementForm.amount,
           ppn: settlementForm.ppn,
           total: settlementForm.total,
@@ -575,6 +600,7 @@ export default function EmployeeAdvanceForm() {
           receipt_number: settlementForm.receipt_number,
           settlement_date: settlementForm.settlement_date,
           bukti_url: settlementForm.bukti_url,
+          bukti: settlementForm.bukti_url,
           created_by: user?.id,
         })
         .select()

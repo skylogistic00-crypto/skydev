@@ -104,21 +104,46 @@ export default function GeneralLedgerView() {
         variant: "destructive",
       });
     } else {
-      // Calculate running balance
-      let balance = 0;
-      const entriesWithBalance = (data || []).map((entry: any) => {
-        balance += (entry.debit || 0) - (entry.credit || 0);
-        return {
-          transaction_date: entry.date,
-          description: entry.description,
-          account_code: entry.account_code,
-          account_name: entry.account_name || "",
-          account_type: entry.account_type || "",
-          debit: entry.debit || 0,
-          credit: entry.credit || 0,
-          balance,
-        };
-      });
+      // Aggregate by account_code so Total Debit/Kredit/Saldo in GL matches Journal Entries totals per account
+      const perAccount: Record<
+        string,
+        {
+          transaction_date: string;
+          description: string;
+          account_code: string;
+          account_name: string;
+          debit: number;
+          credit: number;
+          balance: number;
+        }
+      > = {};
+
+      for (const row of data || []) {
+        const accountCode = row.account_code || "";
+        if (!accountCode) continue;
+
+        if (!perAccount[accountCode]) {
+          perAccount[accountCode] = {
+            transaction_date: row.date,
+            description: "",
+            account_code: accountCode,
+            account_name: row.account_name || "",
+            debit: 0,
+            credit: 0,
+            balance: 0,
+          };
+        }
+
+        perAccount[accountCode].debit += row.debit || 0;
+        perAccount[accountCode].credit += row.credit || 0;
+        perAccount[accountCode].balance =
+          perAccount[accountCode].debit - perAccount[accountCode].credit;
+      }
+
+      const entriesWithBalance = Object.values(perAccount).sort((a, b) =>
+        a.account_code.localeCompare(b.account_code)
+      );
+
       setEntries(entriesWithBalance);
     }
 
@@ -340,19 +365,19 @@ export default function GeneralLedgerView() {
           <div>
             <div className="text-sm text-slate-600">Total Debit</div>
             <div className="text-lg font-bold text-slate-800">
-              {formatRupiah(entries.reduce((sum, e) => sum + e.debit, 0))}
+              {formatRupiah(entries.reduce((sum, e) => sum + (e.debit || 0), 0))}
             </div>
           </div>
           <div>
             <div className="text-sm text-slate-600">Total Kredit</div>
             <div className="text-lg font-bold text-slate-800">
-              {formatRupiah(entries.reduce((sum, e) => sum + e.credit, 0))}
+              {formatRupiah(entries.reduce((sum, e) => sum + (e.credit || 0), 0))}
             </div>
           </div>
           <div>
-            <div className="text-sm text-slate-600">Saldo Akhir</div>
+            <div className="text-sm text-slate-600">Total Saldo</div>
             <div className="text-lg font-bold text-slate-800">
-              {formatRupiah(entries[entries.length - 1]?.balance || 0)}
+              {formatRupiah(entries.reduce((sum, e) => sum + ((e.debit || 0) - (e.credit || 0)), 0))}
             </div>
           </div>
         </div>

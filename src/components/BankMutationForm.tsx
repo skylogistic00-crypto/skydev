@@ -280,25 +280,12 @@ export default function BankMutationForm() {
 
       setLoading(true);
 
-      // Post to journal_entries
-      const journalEntries = mutations.map((row) => ({
-        entry_date: row.tanggal,
-        description: row.keterangan,
-        debit_account_id: row.debit_account_id,
-        credit_account_id: row.kredit_account_id,
-        amount: row.debit > 0 ? row.debit : row.kredit,
-        created_by: user?.id,
-        source: "bank_mutation",
-        approval_status: "approved",
-      }));
-
-      const { error: journalError } = await supabase.from("journal_entries").insert(journalEntries);
-
-      if (journalError) throw journalError;
-
+      // NOTE: Do not insert into journal_entries from client.
+      // Posting must be handled by backend (trigger/RPC/edge function) to avoid duplicates.
       toast({
-        title: "Berhasil",
-        description: `${mutations.length} mutasi berhasil diposting ke jurnal`,
+        title: "Info",
+        description:
+          "Posting jurnal dari sisi client dinonaktifkan. Pastikan posting jurnal dilakukan via backend.",
       });
 
       // Clear mutations
