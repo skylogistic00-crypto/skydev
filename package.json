@@ -41,6 +41,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.45.6",
+    "@tanstack/react-virtual": "^3.13.13",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "browser-image-compression": "^2.0.2",

@@ -21,6 +21,7 @@ import AirWaybill from "@/components/AirWaybill";
 import TransaksiKeuanganForm from "@/components/TransaksiKeuanganForm";
 import BankMutationForm from "@/components/BankMutationForm";
 import BankMutationUpload from "@/components/BankMutationUpload";
+import BankMutationsManagement from "@/components/BankMutationsManagement";
 import AdminSetup from "@/components/AdminSetup";
 import COAManagement from "@/components/COAManagement";
 import BarangLamaReport from "@/components/BarangLamaReport";
@@ -68,6 +69,7 @@ const GeneralLedgerView = lazy(() => import("@/components/GeneralLedgerView"));
 const TrialBalanceView = lazy(() => import("@/components/TrialBalanceView"));
 const BankReconciliation = lazy(() => import("@/pages/BankReconciliation"));
 const BankMutationReview = lazy(() => import("@/pages/BankMutationReview"));
+const MutationSummaryDashboard = lazy(() => import("@/components/MutationSummaryDashboard"));
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -979,6 +981,8 @@ function AppRoutesContent() {
       <Route path="/ocr-extractor" element={<OCRExtractor />} />
       <Route path="/bank-reconciliation" element={<BankReconciliation />} />
       <Route path="/bank-mutation-review" element={<BankMutationReview />} />
+      <Route path="/bank-mutations-management" element={<BankMutationsManagement />} />
+      <Route path="/mutation-summary" element={<MutationSummaryDashboard />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

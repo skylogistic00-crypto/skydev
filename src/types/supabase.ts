@@ -1289,152 +1289,167 @@ export type Database = {
       }
       bank_mutations: {
         Row: {
-          akun: string | null
           amount: number
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
           balance: number | null
-          bank_account_code: string | null
-          bank_account_id: string | null
-          bank_account_name: string | null
           bank_account_number: string | null
-          bank_name: string
           bank_reference_id: string | null
+          category: string | null
+          counterparty_name: string | null
+          counterparty_type: string | null
+          counterpartyrole: string | null
           created_at: string | null
           created_by: string | null
           credit: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          date: string
           debit: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
           description: string | null
-          duplicate_of: string | null
+          evidence_url: string | null
           id: string
-          is_duplicate: boolean | null
           journal_entry_id: string | null
           kas_bank: string | null
           mapping_status: string | null
           matched: string | null
-          matched_at: string | null
-          matched_transaction_id: string | null
           mutation_date: string | null
           ocr_confidence: number | null
           ocr_data: Json | null
-          pic: string | null
+          ocr_detected_amount: string | null
+          ocr_detected_counterparty: string | null
+          ocr_detected_date: string | null
+          ocr_text: string | null
+          Payment_type: string | null
           pos: string | null
           posted_at: string | null
-          pp: string | null
           processed: string | null
+          pushed_to_supabase: string | null
           raw_data: Json | null
+          raw_mutation_id: string | null
           raw_payload: string | null
           source: string | null
           status: string | null
-          sub_akun: string | null
-          transaction_date: string
+          supabase_table: string | null
+          transaction_direction: string | null
           transaction_type: string
-          type: string | null
           updated_at: string | null
           upload_id: string
           user_id: string
         }
         Insert: {
-          akun?: string | null
           amount?: number
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
           balance?: number | null
-          bank_account_code?: string | null
-          bank_account_id?: string | null
-          bank_account_name?: string | null
           bank_account_number?: string | null
-          bank_name: string
           bank_reference_id?: string | null
+          category?: string | null
+          counterparty_name?: string | null
+          counterparty_type?: string | null
+          counterpartyrole?: string | null
           created_at?: string | null
           created_by?: string | null
           credit?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          date: string
           debit?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
-          duplicate_of?: string | null
+          evidence_url?: string | null
           id?: string
-          is_duplicate?: boolean | null
           journal_entry_id?: string | null
           kas_bank?: string | null
           mapping_status?: string | null
           matched?: string | null
-          matched_at?: string | null
-          matched_transaction_id?: string | null
           mutation_date?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
-          pic?: string | null
+          ocr_detected_amount?: string | null
+          ocr_detected_counterparty?: string | null
+          ocr_detected_date?: string | null
+          ocr_text?: string | null
+          Payment_type?: string | null
           pos?: string | null
           posted_at?: string | null
-          pp?: string | null
           processed?: string | null
+          pushed_to_supabase?: string | null
           raw_data?: Json | null
+          raw_mutation_id?: string | null
           raw_payload?: string | null
           source?: string | null
           status?: string | null
-          sub_akun?: string | null
-          transaction_date: string
+          supabase_table?: string | null
+          transaction_direction?: string | null
           transaction_type: string
-          type?: string | null
           updated_at?: string | null
           upload_id: string
           user_id: string
         }
         Update: {
-          akun?: string | null
           amount?: number
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
           balance?: number | null
-          bank_account_code?: string | null
-          bank_account_id?: string | null
-          bank_account_name?: string | null
           bank_account_number?: string | null
-          bank_name?: string
           bank_reference_id?: string | null
+          category?: string | null
+          counterparty_name?: string | null
+          counterparty_type?: string | null
+          counterpartyrole?: string | null
           created_at?: string | null
           created_by?: string | null
           credit?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          date?: string
           debit?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
           description?: string | null
-          duplicate_of?: string | null
+          evidence_url?: string | null
           id?: string
-          is_duplicate?: boolean | null
           journal_entry_id?: string | null
           kas_bank?: string | null
           mapping_status?: string | null
           matched?: string | null
-          matched_at?: string | null
-          matched_transaction_id?: string | null
           mutation_date?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
-          pic?: string | null
+          ocr_detected_amount?: string | null
+          ocr_detected_counterparty?: string | null
+          ocr_detected_date?: string | null
+          ocr_text?: string | null
+          Payment_type?: string | null
           pos?: string | null
           posted_at?: string | null
-          pp?: string | null
           processed?: string | null
+          pushed_to_supabase?: string | null
           raw_data?: Json | null
+          raw_mutation_id?: string | null
           raw_payload?: string | null
           source?: string | null
           status?: string | null
-          sub_akun?: string | null
-          transaction_date?: string
+          supabase_table?: string | null
+          transaction_direction?: string | null
           transaction_type?: string
-          type?: string | null
           updated_at?: string | null
           upload_id?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "bank_mutations_duplicate_of_fkey"
-            columns: ["duplicate_of"]
+            foreignKeyName: "bank_mutations_raw_mutation_id_fkey"
+            columns: ["raw_mutation_id"]
             isOneToOne: false
-            referencedRelation: "bank_mutations"
+            referencedRelation: "tabel_mutations"
             referencedColumns: ["id"]
           },
           {
@@ -1955,11 +1970,14 @@ export type Database = {
           approved_by: string | null
           bank_account: string | null
           bukti: string | null
+          category: string | null
           coa_cash_code: string | null
           coa_cash_id: string | null
           coa_contra_code: string | null
           coa_revenue_account: string | null
           coa_revenue_code: string | null
+          counterparty_name: string | null
+          counterparty_role: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
@@ -1977,8 +1995,10 @@ export type Database = {
           payment_method: string | null
           reference_number: string | null
           source_destination: string | null
+          source_mutation_id: string | null
           source_table: string | null
           transaction_date: string
+          transaction_direction: string | null
           transaction_type: string
           updated_at: string | null
         }
@@ -1995,11 +2015,14 @@ export type Database = {
           approved_by?: string | null
           bank_account?: string | null
           bukti?: string | null
+          category?: string | null
           coa_cash_code?: string | null
           coa_cash_id?: string | null
           coa_contra_code?: string | null
           coa_revenue_account?: string | null
           coa_revenue_code?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2017,8 +2040,10 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           source_destination?: string | null
+          source_mutation_id?: string | null
           source_table?: string | null
           transaction_date: string
+          transaction_direction?: string | null
           transaction_type?: string
           updated_at?: string | null
         }
@@ -2035,11 +2060,14 @@ export type Database = {
           approved_by?: string | null
           bank_account?: string | null
           bukti?: string | null
+          category?: string | null
           coa_cash_code?: string | null
           coa_cash_id?: string | null
           coa_contra_code?: string | null
           coa_revenue_account?: string | null
           coa_revenue_code?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2057,8 +2085,10 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           source_destination?: string | null
+          source_mutation_id?: string | null
           source_table?: string | null
           transaction_date?: string
+          transaction_direction?: string | null
           transaction_type?: string
           updated_at?: string | null
         }
@@ -2070,6 +2100,7 @@ export type Database = {
           account_name: string | null
           amount: number | null
           approval_status: string | null
+          approved: string | null
           approved_at: string | null
           approved_by: string | null
           attachment_url: string | null
@@ -2084,6 +2115,8 @@ export type Database = {
           coa_expense_id: string | null
           coa_id: string | null
           cost_center_id: string | null
+          counterparty_name: string | null
+          counterparty_role: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
@@ -2105,6 +2138,7 @@ export type Database = {
           payment_method: string | null
           reference_number: string | null
           rejection_reason: string | null
+          source_mutation_id: string | null
           source_table: string | null
           status: string | null
           tanggal: string | null
@@ -2112,6 +2146,7 @@ export type Database = {
           tax_code: string | null
           tax_type: string | null
           transaction_date: string | null
+          transaction_direction: string | null
           transaction_type: string | null
           updated_at: string | null
         }
@@ -2120,6 +2155,7 @@ export type Database = {
           account_name?: string | null
           amount?: number | null
           approval_status?: string | null
+          approved?: string | null
           approved_at?: string | null
           approved_by?: string | null
           attachment_url?: string | null
@@ -2134,6 +2170,8 @@ export type Database = {
           coa_expense_id?: string | null
           coa_id?: string | null
           cost_center_id?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2155,6 +2193,7 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
+          source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
           tanggal?: string | null
@@ -2162,6 +2201,7 @@ export type Database = {
           tax_code?: string | null
           tax_type?: string | null
           transaction_date?: string | null
+          transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
         }
@@ -2170,6 +2210,7 @@ export type Database = {
           account_name?: string | null
           amount?: number | null
           approval_status?: string | null
+          approved?: string | null
           approved_at?: string | null
           approved_by?: string | null
           attachment_url?: string | null
@@ -2184,6 +2225,8 @@ export type Database = {
           coa_expense_id?: string | null
           coa_id?: string | null
           cost_center_id?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2205,6 +2248,7 @@ export type Database = {
           payment_method?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
+          source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
           tanggal?: string | null
@@ -2212,6 +2256,7 @@ export type Database = {
           tax_code?: string | null
           tax_type?: string | null
           transaction_date?: string | null
+          transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
         }
@@ -4134,15 +4179,21 @@ export type Database = {
           advance_date: string
           advance_number: string
           amount: number
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           bukti: string | null
           bukti_url: string | null
+          category: string | null
           coa_account_code: string
+          counterparty_name: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
           credit_account_name: string | null
           debit_account_code: string | null
           debit_account_name: string | null
+          description: string | null
           disbursement_account_id: string | null
           disbursement_date: string | null
           disbursement_method: string | null
@@ -4155,22 +4206,31 @@ export type Database = {
           notes: string | null
           reference_number: string | null
           remaining_balance: number
+          source_mutation_id: string | null
           status: string
+          transaction_date: string | null
+          transaction_direction: string | null
           updated_at: string | null
         }
         Insert: {
           advance_date?: string
           advance_number: string
           amount: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
+          category?: string | null
           coa_account_code: string
+          counterparty_name?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
           credit_account_name?: string | null
           debit_account_code?: string | null
           debit_account_name?: string | null
+          description?: string | null
           disbursement_account_id?: string | null
           disbursement_date?: string | null
           disbursement_method?: string | null
@@ -4183,22 +4243,31 @@ export type Database = {
           notes?: string | null
           reference_number?: string | null
           remaining_balance: number
+          source_mutation_id?: string | null
           status?: string
+          transaction_date?: string | null
+          transaction_direction?: string | null
           updated_at?: string | null
         }
         Update: {
           advance_date?: string
           advance_number?: string
           amount?: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
+          category?: string | null
           coa_account_code?: string
+          counterparty_name?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
           credit_account_name?: string | null
           debit_account_code?: string | null
           debit_account_name?: string | null
+          description?: string | null
           disbursement_account_id?: string | null
           disbursement_date?: string | null
           disbursement_method?: string | null
@@ -4211,7 +4280,10 @@ export type Database = {
           notes?: string | null
           reference_number?: string | null
           remaining_balance?: number
+          source_mutation_id?: string | null
           status?: string
+          transaction_date?: string | null
+          transaction_direction?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4786,6 +4858,7 @@ export type Database = {
       }
       finance_approvals: {
         Row: {
+          approved: string | null
           approved_by: string | null
           approved_by_name: string | null
           approved_name: string | null
@@ -4797,6 +4870,7 @@ export type Database = {
           transaction_id: string | null
         }
         Insert: {
+          approved?: string | null
           approved_by?: string | null
           approved_by_name?: string | null
           approved_name?: string | null
@@ -4808,6 +4882,7 @@ export type Database = {
           transaction_id?: string | null
         }
         Update: {
+          approved?: string | null
           approved_by?: string | null
           approved_by_name?: string | null
           approved_name?: string | null
@@ -9760,6 +9835,135 @@ export type Database = {
           },
         ]
       }
+      tabel_mutations: {
+        Row: {
+          amount: number
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          balance: number | null
+          bank_account: string | null
+          bank_account_name: string | null
+          bank_name: string
+          category: string | null
+          counterparty_name: string | null
+          counterparty_role: string | null
+          counterparty_type: string | null
+          created_at: string
+          credit: number | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          currency: string | null
+          currency_code: string
+          debit: number | null
+          debit_account_code: string | null
+          debit_account_name: string | null
+          description: string | null
+          direction: string
+          evidence_url: string | null
+          fingerprint: string | null
+          id: string
+          imported_at: string
+          is_locked: boolean
+          mutation_date: string | null
+          ocr_text: string | null
+          payment_type: string | null
+          posted_at: string | null
+          reference_number: string
+          source: string
+          source_detail: string | null
+          supabase_table: string | null
+          transaction_date: string
+          transaction_direction: string | null
+          transaction_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          balance?: number | null
+          bank_account?: string | null
+          bank_account_name?: string | null
+          bank_name: string
+          category?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          credit?: number | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          currency?: string | null
+          currency_code?: string
+          debit?: number | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          direction: string
+          evidence_url?: string | null
+          fingerprint?: string | null
+          id?: string
+          imported_at?: string
+          is_locked?: boolean
+          mutation_date?: string | null
+          ocr_text?: string | null
+          payment_type?: string | null
+          posted_at?: string | null
+          reference_number: string
+          source?: string
+          source_detail?: string | null
+          supabase_table?: string | null
+          transaction_date: string
+          transaction_direction?: string | null
+          transaction_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          balance?: number | null
+          bank_account?: string | null
+          bank_account_name?: string | null
+          bank_name?: string
+          category?: string | null
+          counterparty_name?: string | null
+          counterparty_role?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          credit?: number | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          currency?: string | null
+          currency_code?: string
+          debit?: number | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          direction?: string
+          evidence_url?: string | null
+          fingerprint?: string | null
+          id?: string
+          imported_at?: string
+          is_locked?: boolean
+          mutation_date?: string | null
+          ocr_text?: string | null
+          payment_type?: string | null
+          posted_at?: string | null
+          reference_number?: string
+          source?: string
+          source_detail?: string | null
+          supabase_table?: string | null
+          transaction_date?: string
+          transaction_direction?: string | null
+          transaction_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tax_audit: {
         Row: {
           action: string | null
@@ -12168,6 +12372,25 @@ export type Database = {
           total_paid?: number | null
           total_principal_dibayar?: never
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      vw_mutation_summary: {
+        Row: {
+          count_in: number | null
+          count_out: number | null
+          period: string | null
+          total_in: number | null
+          total_out: number | null
+        }
+        Relationships: []
+      }
+      vw_mutation_summary_global: {
+        Row: {
+          count_in: number | null
+          count_out: number | null
+          total_in: number | null
+          total_out: number | null
         }
         Relationships: []
       }

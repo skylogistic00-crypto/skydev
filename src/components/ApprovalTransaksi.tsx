@@ -357,9 +357,22 @@ export default function ApprovalTransaksi({
       }
     }
     
-    // REJECT if no specific cash account is selected
+    // If no specific cash account, use a default account
     if (!cashAccountCode) {
-      throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil).");
+      // Fetch default cash account (Kas Besar or first cash account)
+      const { data: defaultCashAccount } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, account_name")
+        .or("account_code.eq.1-1100,account_name.ilike.%kas besar%")
+        .limit(1)
+        .single();
+      
+      if (defaultCashAccount) {
+        cashAccountCode = defaultCashAccount.account_code;
+        cashAccountName = defaultCashAccount.account_name;
+      } else {
+        throw new Error("Akun Kas tidak ditemukan. Silakan setup akun Kas di Chart of Accounts.");
+      }
     }
     if (!cashAccountName) {
       cashAccountName = "Kas";
@@ -516,9 +529,22 @@ export default function ApprovalTransaksi({
       }
     }
     
-    // REJECT if no specific cash account is selected
+    // If no specific cash account, use a default account
     if (!cashAccountCode) {
-      throw new Error("Akun Kas tidak ditemukan. Transaksi harus memiliki akun Kas yang spesifik (Kas Besar/Kas Kecil).");
+      // Fetch default cash account (Kas Besar or first cash account)
+      const { data: defaultCashAccount } = await supabase
+        .from("chart_of_accounts")
+        .select("account_code, account_name")
+        .or("account_code.eq.1-1100,account_name.ilike.%kas besar%")
+        .limit(1)
+        .single();
+      
+      if (defaultCashAccount) {
+        cashAccountCode = defaultCashAccount.account_code;
+        cashAccountName = defaultCashAccount.account_name;
+      } else {
+        throw new Error("Akun Kas tidak ditemukan. Silakan setup akun Kas di Chart of Accounts.");
+      }
     }
     if (!cashAccountName) {
       cashAccountName = "Kas";

@@ -200,11 +200,11 @@ export default function Navigation() {
       roles: ["super_admin", "accounting_manager", "accounting_staff"],
     },
     {
-      path: "/mutasi-bank",
-      label: "Mutasi Bank",
+      path: "/bank-mutations-management",
+      label: "Bank Mutations Management",
       icon: DollarSign,
       color: "cyan",
-      roles: ["super_admin", "accounting_manager", "accounting_staff"],
+      roles: ["super_admin", "accounting_manager", "accounting_staff", "finance", "admin"],
     },
     {
       path: "/employee-advance",
