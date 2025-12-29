@@ -1,4 +1,7 @@
-CREATE OR REPLACE VIEW vw_mutation_summary_global AS
+-- Drop and recreate the view with correct columns
+DROP VIEW IF EXISTS vw_mutation_summary_global;
+
+CREATE VIEW vw_mutation_summary_global AS
 SELECT
   COALESCE(SUM(debit::NUMERIC), 0) as total_in,
   COALESCE(SUM(credit::NUMERIC), 0) as total_out,

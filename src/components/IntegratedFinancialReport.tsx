@@ -61,6 +61,7 @@ interface JournalEntry {
   debit: number;
   credit: number;
   created_at: string;
+  journal_ref?: string;
   debit_account_name?: string;
   credit_account_name?: string;
 }
@@ -96,6 +97,9 @@ export default function IntegratedFinancialReport() {
 
   const [reportType, setReportType] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [journalStartDate, setJournalStartDate] = useState<string>("");
+  const [journalEndDate, setJournalEndDate] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -107,6 +111,11 @@ export default function IntegratedFinancialReport() {
   useEffect(() => {
     applyFilters();
   }, [reportType, searchQuery, reportData]);
+
+  useEffect(() => {
+    fetchJournalEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journalStartDate, journalEndDate]);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -276,10 +285,21 @@ export default function IntegratedFinancialReport() {
   const fetchJournalEntries = async () => {
     setLoadingJournal(true);
     try {
-      const { data: journalData, error: journalError } = await supabase
+      let query = supabase
         .from("journal_entries")
-        .select("*, tanggal, account_code, account_name, debit, credit, transaction_date, journal_ref, source_id")
-        .order("tanggal", { ascending: false });
+        .select(
+          "*, tanggal, account_code, account_name, debit, credit, transaction_date, journal_ref, source_id",
+        )
+        .order("transaction_date", { ascending: false });
+
+      if (journalStartDate) {
+        query = query.gte("transaction_date", journalStartDate);
+      }
+      if (journalEndDate) {
+        query = query.lte("transaction_date", journalEndDate);
+      }
+
+      const { data: journalData, error: journalError } = await query;
 
       if (journalError) {
         toast({
@@ -755,10 +775,33 @@ export default function IntegratedFinancialReport() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <h3 className="text-lg font-semibold">
                   Data Journal Entries ({journalEntries.length} entries)
                 </h3>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="journalStartDate">Dari Tanggal</Label>
+                    <Input
+                      id="journalStartDate"
+                      type="date"
+                      value={journalStartDate}
+                      onChange={(e) => setJournalStartDate(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="journalEndDate">Sampai Tanggal</Label>
+                    <Input
+                      id="journalEndDate"
+                      type="date"
+                      value={journalEndDate}
+                      onChange={(e) => setJournalEndDate(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
@@ -852,7 +895,7 @@ export default function IntegratedFinancialReport() {
                   </TableBody>
                   <tfoot>
                     <TableRow className="bg-gray-50 font-semibold">
-                      <TableCell colSpan={6} className="text-right">
+                      <TableCell colSpan={7} className="text-right">
                         Total
                       </TableCell>
                       <TableCell className="text-right font-mono">

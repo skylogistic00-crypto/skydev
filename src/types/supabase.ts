@@ -1956,6 +1956,27 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_account_mapping: {
+        Row: {
+          cash_account_code: string
+          is_active: boolean | null
+          source_name: string
+          source_type: string
+        }
+        Insert: {
+          cash_account_code: string
+          is_active?: boolean | null
+          source_name: string
+          source_type: string
+        }
+        Update: {
+          cash_account_code?: string
+          is_active?: boolean | null
+          source_name?: string
+          source_type?: string
+        }
+        Relationships: []
+      }
       cash_and_bank_receipts: {
         Row: {
           account_code: string | null
@@ -1978,6 +1999,7 @@ export type Database = {
           coa_revenue_code: string | null
           counterparty_name: string | null
           counterparty_role: string | null
+          counterparty_type: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
@@ -1993,10 +2015,13 @@ export type Database = {
           ocr_id: string | null
           payer_name: string | null
           payment_method: string | null
+          payment_type: string | null
           reference_number: string | null
+          source: string | null
           source_destination: string | null
           source_mutation_id: string | null
           source_table: string | null
+          status: string | null
           transaction_date: string
           transaction_direction: string | null
           transaction_type: string
@@ -2023,6 +2048,7 @@ export type Database = {
           coa_revenue_code?: string | null
           counterparty_name?: string | null
           counterparty_role?: string | null
+          counterparty_type?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2038,10 +2064,13 @@ export type Database = {
           ocr_id?: string | null
           payer_name?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           reference_number?: string | null
+          source?: string | null
           source_destination?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
+          status?: string | null
           transaction_date: string
           transaction_direction?: string | null
           transaction_type?: string
@@ -2068,6 +2097,7 @@ export type Database = {
           coa_revenue_code?: string | null
           counterparty_name?: string | null
           counterparty_role?: string | null
+          counterparty_type?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2083,10 +2113,13 @@ export type Database = {
           ocr_id?: string | null
           payer_name?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           reference_number?: string | null
+          source?: string | null
           source_destination?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
+          status?: string | null
           transaction_date?: string
           transaction_direction?: string | null
           transaction_type?: string
@@ -2117,6 +2150,7 @@ export type Database = {
           cost_center_id: string | null
           counterparty_name: string | null
           counterparty_role: string | null
+          counterparty_type: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
@@ -2136,8 +2170,10 @@ export type Database = {
           ocr_id: string | null
           payee_name: string | null
           payment_method: string | null
+          payment_type: string | null
           reference_number: string | null
           rejection_reason: string | null
+          source: string | null
           source_mutation_id: string | null
           source_table: string | null
           status: string | null
@@ -2172,6 +2208,7 @@ export type Database = {
           cost_center_id?: string | null
           counterparty_name?: string | null
           counterparty_role?: string | null
+          counterparty_type?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2191,8 +2228,10 @@ export type Database = {
           ocr_id?: string | null
           payee_name?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
+          source?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -2227,6 +2266,7 @@ export type Database = {
           cost_center_id?: string | null
           counterparty_name?: string | null
           counterparty_role?: string | null
+          counterparty_type?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -2246,8 +2286,10 @@ export type Database = {
           ocr_id?: string | null
           payee_name?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           reference_number?: string | null
           rejection_reason?: string | null
+          source?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -2266,6 +2308,13 @@ export type Database = {
             columns: ["coa_cash_account_code"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_code"]
+          },
+          {
+            foreignKeyName: "fk_cd_coa_cash"
+            columns: ["coa_cash_account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
             referencedColumns: ["account_code"]
           },
         ]
@@ -4303,6 +4352,60 @@ export type Database = {
           },
         ]
       }
+      employee_advances_top_up: {
+        Row: {
+          advance_id: string
+          amount: number
+          bukti: string | null
+          bukti_url: string | null
+          created_at: string
+          created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
+          description: string | null
+          employee_id: string
+          employee_name: string | null
+          id: string
+          top_up_date: string
+        }
+        Insert: {
+          advance_id: string
+          amount?: number
+          bukti?: string | null
+          bukti_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          employee_id: string
+          employee_name?: string | null
+          id?: string
+          top_up_date: string
+        }
+        Update: {
+          advance_id?: string
+          amount?: number
+          bukti?: string | null
+          bukti_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          employee_id?: string
+          employee_name?: string | null
+          id?: string
+          top_up_date?: string
+        }
+        Relationships: []
+      }
       employee_documents: {
         Row: {
           created_at: string | null
@@ -5200,6 +5303,13 @@ export type Database = {
             columns: ["account_code"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_code"]
+          },
+          {
+            foreignKeyName: "fixed_assets_account_code_fkey"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
             referencedColumns: ["account_code"]
           },
         ]
@@ -6270,6 +6380,13 @@ export type Database = {
             referencedColumns: ["account_code"]
           },
           {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
+            referencedColumns: ["account_code"]
+          },
+          {
             foreignKeyName: "fk_journal_stock_adj"
             columns: ["stock_adjustment_id"]
             isOneToOne: false
@@ -6444,6 +6561,7 @@ export type Database = {
           account_code: string | null
           account_name: string
           account_number: string
+          amount: number | null
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
@@ -6487,6 +6605,7 @@ export type Database = {
           account_code?: string | null
           account_name: string
           account_number: string
+          amount?: number | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -6530,6 +6649,7 @@ export type Database = {
           account_code?: string | null
           account_name?: string
           account_number?: string
+          amount?: number | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -9869,9 +9989,14 @@ export type Database = {
           ocr_text: string | null
           payment_type: string | null
           posted_at: string | null
+          processed: boolean
+          processed_at: string | null
+          processed_id: string | null
+          processed_table: string | null
           reference_number: string
           source: string
           source_detail: string | null
+          source_mutation_id: string | null
           supabase_table: string | null
           transaction_date: string
           transaction_direction: string | null
@@ -9911,9 +10036,14 @@ export type Database = {
           ocr_text?: string | null
           payment_type?: string | null
           posted_at?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          processed_id?: string | null
+          processed_table?: string | null
           reference_number: string
           source?: string
           source_detail?: string | null
+          source_mutation_id?: string | null
           supabase_table?: string | null
           transaction_date: string
           transaction_direction?: string | null
@@ -9953,9 +10083,14 @@ export type Database = {
           ocr_text?: string | null
           payment_type?: string | null
           posted_at?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          processed_id?: string | null
+          processed_table?: string | null
           reference_number?: string
           source?: string
           source_detail?: string | null
+          source_mutation_id?: string | null
           supabase_table?: string | null
           transaction_date?: string
           transaction_direction?: string | null
@@ -11978,6 +12113,13 @@ export type Database = {
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["account_code"]
           },
+          {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
+            referencedColumns: ["account_code"]
+          },
         ]
       }
       view_general_ledger: {
@@ -12088,6 +12230,14 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vw_cash_account_balance: {
+        Row: {
+          account_code: string | null
+          account_name: string | null
+          balance: number | null
+        }
+        Relationships: []
       }
       vw_cash_flow_by_bank: {
         Row: {
@@ -12280,6 +12430,13 @@ export type Database = {
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["account_code"]
           },
+          {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
+            referencedColumns: ["account_code"]
+          },
         ]
       }
       vw_loan_summary: {
@@ -12389,6 +12546,7 @@ export type Database = {
         Row: {
           count_in: number | null
           count_out: number | null
+          saldo: number | null
           total_in: number | null
           total_out: number | null
         }
@@ -12563,6 +12721,47 @@ export type Database = {
         Returns: undefined
       }
       apply_tax_engine: { Args: { p_id: string }; Returns: Json }
+      approve_and_process_bank_mutation: {
+        Args: { p_approved_by: string; p_mutation_id: string }
+        Returns: undefined
+      }
+      approve_and_process_bank_mutations_bulk: {
+        Args: { p_approved_by: string; p_mutation_ids: string[] }
+        Returns: undefined
+      }
+      approve_sql_audit_log: {
+        Args: { p_log_id: string; p_status: string }
+        Returns: undefined
+      }
+      approve_transaction_and_post_journal:
+        | {
+            Args: { p_approved_by: string; p_transaction_id: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_approved_by: string
+              p_cash_account_code?: string
+              p_transaction_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_approved_by: string
+              p_cash_account_code: string
+              p_transaction_id: string
+            }
+            Returns: undefined
+          }
+      approve_transaction_and_post_journal_final: {
+        Args: {
+          p_approved_by: string
+          p_table_name: string
+          p_transaction_id: string
+        }
+        Returns: undefined
+      }
       auto_match_bank_mutation: {
         Args: { p_mutation_id: string }
         Returns: undefined
@@ -12985,16 +13184,16 @@ export type Database = {
         }[]
       }
       normalize_account_type: { Args: { input: string }; Returns: string }
-      post_bank_statement_as_journal: {
-        Args: { p_id: string; p_user?: string }
-        Returns: undefined
-      }
-      post_journal_bank_mutation: {
-        Args: { p_bank_mutation_id: string }
-        Returns: undefined
-      }
       post_journal_to_general_ledger: {
         Args: { p_journal_id: string }
+        Returns: undefined
+      }
+      process_bank_mutation_to_transaction: {
+        Args: { p_mutation_id: string; p_processed_by: string }
+        Returns: undefined
+      }
+      process_mutation_to_transaction: {
+        Args: { p_mutation_id: string }
         Returns: undefined
       }
       rebuild_general_ledger: { Args: never; Returns: undefined }
@@ -13040,6 +13239,10 @@ export type Database = {
           credit: number
           debit: number
         }[]
+      }
+      update_bank_mutation_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
       }
       update_coa_balances_from_gl: { Args: never; Returns: string }
       update_coa_balances_from_journal: { Args: never; Returns: string }

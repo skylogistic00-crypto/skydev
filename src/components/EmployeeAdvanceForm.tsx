@@ -451,10 +451,40 @@ export default function EmployeeAdvanceForm() {
       }
 
       if (existingAdvances) {
-        // Add to existing advance balance
+        // Existing balance: log top-up into employee_advances_top_up and update running balance in employee_advances
         const newAmount = existingAdvances.amount + advanceForm.amount;
         const newRemainingBalance = existingAdvances.remaining_balance + advanceForm.amount;
         const existingNotes = existingAdvances.notes || '';
+
+        const { data: originalAdvance, error: originalAdvanceError } = await supabase
+          .from("employee_advances")
+          .select(
+            "debit_account_code, debit_account_name, credit_account_code, credit_account_name"
+          )
+          .eq("id", existingAdvances.id)
+          .single();
+
+        if (originalAdvanceError) throw originalAdvanceError;
+
+        const { error: topUpInsertError } = await supabase
+          .from("employee_advances_top_up")
+          .insert({
+            advance_id: existingAdvances.id,
+            employee_id: advanceForm.employee_id,
+            employee_name: advanceForm.employee_name,
+            top_up_date: advanceForm.advance_date,
+            amount: advanceForm.amount,
+            description: advanceForm.notes,
+            bukti_url: advanceForm.bukti_url,
+            bukti: advanceForm.bukti_url,
+            created_by: user?.id,
+            debit_account_code: originalAdvance?.debit_account_code || null,
+            debit_account_name: originalAdvance?.debit_account_name || null,
+            credit_account_code: originalAdvance?.credit_account_code || null,
+            credit_account_name: originalAdvance?.credit_account_name || null,
+          });
+
+        if (topUpInsertError) throw topUpInsertError;
 
         const { error: updateError } = await supabase
           .from("employee_advances")
@@ -469,38 +499,6 @@ export default function EmployeeAdvanceForm() {
           .eq("id", existingAdvances.id);
 
         if (updateError) throw updateError;
-
-        // Create journal entry for addition using edge function
-        const { error: journalError } = await supabase.functions.invoke(
-          "supabase-functions-employee-advance-journal",
-          {
-            body: {
-              type: "advance",
-              advance_id: existingAdvances.id,
-              employee_name: advanceForm.employee_name,
-              amount: advanceForm.amount,
-              date: advanceForm.advance_date,
-              description: advanceForm.notes,
-              bukti_url: advanceForm.bukti_url,
-              is_addition: true,
-
-              // Ensure credit side uses the selected payment account
-              credit_account_id:
-                advanceForm.payment_method === "Bank"
-                  ? advanceForm.bank_account_id
-                  : advanceForm.kas_account_id,
-            },
-          }
-        );
-
-        if (journalError) {
-          console.error("Journal entry error:", journalError);
-          toast({
-            title: "Warning",
-            description: "Saldo berhasil ditambah tapi gagal membuat jurnal",
-            variant: "destructive",
-          });
-        }
 
         toast({
           title: "Saldo Uang Muka Bertambah",
@@ -608,24 +606,8 @@ export default function EmployeeAdvanceForm() {
 
       if (settlementError) throw settlementError;
 
-      // Call settlement function to create journal entries
-      const { error: settlementJournalError } = await supabase.functions.invoke(
-        "supabase-functions-employee-advance-settlement",
-        {
-          body: {
-            settlement_id: settlementData.id,
-            advance_id: settlementForm.advance_id,
-            settlement_amount: settlementForm.total,
-            settlement_date: settlementForm.settlement_date,
-            description: settlementForm.description,
-            expense_account_code: settlementForm.expense_account_code,
-            coa_account_code: selectedAdvance?.coa_account_code,
-            bukti_url: settlementForm.bukti_url,
-          },
-        }
-      );
-
-      if (settlementJournalError) throw settlementJournalError;
+      // Do not use edge function supabase-functions-employee-advance-settlement.
+      // Journaling should be handled by database trigger / backend process.
 
       toast({
         title: "Penyelesaian Berhasil",
@@ -679,6 +661,18 @@ export default function EmployeeAdvanceForm() {
       if (!payload.advance_id) throw new Error("Uang muka wajib dipilih");
       if (payload.amount <= 0) throw new Error("Jumlah harus > 0");
 
+      const selectedDebitAccount =
+        returnForm.payment_method === "Bank"
+          ? bankAccounts.find((b) => b.id === returnForm.bank_account_id)
+          : kasAccounts.find((k) => k.id === returnForm.kas_account_id);
+
+      if (returnForm.payment_method === "Bank" && !returnForm.bank_account_id) {
+        throw new Error("Bank wajib dipilih");
+      }
+      if (returnForm.payment_method === "Kas" && !returnForm.kas_account_id) {
+        throw new Error("Kas wajib dipilih");
+      }
+
       const { data: returnData, error } = await supabase
         .from("employee_advance_returns")
         .insert({
@@ -689,29 +683,19 @@ export default function EmployeeAdvanceForm() {
           notes: returnForm.notes,
           bukti_url: returnForm.bukti_url,
           created_by: user?.id,
+
+          debit_account_code: selectedDebitAccount?.account_code || null,
+          debit_account_name: selectedDebitAccount?.account_name || null,
+
+          credit_account_code: "1-1500",
+          credit_account_name: "Uang Muka Karyawan",
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      const { error: journalError } = await supabase.functions.invoke(
-        "supabase-functions-employee-advance-journal",
-        {
-          body: sanitizePayload({
-            type: "return",
-            return_id: returnData.id,
-            advance_id: returnForm.advance_id,
-            employee_name: selectedAdvance?.employee_name,
-            amount: returnForm.amount,
-            date: returnForm.return_date,
-            coa_account_code: selectedAdvance?.coa_account_code,
-            bukti_url: returnForm.bukti_url,
-          }),
-        }
-      );
-
-      if (journalError) throw journalError;
+      // Journal is handled by database trigger; do not call edge function here.
 
       toast({
         title: "Pengembalian Berhasil",
