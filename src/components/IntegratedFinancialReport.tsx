@@ -100,6 +100,7 @@ export default function IntegratedFinancialReport() {
 
   const [journalStartDate, setJournalStartDate] = useState<string>("");
   const [journalEndDate, setJournalEndDate] = useState<string>("");
+  const [journalDescriptionQuery, setJournalDescriptionQuery] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -780,7 +781,7 @@ export default function IntegratedFinancialReport() {
                   Data Journal Entries ({journalEntries.length} entries)
                 </h3>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
                     <Label htmlFor="journalStartDate">Dari Tanggal</Label>
                     <Input
@@ -801,6 +802,17 @@ export default function IntegratedFinancialReport() {
                       className="h-9"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="journalDescriptionQuery">Deskripsi</Label>
+                    <Input
+                      id="journalDescriptionQuery"
+                      type="text"
+                      value={journalDescriptionQuery}
+                      onChange={(e) => setJournalDescriptionQuery(e.target.value)}
+                      placeholder="Cari deskripsi..."
+                      className="h-9"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -808,8 +820,8 @@ export default function IntegratedFinancialReport() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-100">
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Jenis Transaksi</TableHead>
+                      <TableHead className="w-32">Tanggal</TableHead>
+                      <TableHead className="w-40">Jenis Transaksi</TableHead>
                       <TableHead>Kode Akun</TableHead>
                       <TableHead>Nama Akun</TableHead>
                       <TableHead>Deskripsi</TableHead>
@@ -830,67 +842,107 @@ export default function IntegratedFinancialReport() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      // Show all journal_entries rows (no grouping)
-                      journalEntries.map((entry: any) => {
-                        const dateVal = entry.transaction_date || entry.tanggal || entry.entry_date;
-                        const isDebit = (entry.debit || 0) > 0;
-                        const isCredit = (entry.credit || 0) > 0;
+                      // Group by journal_ref so entries appear as pairs/sets
+                      Object.entries(
+                        journalEntries
+                          .filter((entry: any) => {
+                            const q = journalDescriptionQuery.trim().toLowerCase();
+                            if (!q) return true;
+                            return (entry.description || "").toLowerCase().includes(q);
+                          })
+                          .reduce((acc: Record<string, any[]>, entry: any) => {
+                            const key = (entry.journal_ref || entry.id || "").toString();
+                            if (!acc[key]) acc[key] = [];
+                            acc[key].push(entry);
+                            return acc;
+                          }, {}),
+                      ).flatMap(([ref, entries]) =>
+                        [...entries]
+                          .sort((a: any, b: any) => {
+                            const aDebit = (a.debit || 0) > 0;
+                            const bDebit = (b.debit || 0) > 0;
+                            const aCredit = (a.credit || 0) > 0;
+                            const bCredit = (b.credit || 0) > 0;
 
-                        return (
-                          <TableRow key={entry.id}>
-                            <TableCell className="text-sm">
-                              {dateVal ? new Date(dateVal).toLocaleDateString("id-ID") : "-"}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {entry.transaction_type || entry.jenis_transaksi || "-"}
-                            </TableCell>
-                            <TableCell className="font-mono">
-                              {entry.account_code || entry.debit_account_code || entry.credit_account_code || "-"}
-                            </TableCell>
-                            <TableCell>
-                              {entry.account_name || entry.debit_account_name || entry.credit_account_name || "-"}
-                            </TableCell>
-                            <TableCell className="text-sm">{entry.description || "-"}</TableCell>
-                            <TableCell className="text-sm">
-                              {entry.bukti || entry.bukti_url ? (
-                                <a
-                                  href={(entry.bukti_url || entry.bukti) as string}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  aria-label="Lihat bukti"
-                                  title="Lihat bukti"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </a>
-                              ) : (
-                                "-"
+                            if (aDebit !== bDebit) return aDebit ? -1 : 1;
+                            if (aCredit !== bCredit) return aCredit ? 1 : -1;
+                            return 0;
+                          })
+                          .map((entry: any, idx: number) => {
+                            const dateVal = entry.transaction_date || entry.tanggal || entry.entry_date;
+                            const isDebit = (entry.debit || 0) > 0;
+                            const isCredit = (entry.credit || 0) > 0;
+
+                            const isGroupFirstRow = idx === 0;
+                            const groupRowSpan = entries.length;
+
+                            return (
+                              <TableRow key={`${ref}-${entry.id}`} className={idx === 0 ? "border-t-2 border-gray-200" : undefined}>
+                              {isGroupFirstRow && (
+                                <TableCell className="text-sm" rowSpan={groupRowSpan}>
+                                  {dateVal ? new Date(dateVal).toLocaleDateString("id-ID") : "-"}
+                                </TableCell>
                               )}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {isDebit ? formatRupiah(entry.debit || 0) : "-"}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {isCredit ? formatRupiah(entry.credit || 0) : "-"}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteJournalEntry(entry.journal_ref, entry.reference_type, entry.reference_id)}
-                                disabled={!entry.journal_ref || deletingRef === entry.journal_ref}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                {deletingRef === (entry.journal_ref || "NO-REF") ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                              {isGroupFirstRow && (
+                                <TableCell className="text-sm" rowSpan={groupRowSpan}>
+                                  {entry.transaction_type || entry.jenis_transaksi || "-"}
+                                </TableCell>
+                              )}
+                              <TableCell className="font-mono">
+                                {entry.account_code || entry.debit_account_code || entry.credit_account_code || "-"}
+                              </TableCell>
+                              <TableCell>
+                                {entry.account_name || entry.debit_account_name || entry.credit_account_name || "-"}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                <div
+                                  className="max-w-[420px] line-clamp-2 break-words whitespace-pre-line"
+                                  title={entry.description || ""}
+                                >
+                                  {entry.description || "-"}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {entry.bukti || entry.bukti_url ? (
+                                  <a
+                                    href={(entry.bukti_url || entry.bukti) as string}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-md text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    aria-label="Lihat bukti"
+                                    title="Lihat bukti"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </a>
                                 ) : (
-                                  <Trash2 className="h-4 w-4" />
+                                  "-"
                                 )}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {isDebit ? formatRupiah(entry.debit || 0) : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {isCredit ? formatRupiah(entry.credit || 0) : "-"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteJournalEntry(entry.journal_ref, entry.reference_type, entry.reference_id)}
+                                  disabled={!entry.journal_ref || deletingRef === entry.journal_ref}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  {deletingRef === (entry.journal_ref || "NO-REF") ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )
                     )}
                   </TableBody>
                   <tfoot>
