@@ -132,6 +132,7 @@ export default function EmployeeAdvanceForm() {
     advance_date: new Date().toISOString().slice(0, 10),
     notes: "",
     bukti_url: "",
+    mode: "topup" as "new" | "topup",
   });
 
   const [settlementForm, setSettlementForm] = useState({
@@ -225,43 +226,51 @@ export default function EmployeeAdvanceForm() {
       return;
     }
 
-    // Parse notes to extract addition history
-    const additionHistory: any[] = [];
-    let totalAdditions = 0;
-    if (advanceData?.notes) {
-      const lines = advanceData.notes.split('\n');
-      lines.forEach((line: string) => {
-        const match = line.match(/\[([^\]]+)\] Penambahan: Rp ([\d.,]+) - (.+)/);
-        if (match) {
-          const amount = parseFloat(match[2].replace(/[.,]/g, ''));
-          totalAdditions += amount;
-          additionHistory.push({
-            type: 'addition',
-            date: match[1],
-            amount: amount,
-            notes: match[3]
-          });
-        }
+    // Fetch top up history (penambahan) from employee_advances_top_up
+    const { data: topUps, error: topUpError } = await supabase
+      .from("employee_advances_top_up")
+      .select("id, top_up_date, amount, description, bukti_url")
+      .eq("advance_id", advanceId)
+      .order("top_up_date", { ascending: false });
+
+    if (topUpError) {
+      console.error("Error fetching topups:", topUpError);
+      toast({
+        title: "Error",
+        description: "Gagal mengambil data penambahan (top up)",
+        variant: "destructive",
       });
+      return;
     }
 
+    const additionHistory: any[] = (topUps || []).map((tu: any) => ({
+      ...tu,
+      type: "addition",
+      date: new Date(tu.top_up_date).toLocaleDateString("id-ID"),
+      notes: tu.description || "Penambahan",
+    }));
+
     // Calculate initial amount (total - all additions)
+    const totalAdditions = (topUps || []).reduce(
+      (sum: number, tu: any) => sum + (tu.amount || 0),
+      0,
+    );
     const initialAmount = (advanceData?.amount || 0) - totalAdditions;
 
     // Add initial advance as first addition
     const initialAddition = {
-      type: 'initial',
-      date: new Date(advanceData?.advance_date).toLocaleDateString('id-ID'),
+      type: "initial",
+      date: new Date(advanceData?.advance_date).toLocaleDateString("id-ID"),
       amount: initialAmount,
-      notes: 'Uang muka awal'
+      notes: "Uang muka awal",
     };
 
     // Combine all with type indicator
     const combined = [
       initialAddition,
       ...additionHistory,
-      ...(settlements || []).map(s => ({ ...s, type: 'settlement' })),
-      ...(returns || []).map(r => ({ ...r, type: 'return' }))
+      ...(settlements || []).map((s) => ({ ...s, type: "settlement" })),
+      ...(returns || []).map((r) => ({ ...r, type: "return" })),
     ];
 
     setSelectedAdvanceSettlements(combined);
@@ -439,22 +448,32 @@ export default function EmployeeAdvanceForm() {
 
     try {
       // Check if employee already has an active advance
+      // - For topup: use selected advance id from dropdown (topup_advance_id)
+      // - For new: use selected employee_id
+      const targetAdvanceId = (advanceForm as any).topup_advance_id || null;
+
       const { data: existingAdvances, error: fetchError } = await supabase
         .from("employee_advances")
         .select("id, amount, remaining_balance, notes")
-        .eq("employee_id", advanceForm.employee_id)
-        .in("status", ["draft", "requested", "disbursed", "partially_settled"])
+        .eq(
+          "id",
+          advanceForm.mode === "topup" && targetAdvanceId ? targetAdvanceId : "__no_match__",
+        )
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+      if (fetchError && fetchError.code !== "PGRST116") {
         throw fetchError;
       }
 
-      if (existingAdvances) {
-        // Existing balance: log top-up into employee_advances_top_up and update running balance in employee_advances
+      if (existingAdvances && advanceForm.mode === "topup") {
+        toast({
+          title: "Top Up",
+          description: "Menambahkan saldo ke uang muka yang masih aktif",
+        });
+
         const newAmount = existingAdvances.amount + advanceForm.amount;
         const newRemainingBalance = existingAdvances.remaining_balance + advanceForm.amount;
-        const existingNotes = existingAdvances.notes || '';
+        const existingNotes = existingAdvances.notes || "";
 
         const { data: originalAdvance, error: originalAdvanceError } = await supabase
           .from("employee_advances")
@@ -494,7 +513,6 @@ export default function EmployeeAdvanceForm() {
             notes:
               (existingNotes ? existingNotes + "\n" : "") +
               `[${new Date().toLocaleDateString()}] Penambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || "No notes"}`,
-
           })
           .eq("id", existingAdvances.id);
 
@@ -504,8 +522,26 @@ export default function EmployeeAdvanceForm() {
           title: "Saldo Uang Muka Bertambah",
           description: `Saldo ${advanceForm.employee_name} bertambah Rp ${advanceForm.amount.toLocaleString()}. Total: Rp ${newAmount.toLocaleString()}`,
         });
-      } else {
-        // Create new advance record
+
+        fetchAdvances();
+        setAdvanceForm({
+          employee_id: "",
+          employee_name: "",
+          amount: 0,
+          notes: "",
+          advance_date: new Date().toISOString().split("T")[0],
+          payment_method: "Kas",
+          bank_account_id: "",
+          kas_account_id: "",
+          bukti_url: "",
+          mode: "new",
+        });
+
+        setIsLoading(false);
+        return;
+      }
+
+      // Create new advance record
         const timestamp = Date.now();
         const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
         const tempAdvanceNumber = `ADV-${timestamp}-${randomSuffix}`;
@@ -538,7 +574,7 @@ export default function EmployeeAdvanceForm() {
           title: "Uang Muka Berhasil Dibuat",
           description: `Uang muka sebesar Rp ${advanceForm.amount.toLocaleString()} untuk ${advanceForm.employee_name} menunggu approval`,
         });
-      }
+      
 
       setAdvanceForm({
         employee_id: "",
@@ -550,6 +586,7 @@ export default function EmployeeAdvanceForm() {
         bank_account_id: "",
         kas_account_id: "",
         bukti_url: "",
+        mode: "new",
       });
 
       fetchAdvances();
@@ -760,19 +797,20 @@ export default function EmployeeAdvanceForm() {
      RENDER
   ========================= */
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Uang Muka Karyawan</h1>
+    <>
+      <div className="container mx-auto p-6 space-y-6">
+        <h1 className="text-3xl font-bold">Uang Muka Karyawan</h1>
 
-      <Tabs defaultValue="create">
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="create">Buat</TabsTrigger>
-          <TabsTrigger value="settlement">Realisasi</TabsTrigger>
-          <TabsTrigger value="return">Pengembalian</TabsTrigger>
-          <TabsTrigger value="list">Daftar</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="create">
+          <TabsList className="grid grid-cols-4">
+            <TabsTrigger value="create">Buat</TabsTrigger>
+            <TabsTrigger value="settlement">Realisasi</TabsTrigger>
+            <TabsTrigger value="return">Pengembalian</TabsTrigger>
+            <TabsTrigger value="list">Daftar</TabsTrigger>
+          </TabsList>
 
-        {/* CREATE */}
-        <TabsContent value="create">
+          {/* CREATE */}
+          <TabsContent value="create">
           <Card>
             <CardHeader>
               <CardTitle>Berikan Uang Muka ke Karyawan</CardTitle>
@@ -782,191 +820,294 @@ export default function EmployeeAdvanceForm() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateAdvance} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Karyawan *</Label>
-                    <Select
-                      value={advanceForm.employee_id}
-                      onValueChange={(value) => {
-                        const employee = employees.find((e) => e.id === value);
-                        setAdvanceForm({
-                          ...advanceForm,
-                          employee_id: value,
-                          employee_name: employee?.full_name || "",
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih karyawan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {/* Show employee advance history */}
-                    {advanceForm.employee_id && (() => {
-                      const employeeAdvances = advances.filter(
-                        (adv) => adv.employee_id === advanceForm.employee_id && 
-                        ['draft', 'requested', 'disbursed', 'partially_settled'].includes(adv.status)
-                      );
-                      const totalBalance = employeeAdvances.reduce((sum, adv) => sum + (adv.remaining_balance || 0), 0);
-                      
-                      if (employeeAdvances.length > 0) {
-                        return (
-                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                            <p className="font-medium text-blue-900">
-                              Saldo Uang Muka: Rp {totalBalance.toLocaleString()}
-                            </p>
-                            <p className="text-blue-700 text-xs mt-1">
-                              {employeeAdvances.length} uang muka aktif
-                            </p>
-                          </div>
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <p className="text-sm font-medium">Jenis transaksi:</p>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="advanceMode"
+                          value="topup"
+                          checked={advanceForm.mode === "topup"}
+                          onChange={() =>
+                            setAdvanceForm({
+                              ...advanceForm,
+                              mode: "topup",
+                              employee_id: "",
+                              employee_name: "",
+                            })
+                          }
+                        />
+                        Top Up Saldo
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="advanceMode"
+                          value="new"
+                          checked={advanceForm.mode === "new"}
+                          onChange={() =>
+                            setAdvanceForm({
+                              ...advanceForm,
+                              mode: "new",
+                              employee_id: "",
+                              employee_name: "",
+                            })
+                          }
+                        />
+                        Buat Uang Muka Baru
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Karyawan *</Label>
+                      <Select
+                        value={
+                          advanceForm.mode === "topup"
+                            ? ((advanceForm as any).topup_advance_id || "")
+                            : advanceForm.employee_id
+                        }
+                        onValueChange={(value) => {
+                          if (advanceForm.mode === "topup") {
+                            const selected = advances.find((adv: any) => adv.id === value);
+                            setAdvanceForm({
+                              ...advanceForm,
+                              employee_id: selected?.employee_id || "",
+                              employee_name: selected?.employee_name || "",
+                              topup_advance_id: value,
+                            } as any);
+                            return;
+                          }
+
+                          const employee = employees.find((e) => e.id === value);
+                          setAdvanceForm({
+                            ...advanceForm,
+                            employee_id: value,
+                            employee_name: employee?.full_name || "",
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih karyawan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {advanceForm.mode === "topup"
+                            ? advances
+                                .filter(
+                                  (adv: any) =>
+                                    [
+                                      "draft",
+                                      "requested",
+                                      "disbursed",
+                                      "partially_settled",
+                                    ].includes(adv.status) &&
+                                    (adv.remaining_balance || 0) > 0,
+                                )
+                                .map((adv: any) => (
+                                  <SelectItem key={adv.id} value={adv.id}>
+                                    {adv.employee_name} {adv.advance_number ? `(${adv.advance_number})` : ""} - Rp {(adv.remaining_balance || 0).toLocaleString()}
+                                  </SelectItem>
+                                ))
+                            : employees.map((emp) => (
+                                <SelectItem key={emp.id} value={emp.id}>
+                                  {emp.full_name}
+                                </SelectItem>
+                              ))}
+                        </SelectContent>
+                      </Select>
+
+                      {advanceForm.mode === "topup" &&
+                        !employees.some((emp) =>
+                          advances.some(
+                            (adv) =>
+                              adv.employee_id === emp.id &&
+                              [
+                                "draft",
+                                "requested",
+                                "disbursed",
+                                "partially_settled",
+                              ].includes(adv.status),
+                          ),
+                        ) && (
+                          <p className="text-xs text-muted-foreground">
+                            Tidak ada karyawan dengan uang muka aktif.
+                          </p>
+                        )}
+
+                      {/* Show employee advance history */}
+                      {advanceForm.employee_id && (() => {
+                        const employeeAdvances = advances.filter(
+                          (adv) =>
+                            adv.employee_id === advanceForm.employee_id &&
+                            [
+                              "draft",
+                              "requested",
+                              "disbursed",
+                              "partially_settled",
+                            ].includes(adv.status),
                         );
-                      }
-                      return null;
-                    })()}
+                        const totalBalance = employeeAdvances.reduce(
+                          (sum, adv) => sum + (adv.remaining_balance || 0),
+                          0,
+                        );
+
+                        if (employeeAdvances.length > 0) {
+                          return (
+                            <div className="mt-2">
+                              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                                <p className="font-medium text-blue-900">
+                                  Saldo Uang Muka: Rp {totalBalance.toLocaleString()}
+                                </p>
+                                <p className="text-blue-700 text-xs mt-1">
+                                  {employeeAdvances.length} uang muka aktif
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tanggal</Label>
+                      <Input
+                        type="date"
+                        value={advanceForm.advance_date}
+                        onChange={(e) =>
+                          setAdvanceForm({
+                            ...advanceForm,
+                            advance_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Tanggal</Label>
+                    <Label>Jumlah Uang Muka *</Label>
                     <Input
-                      type="date"
-                      value={advanceForm.advance_date}
+                      type="number"
+                      placeholder="0"
+                      value={advanceForm.amount || ""}
                       onChange={(e) =>
                         setAdvanceForm({
                           ...advanceForm,
-                          advance_date: e.target.value,
+                          amount: parseFloat(e.target.value) || 0,
                         })
                       }
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label>Jumlah Uang Muka *</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={advanceForm.amount || ""}
-                    onChange={(e) =>
-                      setAdvanceForm({
-                        ...advanceForm,
-                        amount: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Catatan</Label>
-                  <Textarea
-                    placeholder="Keperluan uang muka..."
-                    value={advanceForm.notes}
-                    onChange={(e) =>
-                      setAdvanceForm({ ...advanceForm, notes: e.target.value })
-                    }
-                  />
-                </div>
-
-                {/* Bukti Foto Transaksi */}
-                <div className="space-y-2">
-                  <Label htmlFor="bukti-foto-advance">Bukti Foto Transaksi</Label>
-                  <Input
-                    id="bukti-foto-advance"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      try {
-                        const fileExt = file.name.split(".").pop();
-                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-                        const filePath = `transaksi-bukti/${fileName}`;
-
-                        const { error: uploadError } = await supabase.storage
-                          .from("documents")
-                          .upload(filePath, file);
-
-                        if (uploadError) throw uploadError;
-
-                        const {
-                          data: { publicUrl },
-                        } = supabase.storage.from("documents").getPublicUrl(filePath);
-
-                        setAdvanceForm({
-                          ...advanceForm,
-                          bukti_url: publicUrl,
-                        });
-
-                        toast({
-                          title: "✅ Bukti berhasil diupload",
-                          description: "File bukti transaksi telah tersimpan",
-                        });
-                      } catch (error) {
-                        console.error("Upload error:", error);
-                        toast({
-                          title: "❌ Upload gagal",
-                          description: "Gagal mengupload bukti transaksi",
-                          variant: "destructive",
-                        });
+                  <div className="space-y-2">
+                    <Label>Catatan</Label>
+                    <Textarea
+                      placeholder="Keperluan uang muka..."
+                      value={advanceForm.notes}
+                      onChange={(e) =>
+                        setAdvanceForm({ ...advanceForm, notes: e.target.value })
                       }
-                    }}
-                  />
-                  {advanceForm.bukti_url && (
-                    <p className="text-sm text-green-600">✓ File berhasil diupload</p>
-                  )}
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">
-                    📝 Jurnal yang akan dibuat:
-                  </h4>
-                  <div className="text-sm text-blue-800 space-y-1">
-                    <p>
-                      <strong>Debit:</strong> Uang Muka Karyawan -{" "}
-                      {advanceForm.employee_name || "[Nama Karyawan]"} (Rp{" "}
-                      {advanceForm.amount.toLocaleString()})
-                    </p>
-                    <p>
-                      <strong>Credit:</strong>{" "}
-                      {advanceForm.payment_method === "Bank"
-                        ? bankAccounts.find(
-                            (b) => b.id === advanceForm.bank_account_id
-                          )?.account_name || "Bank"
-                        : kasAccounts.find(
-                            (k) => k.id === advanceForm.kas_account_id
-                          )?.account_name || "Kas"}{" "}
-                      (Rp {advanceForm.amount.toLocaleString()})
-                    </p>
+                    />
                   </div>
-                </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Memproses...
-                    </>
-                  ) : (
-                    <>
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Berikan Uang Muka
-                    </>
-                  )}
-                </Button>
+                  {/* Bukti Foto Transaksi */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bukti-foto-advance">Bukti Foto Transaksi</Label>
+                    <Input
+                      id="bukti-foto-advance"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        try {
+                          const fileExt = file.name.split(".").pop();
+                          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                          const filePath = `transaksi-bukti/${fileName}`;
+
+                          const { error: uploadError } = await supabase.storage
+                            .from("documents")
+                            .upload(filePath, file);
+
+                          if (uploadError) throw uploadError;
+
+                          const {
+                            data: { publicUrl },
+                          } = supabase.storage.from("documents").getPublicUrl(filePath);
+
+                          setAdvanceForm({
+                            ...advanceForm,
+                            bukti_url: publicUrl,
+                          });
+
+                          toast({
+                            title: "✅ Bukti berhasil diupload",
+                            description: "File bukti transaksi telah tersimpan",
+                          });
+                        } catch (error) {
+                          console.error("Upload error:", error);
+                          toast({
+                            title: "❌ Upload gagal",
+                            description: "Gagal mengupload bukti transaksi",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    />
+                    {advanceForm.bukti_url && (
+                      <p className="text-sm text-green-600">✓ File berhasil diupload</p>
+                    )}
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      📝 Jurnal yang akan dibuat:
+                    </h4>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p>
+                        <strong>Debit:</strong> Uang Muka Karyawan -{" "}
+                        {advanceForm.employee_name || "[Nama Karyawan]"} (Rp{" "}
+                        {advanceForm.amount.toLocaleString()})
+                      </p>
+                      <p>
+                        <strong>Credit:</strong>{" "}
+                        {advanceForm.payment_method === "Bank"
+                          ? bankAccounts.find(
+                              (b) => b.id === advanceForm.bank_account_id
+                            )?.account_name || "Bank"
+                          : kasAccounts.find(
+                              (k) => k.id === advanceForm.kas_account_id
+                            )?.account_name || "Kas"}{" "}
+                        (Rp {advanceForm.amount.toLocaleString()})
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Berikan Uang Muka
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Tab 2: Settlement */}
-        <TabsContent value="settlement">
+          {/* Tab 2: Settlement */}
+          <TabsContent value="settlement">
           <Card>
             <CardHeader>
               <CardTitle>Serahkan Struk Belanja</CardTitle>
@@ -1009,6 +1150,7 @@ export default function EmployeeAdvanceForm() {
                     </SelectContent>
                   </Select>
                 </div>
+                
 
                 {selectedAdvance && (
                   <div className="bg-slate-50 border rounded-lg p-4">
@@ -1265,10 +1407,10 @@ export default function EmployeeAdvanceForm() {
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Tab 3: Return */}
-        <TabsContent value="return">
+          {/* Tab 3: Return */}
+          <TabsContent value="return">
           <Card>
             <CardHeader>
               <CardTitle>Kembalikan Sisa Uang</CardTitle>
@@ -1531,10 +1673,10 @@ export default function EmployeeAdvanceForm() {
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Tab 4: List */}
-        <TabsContent value="list">
+          {/* Tab 4: List */}
+          <TabsContent value="list">
           <Card>
             <CardHeader>
               <CardTitle>Daftar Uang Muka Karyawan</CardTitle>
@@ -1684,8 +1826,8 @@ export default function EmployeeAdvanceForm() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
 
       {/* Disburse Dialog */}
       <Dialog open={showDisburseDialog} onOpenChange={setShowDisburseDialog}>
@@ -2014,6 +2156,7 @@ export default function EmployeeAdvanceForm() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }
