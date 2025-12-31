@@ -452,17 +452,21 @@ export default function EmployeeAdvanceForm() {
       // - For new: use selected employee_id
       const targetAdvanceId = (advanceForm as any).topup_advance_id || null;
 
-      const { data: existingAdvances, error: fetchError } = await supabase
-        .from("employee_advances")
-        .select("id, amount, remaining_balance, notes")
-        .eq(
-          "id",
-          advanceForm.mode === "topup" && targetAdvanceId ? targetAdvanceId : "__no_match__",
-        )
-        .single();
+      let existingAdvances: any = null;
 
-      if (fetchError && fetchError.code !== "PGRST116") {
-        throw fetchError;
+      if (advanceForm.mode === "topup") {
+        if (!targetAdvanceId) {
+          throw new Error("Pilih No. Uang Muka yang akan di-top up");
+        }
+
+        const { data, error: fetchError } = await supabase
+          .from("employee_advances")
+          .select("id, total_saldo, remaining_balance, notes")
+          .eq("id", targetAdvanceId)
+          .single();
+
+        if (fetchError) throw fetchError;
+        existingAdvances = data;
       }
 
       if (existingAdvances && advanceForm.mode === "topup") {
@@ -471,7 +475,7 @@ export default function EmployeeAdvanceForm() {
           description: "Menambahkan saldo ke uang muka yang masih aktif",
         });
 
-        const newAmount = existingAdvances.amount + advanceForm.amount;
+        const newAmount = (existingAdvances.total_saldo ?? existingAdvances.amount) + advanceForm.amount;
         const newRemainingBalance = existingAdvances.remaining_balance + advanceForm.amount;
         const existingNotes = existingAdvances.notes || "";
 
@@ -508,11 +512,8 @@ export default function EmployeeAdvanceForm() {
         const { error: updateError } = await supabase
           .from("employee_advances")
           .update({
-            amount: newAmount,
+            total_saldo: newAmount,
             remaining_balance: newRemainingBalance,
-            notes:
-              (existingNotes ? existingNotes + "\n" : "") +
-              `[${new Date().toLocaleDateString()}] Penambahan: Rp ${advanceForm.amount.toLocaleString()} - ${advanceForm.notes || "No notes"}`,
           })
           .eq("id", existingAdvances.id);
 
@@ -553,6 +554,7 @@ export default function EmployeeAdvanceForm() {
             employee_name: advanceForm.employee_name,
             advance_number: tempAdvanceNumber,
             amount: advanceForm.amount,
+            total_saldo: advanceForm.amount,
             remaining_balance: advanceForm.amount,
             advance_date: advanceForm.advance_date,
             notes: advanceForm.notes,

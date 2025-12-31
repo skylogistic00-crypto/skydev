@@ -4058,6 +4058,7 @@ export type Database = {
           debit_account_name: string | null
           id: string
           journal_entry_id: string | null
+          journal_ref: string | null
           notes: string | null
           payment_method: string | null
           return_date: string
@@ -4075,6 +4076,7 @@ export type Database = {
           debit_account_name?: string | null
           id?: string
           journal_entry_id?: string | null
+          journal_ref?: string | null
           notes?: string | null
           payment_method?: string | null
           return_date?: string
@@ -4092,6 +4094,7 @@ export type Database = {
           debit_account_name?: string | null
           id?: string
           journal_entry_id?: string | null
+          journal_ref?: string | null
           notes?: string | null
           payment_method?: string | null
           return_date?: string
@@ -4201,20 +4204,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "employee_advance_settlements_advance_id_fkey"
-            columns: ["advance_id"]
-            isOneToOne: false
-            referencedRelation: "employee_advances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_advance_settlements_advance_id_fkey"
-            columns: ["advance_id"]
-            isOneToOne: false
-            referencedRelation: "vw_employee_advance_summary"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "employee_advance_settlements_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -4257,6 +4246,7 @@ export type Database = {
           remaining_balance: number
           source_mutation_id: string | null
           status: string
+          total_saldo: number | null
           transaction_date: string | null
           transaction_direction: string | null
           updated_at: string | null
@@ -4294,6 +4284,7 @@ export type Database = {
           remaining_balance: number
           source_mutation_id?: string | null
           status?: string
+          total_saldo?: number | null
           transaction_date?: string | null
           transaction_direction?: string | null
           updated_at?: string | null
@@ -4331,6 +4322,7 @@ export type Database = {
           remaining_balance?: number
           source_mutation_id?: string | null
           status?: string
+          total_saldo?: number | null
           transaction_date?: string | null
           transaction_direction?: string | null
           updated_at?: string | null
@@ -12820,6 +12812,10 @@ export type Database = {
       }
       create_monthly_tax_reminders: { Args: never; Returns: undefined }
       embedding_coa_match: { Args: { p_text: string }; Returns: Json }
+      employee_advances_set_remaining_balance_manual: {
+        Args: { p_advance_id: string; p_remaining_balance: number }
+        Returns: undefined
+      }
       execute_sql: { Args: { query: string }; Returns: Json }
       extract_keywords: { Args: { p_text: string }; Returns: string[] }
       fn_check_large_transactions: { Args: never; Returns: undefined }
@@ -13194,6 +13190,10 @@ export type Database = {
       }
       process_mutation_to_transaction: {
         Args: { p_mutation_id: string }
+        Returns: undefined
+      }
+      rebuild_employee_advances_remaining_balance: {
+        Args: never
         Returns: undefined
       }
       rebuild_general_ledger: { Args: never; Returns: undefined }

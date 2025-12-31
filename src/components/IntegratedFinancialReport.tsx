@@ -101,6 +101,7 @@ export default function IntegratedFinancialReport() {
   const [journalStartDate, setJournalStartDate] = useState<string>("");
   const [journalEndDate, setJournalEndDate] = useState<string>("");
   const [journalDescriptionQuery, setJournalDescriptionQuery] = useState<string>("");
+  const [journalJenisTransaksi, setJournalJenisTransaksi] = useState<string>("ALL");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export default function IntegratedFinancialReport() {
   useEffect(() => {
     fetchJournalEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journalStartDate, journalEndDate]);
+  }, [journalStartDate, journalEndDate, journalJenisTransaksi]);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -356,7 +357,16 @@ export default function IntegratedFinancialReport() {
           };
         }) || [];
 
-      setJournalEntries(enrichedEntries);
+      const filteredByJenis =
+        journalJenisTransaksi === "ALL"
+          ? enrichedEntries
+          : enrichedEntries.filter(
+              (e: any) =>
+                (e.transaction_type || e.jenis_transaksi || "-") ===
+                journalJenisTransaksi,
+            );
+
+      setJournalEntries(filteredByJenis);
     } catch (err) {
       toast({
         title: "Error",
@@ -781,7 +791,7 @@ export default function IntegratedFinancialReport() {
                   Data Journal Entries ({journalEntries.length} entries)
                 </h3>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                   <div className="space-y-1">
                     <Label htmlFor="journalStartDate">Dari Tanggal</Label>
                     <Input
@@ -813,6 +823,30 @@ export default function IntegratedFinancialReport() {
                       className="h-9"
                     />
                   </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="journalJenisTransaksi">Jenis Transaksi</Label>
+                    <Select
+                      value={journalJenisTransaksi}
+                      onValueChange={(v) => setJournalJenisTransaksi(v)}
+                    >
+                      <SelectTrigger id="journalJenisTransaksi" className="h-9">
+                        <SelectValue placeholder="Semua" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Semua</SelectItem>
+                        <SelectItem value="Penerimaan">Penerimaan</SelectItem>
+                        <SelectItem value="Pengeluaran">Pengeluaran</SelectItem>
+                        <SelectItem value="Pembelian">Pembelian</SelectItem>
+                        <SelectItem value="Penjualan">Penjualan</SelectItem>
+                        <SelectItem value="Pemakaian Internal">Pemakaian Internal</SelectItem>
+                        <SelectItem value="Kasbon Karyawan">Kasbon Karyawan</SelectItem>
+                        <SelectItem value="Uang Muka">Uang Muka</SelectItem>
+                        <SelectItem value="Top Up Uang Muka">Top Up Uang Muka</SelectItem>
+                        <SelectItem value="Penyelesaian Uang Muka">Penyelesaian Uang Muka</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
@@ -820,6 +854,7 @@ export default function IntegratedFinancialReport() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-100">
+                      <TableHead className="w-16">Nomor</TableHead>
                       <TableHead className="w-32">Tanggal</TableHead>
                       <TableHead className="w-40">Jenis Transaksi</TableHead>
                       <TableHead>Kode Akun</TableHead>
@@ -835,7 +870,7 @@ export default function IntegratedFinancialReport() {
                     {journalEntries.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={9}
+                          colSpan={10}
                           className="text-center py-8 text-gray-500"
                         >
                           Tidak ada data
@@ -856,7 +891,7 @@ export default function IntegratedFinancialReport() {
                             acc[key].push(entry);
                             return acc;
                           }, {}),
-                      ).flatMap(([ref, entries]) =>
+                      ).flatMap(([ref, entries], groupIndex) =>
                         [...entries]
                           .sort((a: any, b: any) => {
                             const aDebit = (a.debit || 0) > 0;
@@ -878,6 +913,11 @@ export default function IntegratedFinancialReport() {
 
                             return (
                               <TableRow key={`${ref}-${entry.id}`} className={idx === 0 ? "border-t-2 border-gray-200" : undefined}>
+                              {isGroupFirstRow && (
+                                <TableCell className="text-sm text-center" rowSpan={groupRowSpan}>
+                                  {groupIndex + 1}
+                                </TableCell>
+                              )}
                               {isGroupFirstRow && (
                                 <TableCell className="text-sm" rowSpan={groupRowSpan}>
                                   {dateVal ? new Date(dateVal).toLocaleDateString("id-ID") : "-"}
@@ -947,7 +987,7 @@ export default function IntegratedFinancialReport() {
                   </TableBody>
                   <tfoot>
                     <TableRow className="bg-gray-50 font-semibold">
-                      <TableCell colSpan={7} className="text-right">
+                      <TableCell colSpan={8} className="text-right">
                         Total
                       </TableCell>
                       <TableCell className="text-right font-mono">

@@ -580,6 +580,7 @@ export default function TransaksiKeuanganForm() {
 
   // New fields for item selection
   const [transactionItemType, setTransactionItemType] = useState(""); // "Barang" or "Jasa"
+  const [isJasaLini2, setIsJasaLini2] = useState(false);
   const [stockItems, setStockItems] = useState<any[]>([]);
   const [serviceItems, setServiceItems] = useState<any[]>([]);
   const [selectedItemId, setSelectedItemId] = useState("");
@@ -9217,34 +9218,51 @@ export default function TransaksiKeuanganForm() {
                       <Label htmlFor="transaction_item_type">
                         Tipe Item Transaksi *
                       </Label>
-                      <Select
-                        value={transactionItemType}
-                        onValueChange={(value) => {
-                          setTransactionItemType(value);
-                          setSelectedItemId("");
-                          setItemPrice(0);
-                          setItemQty(1);
-                          // Reset Item Penjualan fields
-                          setSalesItems([{
-                            id: crypto.randomUUID(),
-                            itemName: "",
-                            jenisBarang: "",
-                            quantity: "1",
-                            nominal: "0",
-                            stockId: "",
-                            sellingPrice: 0,
-                            tipeItem: value
-                          }]);
-                        }}
-                      >
-                        <SelectTrigger id="transaction_item_type">
-                          <SelectValue placeholder="-- pilih tipe item --" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Barang">Barang</SelectItem>
-                          <SelectItem value="Jasa">Jasa</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <Select
+                            value={transactionItemType}
+                            onValueChange={(value) => {
+                              setTransactionItemType(value);
+                              setIsJasaLini2(false);
+                              setSelectedItemId("");
+                              setItemPrice(0);
+                              setItemQty(1);
+                              // Reset Item Penjualan fields
+                              setSalesItems([{
+                                id: crypto.randomUUID(),
+                                itemName: "",
+                                jenisBarang: "",
+                                quantity: "1",
+                                nominal: "0",
+                                stockId: "",
+                                sellingPrice: 0,
+                                tipeItem: value
+                              }]);
+                            }}
+                          >
+                            <SelectTrigger id="transaction_item_type">
+                              <SelectValue placeholder="-- pilih tipe item --" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Barang">Barang</SelectItem>
+                              <SelectItem value="Jasa">Jasa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {jenisTransaksi === "Penjualan" && transactionItemType === "Jasa" && (
+                          <label className="flex items-center gap-2 pt-2 select-none">
+                            <input
+                              type="radio"
+                              name="jasa_mode"
+                              checked={isJasaLini2}
+                              onChange={() => setIsJasaLini2(true)}
+                            />
+                            <span className="text-sm">Jasa Lini 2</span>
+                          </label>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -10401,7 +10419,7 @@ export default function TransaksiKeuanganForm() {
               )}
 
               {/* QUANTITY & HARGA JUAL - Only for Penjualan */}
-              {jenisTransaksi === "Penjualan" && (
+              {jenisTransaksi === "Penjualan" && !isJasaLini2 && (
                 <div className="space-y-4">
                   {/* Multiple Items Section */}
                   <div className="border rounded-lg p-4 space-y-4">

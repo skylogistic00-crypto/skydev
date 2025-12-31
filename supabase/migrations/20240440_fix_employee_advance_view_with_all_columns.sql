@@ -10,7 +10,7 @@ SELECT
   ea.employee_id,
   ea.employee_name,
   ea.advance_date,
-  ea.amount,
+  ea.total_saldo as amount,
   ea.remaining_balance,
   ea.status,
   ea.coa_account_code,
@@ -30,7 +30,7 @@ FROM employee_advances ea
 LEFT JOIN employee_advance_settlements eas ON ea.id = eas.advance_id
 LEFT JOIN employee_advance_returns ear ON ea.id = ear.advance_id
 GROUP BY ea.id, ea.advance_number, ea.employee_id, ea.employee_name, 
-         ea.advance_date, ea.amount, ea.remaining_balance, ea.status, 
+         ea.advance_date, ea.total_saldo, ea.remaining_balance, ea.status, 
          ea.coa_account_code, ea.disbursement_method, ea.disbursement_account_id,
          ea.disbursement_date, ea.reference_number, ea.manager_approval, 
          ea.finance_approval, ea.created_at, ea.updated_at;
