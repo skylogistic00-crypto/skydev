@@ -78,7 +78,7 @@ export default function CashDisbursementForm({ onSuccess }) {
     const userId = auth?.user?.id;
 
     const payload = {
-      transaction_date: format(transactionDate, "yyyy-MM-dd"),
+      transaction_date: transactionDate.toISOString(),
       payee_name: payeeName,
       description,
       category,

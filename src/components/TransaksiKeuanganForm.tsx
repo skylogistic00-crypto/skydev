@@ -4469,7 +4469,7 @@ export default function TransaksiKeuanganForm() {
         const isBankPayment = (paymentType || "").toLowerCase() !== "cash";
 
         const { error } = await supabase.from("cash_and_bank_receipts").insert({
-          transaction_date: previewTanggal,
+          transaction_date: new Date(previewTanggal).toISOString(),
           transaction_type: "Penerimaan",
           source_destination:
             sumberPenerimaan || customer || supplier || "Penerimaan Kas",
@@ -4613,7 +4613,7 @@ export default function TransaksiKeuanganForm() {
         const { data, error } = await supabase
           .from("cash_disbursement")
           .insert({
-            transaction_date: previewTanggal,
+            transaction_date: new Date(previewTanggal).toISOString(),
             payee_name:
               namaPengeluaran ||
               namaKaryawanPengeluaran ||
@@ -5459,7 +5459,7 @@ export default function TransaksiKeuanganForm() {
 
             // 🔒 INSERT KAS_TRANSAKSI DENGAN PAYLOAD LENGKAP
             await supabase.from("kas_transaksi").insert({
-              transaction_date: journalData.tanggal,      // Date | yyyy-mm-dd
+              transaction_date: new Date(journalData.tanggal).toISOString(),      // Date | yyyy-mm-dd
               amount: transactionAmount,                   // NUMBER, bukan string
               jenis: "pengeluaran",                        // WAJIB
               coa_kas_id: selectedKasAccountId,            // UUID akun kas (1-11xx)
@@ -5575,7 +5575,7 @@ export default function TransaksiKeuanganForm() {
             const { data: insertedData, error: cashDisbursementError } = await supabase
               .from("cash_disbursement")
               .insert({
-                transaction_date: txDate,
+                transaction_date: new Date(txDate).toISOString(),
                 payee_name: item.namaPengeluaran || item.namaKaryawanPengeluaran || item.supplier || item.customer || "Pengeluaran Kas",
                 description: item.description || journalData.memo,
                 category: item.kategori,
@@ -5667,7 +5667,7 @@ export default function TransaksiKeuanganForm() {
             const { data: insertedData, error: bankDisbursementError } = await supabase
               .from("cash_disbursement")
               .insert({
-                transaction_date: txDate,
+                transaction_date: new Date(txDate).toISOString(),
                 payee_name: item.namaPengeluaran || item.namaKaryawanPengeluaran || item.supplier || item.customer || "Pengeluaran Bank",
                 description: item.description || journalData.memo,
                 category: item.kategori,
@@ -5758,7 +5758,7 @@ export default function TransaksiKeuanganForm() {
             const { error: cashReceiptError } = await supabase
               .from("cash_and_bank_receipts")
               .insert({
-                transaction_date: journalData.tanggal,
+                transaction_date: new Date(journalData.tanggal).toISOString(),
                 transaction_type: "Penerimaan",
                 source_destination: item.sumberPenerimaan || item.customer || item.supplier || "Penerimaan Kas",
                 amount: normalizedInput.nominal,
@@ -5852,7 +5852,7 @@ export default function TransaksiKeuanganForm() {
           const { error: cashReceiptError } = await supabase
             .from("cash_and_bank_receipts")
             .insert({
-              transaction_date: journalData.tanggal,
+              transaction_date: new Date(journalData.tanggal).toISOString(),
               transaction_type: "Penerimaan",
               source_destination:
                 item.sumberPenerimaan ||

@@ -292,7 +292,9 @@ export default function IntegratedFinancialReport() {
         .select(
           "*, tanggal, account_code, account_name, debit, credit, transaction_date, journal_ref, source_id",
         )
-        .order("transaction_date", { ascending: false });
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("journal_ref", { ascending: false });
 
       if (journalStartDate) {
         query = query.gte("transaction_date", journalStartDate);
@@ -539,7 +541,12 @@ export default function IntegratedFinancialReport() {
     const transactions: GLTransaction[] = [];
 
     journalEntries.forEach((entry) => {
-      const code = entry.account_code || entry.accountCode || "";
+      const code =
+        (entry.account_code ||
+          entry.debit_account_code ||
+          entry.credit_account_code ||
+          entry.accountCode ||
+          "") as string;
       if (!code) return;
 
       const debitVal = Number(entry.debit || 0);
@@ -548,6 +555,8 @@ export default function IntegratedFinancialReport() {
       if (code === accountCode) {
         transactions.push({
           date: entry.transaction_date || entry.tanggal || entry.entry_date,
+          created_at: (entry as any).created_at,
+          journal_ref: (entry as any).journal_ref,
           description: entry.description || entry.entry_number || entry.journal_ref,
           debit: debitVal,
           credit: creditVal,
@@ -556,7 +565,19 @@ export default function IntegratedFinancialReport() {
       }
     });
 
-    return transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return transactions.sort((a: any, b: any) => {
+      const aDate = new Date(a.date).getTime();
+      const bDate = new Date(b.date).getTime();
+      if (aDate !== bDate) return aDate - bDate;
+
+      const aCreated = new Date(a.created_at || 0).getTime();
+      const bCreated = new Date(b.created_at || 0).getTime();
+      if (aCreated !== bCreated) return aCreated - bCreated;
+
+      const aRef = (a.journal_ref || "").toString();
+      const bRef = (b.journal_ref || "").toString();
+      return aRef.localeCompare(bRef);
+    });
   };
 
   // Helper function to calculate total debit/credit for an account and all its children
@@ -773,8 +794,47 @@ export default function IntegratedFinancialReport() {
         </div>
       </div>
 
-      {/* Journal Entries Table */}
+      {/* General Ledger (Buku Besar) */}
       <Card className="max-w-7xl mx-auto rounded-2xl shadow-md">
+        <CardHeader className="p-4">
+          <CardTitle className="text-2xl">General Ledger (Buku Besar)</CardTitle>
+          <CardDescription>
+            Struktur Akun Berdasarkan COA dengan Transaksi per Akun
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4">
+          {loadingGL ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-100 flex items-center py-2 px-4 font-bold border-b">
+                <span className="mr-2 w-4"></span>
+                <span className="font-mono mr-4 w-32">Kode Akun</span>
+                <span className="flex-1">Nama Akun</span>
+                <span className="text-right w-32 mr-4">Total Debit</span>
+                <span className="text-right w-32 mr-4">Total Kredit</span>
+                <span className="text-right w-32">Saldo</span>
+              </div>
+              {coaAccounts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Tidak ada data COA
+                </div>
+              ) : (
+                <div>
+                  {coaAccounts.filter(acc => acc.level === 1).map((account) =>
+                    renderGLAccount(account, 1)
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Journal Entries Table */}
+      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
         <CardHeader className="p-4">
           <CardTitle className="text-2xl">Journal Entries</CardTitle>
           <CardDescription>Data Journal Entries</CardDescription>
@@ -863,6 +923,7 @@ export default function IntegratedFinancialReport() {
                       <TableHead>Bukti</TableHead>
                       <TableHead className="text-right">Debit</TableHead>
                       <TableHead className="text-right">Kredit</TableHead>
+                      <TableHead className="text-right">Sisa Saldo</TableHead>
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -870,7 +931,7 @@ export default function IntegratedFinancialReport() {
                     {journalEntries.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={10}
+                          colSpan={11}
                           className="text-center py-8 text-gray-500"
                         >
                           Tidak ada data
@@ -964,6 +1025,47 @@ export default function IntegratedFinancialReport() {
                               <TableCell className="text-right font-mono">
                                 {isCredit ? formatRupiah(entry.credit || 0) : "-"}
                               </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {(() => {
+                                  const accountCode =
+                                    entry.account_code ||
+                                    entry.debit_account_code ||
+                                    entry.credit_account_code ||
+                                    "";
+                                  if (!accountCode) return "-";
+
+                                  const entryDate = new Date(
+                                    entry.transaction_date || entry.tanggal || entry.entry_date,
+                                  ).getTime();
+
+                                  const transactions = getTransactionsForAccount(accountCode);
+                                  const saldo = transactions
+                                    .filter((t: any) => {
+                                       const entryCreatedAt = new Date((entry as any).created_at || 0).getTime();
+                                       const entryRef = ((entry as any).journal_ref || "").toString();
+
+                                       const tDate = new Date(t.date).getTime();
+                                       if (tDate < entryDate) return true;
+                                       if (tDate > entryDate) return false;
+
+                                       const tCreated = new Date(t.created_at || 0).getTime();
+                                       if (tCreated < entryCreatedAt) return true;
+                                       if (tCreated > entryCreatedAt) return false;
+
+                                       const tRef = (t.journal_ref || "").toString();
+                                       if (tRef && entryRef && tRef <= entryRef) return true;
+
+                                       return false;
+                                     })
+                                    .reduce(
+                                      (sum, t) =>
+                                        sum + Number(t.debit || 0) - Number(t.credit || 0),
+                                      0,
+                                    );
+
+                                  return formatRupiah(saldo);
+                                })()}
+                              </TableCell>
                               <TableCell className="text-center">
                                 <Button
                                   variant="ghost"
@@ -1011,45 +1113,6 @@ export default function IntegratedFinancialReport() {
                   </tfoot>
                 </Table>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* General Ledger (Buku Besar) */}
-      <Card className="max-w-7xl mx-auto rounded-2xl shadow-md mt-6">
-        <CardHeader className="p-4">
-          <CardTitle className="text-2xl">General Ledger (Buku Besar)</CardTitle>
-          <CardDescription>
-            Struktur Akun Berdasarkan COA dengan Transaksi per Akun
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4">
-          {loadingGL ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-gray-100 flex items-center py-2 px-4 font-bold border-b">
-                <span className="mr-2 w-4"></span>
-                <span className="font-mono mr-4 w-32">Kode Akun</span>
-                <span className="flex-1">Nama Akun</span>
-                <span className="text-right w-32 mr-4">Total Debit</span>
-                <span className="text-right w-32 mr-4">Total Kredit</span>
-                <span className="text-right w-32">Saldo</span>
-              </div>
-              {coaAccounts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  Tidak ada data COA
-                </div>
-              ) : (
-                <div>
-                  {coaAccounts.filter(acc => acc.level === 1).map((account) =>
-                    renderGLAccount(account, 1)
-                  )}
-                </div>
-              )}
             </div>
           )}
         </CardContent>

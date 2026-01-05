@@ -6160,7 +6160,6 @@ export type Database = {
           description: string | null
           disbursement_id: string | null
           entry_date: string | null
-          entry_type: string | null
           handled_by_user_id: string | null
           id: string
           is_void: boolean | null
@@ -6238,7 +6237,6 @@ export type Database = {
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
-          entry_type?: string | null
           handled_by_user_id?: string | null
           id?: string
           is_void?: boolean | null
@@ -6316,7 +6314,6 @@ export type Database = {
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
-          entry_type?: string | null
           handled_by_user_id?: string | null
           id?: string
           is_void?: boolean | null
@@ -11997,51 +11994,6 @@ export type Database = {
       }
     }
     Views: {
-      cash_disbursement_with_account_name: {
-        Row: {
-          account_code: string | null
-          account_name: string | null
-          amount: number | null
-          approval_status: string | null
-          approved_at: string | null
-          approved_by: string | null
-          attachment_url: string | null
-          bank_account: string | null
-          bank_account_id: string | null
-          bukti: string | null
-          cash_account_id: string | null
-          cash_account_name: string | null
-          category: string | null
-          coa_cash_id: string | null
-          coa_expense_id: string | null
-          coa_id: string | null
-          cost_center_id: string | null
-          created_at: string | null
-          created_by: string | null
-          currency_code: string | null
-          description: string | null
-          document_number: string | null
-          evidence_url: string | null
-          exchange_rate: number | null
-          expense_account_name: string | null
-          id: string | null
-          journal_ref: string | null
-          normalized_amount: number | null
-          notes: string | null
-          ocr_data: Json | null
-          ocr_id: string | null
-          payee_name: string | null
-          payment_method: string | null
-          rejection_reason: string | null
-          status: string | null
-          tax_amount: number | null
-          tax_code: string | null
-          tax_type: string | null
-          transaction_date: string | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
       cash_flow_monthly: {
         Row: {
           cash_in: number | null
@@ -12806,10 +12758,6 @@ export type Database = {
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
       cleanup_old_cart_items: { Args: never; Returns: undefined }
-      create_journal_for_sales: {
-        Args: { p_sales_id: string }
-        Returns: string
-      }
       create_monthly_tax_reminders: { Args: never; Returns: undefined }
       embedding_coa_match: { Args: { p_text: string }; Returns: Json }
       employee_advances_set_remaining_balance_manual: {

@@ -145,7 +145,7 @@ export default function EmployeeAdvanceForm() {
     total: 0,
     description: "",
     receipt_number: "",
-    settlement_date: new Date().toISOString().split("T")[0],
+    settlement_date: new Date().toISOString(),
     bukti_url: "",
   });
 
@@ -495,7 +495,7 @@ export default function EmployeeAdvanceForm() {
             advance_id: existingAdvances.id,
             employee_id: advanceForm.employee_id,
             employee_name: advanceForm.employee_name,
-            top_up_date: advanceForm.advance_date,
+            top_up_date: new Date(advanceForm.advance_date).toISOString(),
             amount: advanceForm.amount,
             description: advanceForm.notes,
             bukti_url: advanceForm.bukti_url,
@@ -530,7 +530,7 @@ export default function EmployeeAdvanceForm() {
           employee_name: "",
           amount: 0,
           notes: "",
-          advance_date: new Date().toISOString().split("T")[0],
+          advance_date: new Date().toISOString(),
           payment_method: "Kas",
           bank_account_id: "",
           kas_account_id: "",
@@ -556,7 +556,7 @@ export default function EmployeeAdvanceForm() {
             amount: advanceForm.amount,
             total_saldo: advanceForm.amount,
             remaining_balance: advanceForm.amount,
-            advance_date: advanceForm.advance_date,
+            advance_date: new Date(advanceForm.advance_date).toISOString(),
             notes: advanceForm.notes,
             bukti_url: advanceForm.bukti_url,
             bukti: advanceForm.bukti_url,
@@ -582,7 +582,7 @@ export default function EmployeeAdvanceForm() {
         employee_id: "",
         employee_name: "",
         amount: 0,
-        advance_date: new Date().toISOString().slice(0, 10),
+        advance_date: new Date().toISOString(),
         notes: "",
         payment_method: "Kas",
         bank_account_id: "",
@@ -635,7 +635,7 @@ export default function EmployeeAdvanceForm() {
           total: settlementForm.total,
           description: settlementForm.description,
           receipt_number: settlementForm.receipt_number,
-          settlement_date: settlementForm.settlement_date,
+          settlement_date: new Date(settlementForm.settlement_date).toISOString(),
           bukti_url: settlementForm.bukti_url,
           bukti: settlementForm.bukti_url,
           created_by: user?.id,
@@ -664,7 +664,7 @@ export default function EmployeeAdvanceForm() {
         total: 0,
         description: "",
         receipt_number: "",
-        settlement_date: new Date().toISOString().split("T")[0],
+        settlement_date: new Date().toISOString(),
         bukti_url: "",
       });
 
@@ -978,11 +978,19 @@ export default function EmployeeAdvanceForm() {
                       <Label>Tanggal</Label>
                       <Input
                         type="date"
-                        value={advanceForm.advance_date}
+                        value={
+                          advanceForm.advance_date
+                            ? new Date(advanceForm.advance_date)
+                                .toISOString()
+                                .slice(0, 10)
+                            : ""
+                        }
                         onChange={(e) =>
                           setAdvanceForm({
                             ...advanceForm,
-                            advance_date: e.target.value,
+                            advance_date: e.target.value
+                              ? new Date(e.target.value).toISOString()
+                              : "",
                           })
                         }
                       />
@@ -1309,11 +1317,19 @@ export default function EmployeeAdvanceForm() {
                   <Label>Tanggal</Label>
                   <Input
                     type="date"
-                    value={settlementForm.settlement_date}
+                    value={
+                      settlementForm.settlement_date
+                        ? new Date(settlementForm.settlement_date)
+                            .toISOString()
+                            .slice(0, 10)
+                        : ""
+                    }
                     onChange={(e) =>
                       setSettlementForm({
                         ...settlementForm,
-                        settlement_date: e.target.value,
+                        settlement_date: e.target.value
+                          ? new Date(e.target.value).toISOString()
+                          : "",
                       })
                     }
                   />
