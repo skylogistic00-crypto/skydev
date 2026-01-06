@@ -643,144 +643,6 @@ export type Database = {
         }
         Relationships: []
       }
-      approval_transaksi: {
-        Row: {
-          account_code: string | null
-          account_name: string | null
-          account_number: string | null
-          amount: number | null
-          approval_status: string | null
-          approved_at: string | null
-          approved_by: string | null
-          bank_name: string | null
-          bukti: string | null
-          bukti_url: string | null
-          coa_cash_code: string | null
-          coa_expense_code: string | null
-          coa_payable_code: string | null
-          created_at: string | null
-          created_by: string | null
-          customer_name: string | null
-          description: string | null
-          document_number: string | null
-          entity_id: string | null
-          id: string
-          item_name: string | null
-          jenis: string | null
-          journal_ref: string | null
-          notes: string | null
-          ocr_data: string | null
-          payment_method: string | null
-          payment_type: string | null
-          ppn_amount: number | null
-          ppn_percentage: number | null
-          quantity: number | null
-          rejection_reason: string | null
-          service_category: string | null
-          service_type: string | null
-          source: string | null
-          subtotal: number | null
-          supplier_name: string | null
-          target_table: string | null
-          total_amount: number | null
-          transaction_date: string
-          transaction_type: string | null
-          type: string | null
-          unit_price: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          account_code?: string | null
-          account_name?: string | null
-          account_number?: string | null
-          amount?: number | null
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          bank_name?: string | null
-          bukti?: string | null
-          bukti_url?: string | null
-          coa_cash_code?: string | null
-          coa_expense_code?: string | null
-          coa_payable_code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          customer_name?: string | null
-          description?: string | null
-          document_number?: string | null
-          entity_id?: string | null
-          id?: string
-          item_name?: string | null
-          jenis?: string | null
-          journal_ref?: string | null
-          notes?: string | null
-          ocr_data?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          ppn_amount?: number | null
-          ppn_percentage?: number | null
-          quantity?: number | null
-          rejection_reason?: string | null
-          service_category?: string | null
-          service_type?: string | null
-          source?: string | null
-          subtotal?: number | null
-          supplier_name?: string | null
-          target_table?: string | null
-          total_amount?: number | null
-          transaction_date: string
-          transaction_type?: string | null
-          type?: string | null
-          unit_price?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          account_code?: string | null
-          account_name?: string | null
-          account_number?: string | null
-          amount?: number | null
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          bank_name?: string | null
-          bukti?: string | null
-          bukti_url?: string | null
-          coa_cash_code?: string | null
-          coa_expense_code?: string | null
-          coa_payable_code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          customer_name?: string | null
-          description?: string | null
-          document_number?: string | null
-          entity_id?: string | null
-          id?: string
-          item_name?: string | null
-          jenis?: string | null
-          journal_ref?: string | null
-          notes?: string | null
-          ocr_data?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          ppn_amount?: number | null
-          ppn_percentage?: number | null
-          quantity?: number | null
-          rejection_reason?: string | null
-          service_category?: string | null
-          service_type?: string | null
-          source?: string | null
-          subtotal?: number | null
-          supplier_name?: string | null
-          target_table?: string | null
-          total_amount?: number | null
-          transaction_date?: string
-          transaction_type?: string | null
-          type?: string | null
-          unit_price?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       asset_depreciation: {
         Row: {
           accumulated_depreciation: number | null
@@ -2140,6 +2002,7 @@ export type Database = {
           bank_account: string | null
           bank_account_id: string | null
           bukti: string | null
+          bukti_url: string | null
           cash_account_id: string | null
           category: string | null
           coa_cash_account_code: string | null
@@ -2174,6 +2037,7 @@ export type Database = {
           reference_number: string | null
           rejection_reason: string | null
           source: string | null
+          source_id: string | null
           source_mutation_id: string | null
           source_table: string | null
           status: string | null
@@ -2198,6 +2062,7 @@ export type Database = {
           bank_account?: string | null
           bank_account_id?: string | null
           bukti?: string | null
+          bukti_url?: string | null
           cash_account_id?: string | null
           category?: string | null
           coa_cash_account_code?: string | null
@@ -2232,6 +2097,7 @@ export type Database = {
           reference_number?: string | null
           rejection_reason?: string | null
           source?: string | null
+          source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -2256,6 +2122,7 @@ export type Database = {
           bank_account?: string | null
           bank_account_id?: string | null
           bukti?: string | null
+          bukti_url?: string | null
           cash_account_id?: string | null
           category?: string | null
           coa_cash_account_code?: string | null
@@ -2290,6 +2157,7 @@ export type Database = {
           reference_number?: string | null
           rejection_reason?: string | null
           source?: string | null
+          source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -4204,6 +4072,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "employee_advance_settlements_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "employee_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advance_settlements_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "vw_employee_advance_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_advance_settlements_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -4222,6 +4104,7 @@ export type Database = {
           approved_by: string | null
           bukti: string | null
           bukti_url: string | null
+          cash_disbursement_id: string | null
           category: string | null
           coa_account_code: string
           counterparty_name: string | null
@@ -4260,6 +4143,7 @@ export type Database = {
           approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
+          cash_disbursement_id?: string | null
           category?: string | null
           coa_account_code: string
           counterparty_name?: string | null
@@ -4298,6 +4182,7 @@ export type Database = {
           approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
+          cash_disbursement_id?: string | null
           category?: string | null
           coa_account_code?: string
           counterparty_name?: string | null
@@ -4396,7 +4281,22 @@ export type Database = {
           id?: string
           top_up_date?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employee_advances_top_up_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "employee_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_advances_top_up_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "vw_employee_advance_summary"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_documents: {
         Row: {
@@ -4953,50 +4853,63 @@ export type Database = {
       }
       finance_approvals: {
         Row: {
-          approved: string | null
+          amount: number | null
+          approval_status: Database["public"]["Enums"]["approval_status_enum"]
+          approved_at: string | null
           approved_by: string | null
-          approved_by_name: string | null
-          approved_name: string | null
-          created_at: string | null
+          bukti: string | null
+          bukti_url: string | null
+          created_at: string
+          description: string | null
           id: string
-          level: string | null
           notes: string | null
-          status: string | null
-          transaction_id: string | null
+          reference_id: string
+          reference_table: string
+          source_id: string | null
+          source_table: string | null
+          transaction_date: string | null
+          transaction_type: string | null
+          updated_at: string
         }
         Insert: {
-          approved?: string | null
+          amount?: number | null
+          approval_status?: Database["public"]["Enums"]["approval_status_enum"]
+          approved_at?: string | null
           approved_by?: string | null
-          approved_by_name?: string | null
-          approved_name?: string | null
-          created_at?: string | null
+          bukti?: string | null
+          bukti_url?: string | null
+          created_at?: string
+          description?: string | null
           id?: string
-          level?: string | null
           notes?: string | null
-          status?: string | null
-          transaction_id?: string | null
+          reference_id: string
+          reference_table: string
+          source_id?: string | null
+          source_table?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          updated_at?: string
         }
         Update: {
-          approved?: string | null
+          amount?: number | null
+          approval_status?: Database["public"]["Enums"]["approval_status_enum"]
+          approved_at?: string | null
           approved_by?: string | null
-          approved_by_name?: string | null
-          approved_name?: string | null
-          created_at?: string | null
+          bukti?: string | null
+          bukti_url?: string | null
+          created_at?: string
+          description?: string | null
           id?: string
-          level?: string | null
           notes?: string | null
-          status?: string | null
-          transaction_id?: string | null
+          reference_id?: string
+          reference_table?: string
+          source_id?: string | null
+          source_table?: string | null
+          transaction_date?: string | null
+          transaction_type?: string | null
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "finance_approvals_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "finance_transactions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       finance_transaction_breakdown: {
         Row: {
@@ -12078,78 +11991,6 @@ export type Database = {
         }
         Relationships: []
       }
-      vw_all_financial_transactions: {
-        Row: {
-          approval_status: string | null
-          approved_at: string | null
-          approved_by: string | null
-          created_at: string | null
-          customer_name: string | null
-          description: string | null
-          id: string | null
-          item_name: string | null
-          journal_ref: string | null
-          notes: string | null
-          payment_method: string | null
-          payment_type: string | null
-          ppn_amount: number | null
-          quantity: number | null
-          subtotal: number | null
-          supplier_name: string | null
-          target_table: string | null
-          total_amount: number | null
-          transaction_date: string | null
-          transaction_type: string | null
-          unit_price: number | null
-        }
-        Insert: {
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          customer_name?: string | null
-          description?: string | null
-          id?: string | null
-          item_name?: string | null
-          journal_ref?: string | null
-          notes?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          ppn_amount?: number | null
-          quantity?: number | null
-          subtotal?: number | null
-          supplier_name?: string | null
-          target_table?: string | null
-          total_amount?: number | null
-          transaction_date?: string | null
-          transaction_type?: string | null
-          unit_price?: number | null
-        }
-        Update: {
-          approval_status?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          customer_name?: string | null
-          description?: string | null
-          id?: string | null
-          item_name?: string | null
-          journal_ref?: string | null
-          notes?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          ppn_amount?: number | null
-          quantity?: number | null
-          subtotal?: number | null
-          supplier_name?: string | null
-          target_table?: string | null
-          total_amount?: number | null
-          transaction_date?: string | null
-          transaction_type?: string | null
-          unit_price?: number | null
-        }
-        Relationships: []
-      }
       vw_attendance_with_employee: {
         Row: {
           attendance_date: string | null
@@ -12766,6 +12607,10 @@ export type Database = {
       }
       execute_sql: { Args: { query: string }; Returns: Json }
       extract_keywords: { Args: { p_text: string }; Returns: string[] }
+      fn_balance: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: number
+      }
       fn_check_large_transactions: { Args: never; Returns: undefined }
       fn_income_statement: {
         Args: { p_end: string; p_start: string }
@@ -12782,6 +12627,21 @@ export type Database = {
         }[]
       }
       fn_post_monthly_depreciation: { Args: never; Returns: undefined }
+      fn_test: {
+        Args: never
+        Returns: {
+          ids: string[]
+          total: number
+        }[]
+      }
+      fn_total_expense: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: number
+      }
+      fn_total_income: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: number
+      }
       fn_update_coa_balance: { Args: never; Returns: undefined }
       gen_stock_code: { Args: never; Returns: string }
       generate_advance_number: { Args: never; Returns: string }
@@ -13241,6 +13101,7 @@ export type Database = {
         | "CLEARED"
         | "DELIVERED"
         | "CANCELLED"
+      approval_status_enum: "waiting_approval" | "approved" | "rejected"
       customs_status: "PENDING" | "RELEASED" | "HOLD" | "CLEARED" | "REJECTED"
       flow_type_enum: "bank" | "cash"
       import_type:
@@ -13424,6 +13285,7 @@ export const Constants = {
         "DELIVERED",
         "CANCELLED",
       ],
+      approval_status_enum: ["waiting_approval", "approved", "rejected"],
       customs_status: ["PENDING", "RELEASED", "HOLD", "CLEARED", "REJECTED"],
       flow_type_enum: ["bank", "cash"],
       import_type: [
