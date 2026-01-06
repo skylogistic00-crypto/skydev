@@ -9684,19 +9684,30 @@ export default function TransaksiKeuanganForm() {
                         {coa
                           .filter((acc) => {
                             // Filter: Kredit normal_balance untuk revenue
-                            const isCreditBalance = acc.normal_balance?.toUpperCase() === 'CREDIT' || acc.normal_balance === 'Kredit';
-                            // Check for revenue account types (lowercase or capitalized)
-                            const accountTypeLower = acc.account_type?.toLowerCase() || '';
-                            const isRevenueAccount = 
-                              accountTypeLower === 'revenue' ||
-                              accountTypeLower === 'pendapatan' ||
-                              accountTypeLower.includes('pendapatan') ||
-                              accountTypeLower.includes('revenue');
+                            const isCreditBalance =
+                              acc.normal_balance?.toUpperCase() === "CREDIT" ||
+                              acc.normal_balance === "Kredit";
+
+                            // Revenue accounts (tipe Pendapatan/Revenue)
+                            const accountTypeLower = acc.account_type?.toLowerCase() || "";
+                            const isRevenueAccount =
+                              accountTypeLower === "revenue" ||
+                              accountTypeLower === "pendapatan" ||
+                              accountTypeLower.includes("pendapatan") ||
+                              accountTypeLower.includes("revenue");
+
+                            // Tambahan: izinkan akun child dari 3-1000 (Modal) muncul di dropdown ini
+                            const isChildOfModal3_1000 = acc.parent_code === "3-1000";
+
                             const matchesSearch = `${acc.account_code} ${acc.description || acc.account_name}`
                               .toLowerCase()
                               .includes(bankSearch.toLowerCase());
-                            
-                            return isCreditBalance && isRevenueAccount && matchesSearch;
+
+                            return (
+                              isCreditBalance &&
+                              (isRevenueAccount || isChildOfModal3_1000) &&
+                              matchesSearch
+                            );
                           })
                           .map((acc) => (
                             <div
@@ -9729,19 +9740,28 @@ export default function TransaksiKeuanganForm() {
                               )}
                             </div>
                           ))}
-                        {coa.filter((acc) => {
-                          const isCreditBalance = acc.normal_balance?.toUpperCase() === 'CREDIT' || acc.normal_balance === 'Kredit';
-                          const accountTypeLower = acc.account_type?.toLowerCase() || '';
-                          const isRevenueAccount = 
-                            accountTypeLower === 'revenue' ||
-                            accountTypeLower === 'pendapatan' ||
-                            accountTypeLower.includes('pendapatan') ||
-                            accountTypeLower.includes('revenue');
-                          const matchesSearch = `${acc.account_code} ${acc.description || acc.account_name}`
-                            .toLowerCase()
-                            .includes(bankSearch.toLowerCase());
-                          return isCreditBalance && isRevenueAccount && matchesSearch;
-                        }).length === 0 && (
+                        {coa
+                          .filter((acc) => {
+                            const isCreditBalance =
+                              acc.normal_balance?.toUpperCase() === "CREDIT" ||
+                              acc.normal_balance === "Kredit";
+                            const accountTypeLower = acc.account_type?.toLowerCase() || "";
+                            const isRevenueAccount =
+                              accountTypeLower === "revenue" ||
+                              accountTypeLower === "pendapatan" ||
+                              accountTypeLower.includes("pendapatan") ||
+                              accountTypeLower.includes("revenue");
+                            const isChildOfModal3_1000 = acc.parent_code === "3-1000";
+                            const matchesSearch = `${acc.account_code} ${acc.description || acc.account_name}`
+                              .toLowerCase()
+                              .includes(bankSearch.toLowerCase());
+
+                            return (
+                              isCreditBalance &&
+                              (isRevenueAccount || isChildOfModal3_1000) &&
+                              matchesSearch
+                            );
+                          }).length === 0 && (
                           <div className="p-3 text-center text-gray-500 text-sm">
                             Tidak ada akun ditemukan. Klik "+ Tambah Akun Baru" untuk membuat akun baru.
                           </div>
