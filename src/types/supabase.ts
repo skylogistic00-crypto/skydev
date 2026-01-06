@@ -1818,6 +1818,57 @@ export type Database = {
         }
         Relationships: []
       }
+      capital_contributions: {
+        Row: {
+          amount: number
+          bukti_url: string | null
+          created_at: string
+          created_by: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
+          description: string | null
+          id: string
+          payment_method: string | null
+          reference_no: string | null
+          transaction_date: string
+          transaction_type: string | null
+        }
+        Insert: {
+          amount?: number
+          bukti_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          reference_no?: string | null
+          transaction_date: string
+          transaction_type?: string | null
+        }
+        Update: {
+          amount?: number
+          bukti_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_account_code?: string | null
+          credit_account_name?: string | null
+          debit_account_code?: string | null
+          debit_account_name?: string | null
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          reference_no?: string | null
+          transaction_date?: string
+          transaction_type?: string | null
+        }
+        Relationships: []
+      }
       cash_account_mapping: {
         Row: {
           cash_account_code: string
@@ -12953,6 +13004,7 @@ export type Database = {
           amount: number
         }[]
       }
+      insert_journal_entries: { Args: { entries: Json }; Returns: undefined }
       insert_journal_entries_disabled: {
         Args: { entries: Json }
         Returns: undefined

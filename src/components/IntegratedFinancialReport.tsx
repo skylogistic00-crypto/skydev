@@ -916,14 +916,14 @@ export default function IntegratedFinancialReport() {
                     <TableRow className="bg-gray-100">
                       <TableHead className="w-16">Nomor</TableHead>
                       <TableHead className="w-32">Tanggal</TableHead>
-                      <TableHead className="w-40">Jenis Transaksi</TableHead>
+                      <TableHead className="w-28">Jenis Transaksi</TableHead>
                       <TableHead>Kode Akun</TableHead>
                       <TableHead>Nama Akun</TableHead>
                       <TableHead>Deskripsi</TableHead>
                       <TableHead>Bukti</TableHead>
                       <TableHead className="text-right">Debit</TableHead>
                       <TableHead className="text-right">Kredit</TableHead>
-                      <TableHead className="text-right">Sisa Saldo</TableHead>
+                      <TableHead className="text-right w-36">Sisa Saldo</TableHead>
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -973,7 +973,13 @@ export default function IntegratedFinancialReport() {
                             const groupRowSpan = entries.length;
 
                             return (
-                              <TableRow key={`${ref}-${entry.id}`} className={idx === 0 ? "border-t-2 border-gray-200" : undefined}>
+                              <TableRow
+                                key={`${ref}-${entry.id}`}
+                                className={
+                                  (groupIndex % 2 === 0 ? "bg-blue-50/50 " : "bg-white ") +
+                                  (idx === 0 ? "border-t-2 border-gray-200" : "")
+                                }
+                              >
                               {isGroupFirstRow && (
                                 <TableCell className="text-sm text-center" rowSpan={groupRowSpan}>
                                   {groupIndex + 1}

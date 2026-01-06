@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS permohonan_dana (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS journal_entries (
+CREATE TABLE IF NOT EXISTS journal_entries_legacy_permohonan_dana (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   permohonan_dana_id UUID REFERENCES permohonan_dana(id) ON DELETE CASCADE,
   entry_date DATE NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
 );
 
 ALTER TABLE permohonan_dana ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries_legacy_permohonan_dana ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow all operations on permohonan_dana" ON permohonan_dana;
 CREATE POLICY "Allow all operations on permohonan_dana"
@@ -31,11 +31,11 @@ ON permohonan_dana FOR ALL
 USING (true)
 WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow all operations on journal_entries" ON journal_entries;
-CREATE POLICY "Allow all operations on journal_entries"
-ON journal_entries FOR ALL
+DROP POLICY IF EXISTS "Allow all operations on journal_entries_legacy_permohonan_dana" ON journal_entries_legacy_permohonan_dana;
+CREATE POLICY "Allow all operations on journal_entries_legacy_permohonan_dana"
+ON journal_entries_legacy_permohonan_dana FOR ALL
 USING (true)
 WITH CHECK (true);
 
 alter publication supabase_realtime add table permohonan_dana;
-alter publication supabase_realtime add table journal_entries;
+alter publication supabase_realtime add table journal_entries_legacy_permohonan_dana;

@@ -4694,8 +4694,31 @@ export default function TransaksiKeuanganForm() {
       }
 
       case "Setoran Modal": {
-        // Setoran Modal: Use default journal_entries insert (sync_journal_to_gl trigger)
-        console.log("✅ ROUTER: Setoran Modal - using default journal_entries insert");
+        console.log("✅ ROUTER: Setoran Modal - inserting to capital_contributions");
+
+        const debitLine = previewLines.find((l) => l.dc === "D");
+        const creditLine = previewLines.find((l) => l.dc === "C");
+
+        if (!debitLine?.account_code || !creditLine?.account_code) {
+          throw new Error(
+            "Setoran Modal but missing debit/credit lines (kas/bank & modal).",
+          );
+        }
+
+        const { error } = await supabase.from("capital_contributions").insert({
+          transaction_date: previewTanggal,
+          amount: nominal,
+          description: previewMemo,
+          payment_method: paymentType || null,
+          debit_account_code: debitLine.account_code,
+          debit_account_name: debitLine.account_name || null,
+          credit_account_code: creditLine.account_code,
+          credit_account_name: creditLine.account_name || null,
+          reference_no: journalRef,
+          bukti_url: uploadedBuktiUrl || null,
+        });
+
+        if (error) throw new Error(`capital_contributions: ${error.message}`);
         break;
       }
 

@@ -43,7 +43,7 @@ BEGIN
       COALESCE((entry->>'debit')::DECIMAL, 0),
       COALESCE((entry->>'credit')::DECIMAL, 0),
       COALESCE((entry->>'description')::TEXT, ''),
-      COALESCE((entry->>'created_by')::TEXT, 'system'),
+      COALESCE(NULLIF(entry->>'created_by','')::UUID, auth.uid()),
       COALESCE((entry->>'transaction_date')::DATE, CURRENT_DATE)
     );
   END LOOP;
