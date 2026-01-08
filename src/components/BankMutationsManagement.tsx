@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,37 +20,31 @@ import {
   SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
-import { Loader2, ArrowLeft } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { Loader2, ArrowLeft, CheckCircle, Search } from "lucide-react";
 
 /* =====================================================
    TYPES
 ===================================================== */
 interface BankMutation {
   id: string;
-  transaction_date: string;
-  created_at: string;
-  description?: string | null;
-  reference_number?: string | null;
+  date: string;
+  description: string | null;
   amount: number;
-  transaction_direction: "IN" | "OUT";
-  approval_status?: "draft" | "approved" | "posted" | "failed" | null;
+  status: "raw" | "pending" | "approved";
+  source: string | null;
+  created_at: string;
 }
-
-interface Summary {
-  total_in: number;
-  total_out: number;
-  saldo: number;
-}
-
-/* =====================================================
-   CONST
-===================================================== */
-const PAGE_SIZE = 30;
-const HIGHLIGHT_MS = 2500;
 
 /* =====================================================
    COMPONENT
@@ -66,197 +54,109 @@ export default function BankMutationsManagement() {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
 
-  const canApprove = useMemo(
+  /* ================= ACCESS ================= */
+  const hasAccess = useMemo(
     () =>
-      ["admin", "finance", "super_admin"].includes(
-        (userRole ?? "").toLowerCase()
-      ),
+      [
+        "admin",
+        "finance",
+        "accounting",
+        "super_admin",
+        "accounting_manager",
+        "accounting_staff",
+      ].includes((userRole ?? "").toLowerCase()),
     [userRole]
   );
 
   /* ================= STATE ================= */
   const [rows, setRows] = useState<BankMutation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
 
   /* ================= FILTER ================= */
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [status, setStatus] = useState<"draft" | "all">("draft");
-  const [search, setSearch] = useState("");
-
-  /* ================= SUMMARY ================= */
-  const [summary, setSummary] = useState<Summary | null>(null);
-
-  /* ================= CURSOR ================= */
-  const cursorRef = useRef<{ created_at: string; id: string } | null>(null);
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  /* ================= VIRTUAL ================= */
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 56,
-    overscan: 8,
-  });
-
-  /* =====================================================
-     RESET + RELOAD
-  ===================================================== */
-  const resetAndReload = useCallback(() => {
-    cursorRef.current = null;
-    setRows([]);
-    setSelected(new Set());
-    setHasMore(true);
-  }, []);
-
-  useEffect(() => {
-    resetAndReload();
-  }, [fromDate, toDate, status, search, resetAndReload]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "raw" | "pending" | "approved" | "all"
+  >("raw");
+  const [searchDesc, setSearchDesc] = useState("");
 
   /* =====================================================
      FETCH DATA
   ===================================================== */
-  const fetchMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+  const fetchBankMutations = useCallback(async () => {
     setLoading(true);
 
-    let q = supabase
-      .from("tabel_mutations")
-      .select(`
-        id,
-        transaction_date,
-        created_at,
-        description,
-        reference_number,
-        amount,
-        transaction_direction,
-        approval_status
-      `)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(PAGE_SIZE);
+    let query = supabase
+      .from("bank_mutations")
+      .select("id, date, description, amount, status, source, created_at")
+      .order("date", { ascending: false });
 
-    if (fromDate) q = q.gte("transaction_date", fromDate);
-    if (toDate) q = q.lte("transaction_date", toDate);
-    if (status !== "all") q = q.eq("approval_status", status);
-    if (search) q = q.ilike("description", `%${search}%`);
-
-    if (cursorRef.current) {
-      const c = cursorRef.current;
-      q = q.or(
-        `created_at.lt.${c.created_at},and(created_at.eq.${c.created_at},id.lt.${c.id})`
-      );
+    if (statusFilter !== "all") {
+      query = query.eq("status", statusFilter);
     }
 
-    const { data, error } = await q;
+    if (dateFrom) query = query.gte("date", dateFrom);
+    if (dateTo) query = query.lte("date", dateTo);
+    if (searchDesc) query = query.ilike("description", `%${searchDesc}%`);
+
+    const { data, error } = await query;
+
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
       return;
     }
 
-    if (!data || data.length === 0) {
-      setHasMore(false);
-      setLoading(false);
-      return;
-    }
-
-    cursorRef.current = {
-      created_at: data[data.length - 1].created_at,
-      id: data[data.length - 1].id,
-    };
-
-    setRows((prev) => {
-      const map = new Map(prev.map((r) => [r.id, r]));
-      data.forEach((r) => map.set(r.id, r));
-      return Array.from(map.values());
-    });
-
+    setRows((data as BankMutation[]) || []);
     setLoading(false);
-  }, [loading, hasMore, fromDate, toDate, status, search, toast]);
+  }, [statusFilter, dateFrom, dateTo, searchDesc, toast]);
 
   useEffect(() => {
-    fetchMore();
-  }, [fetchMore]);
+    if (hasAccess) fetchBankMutations();
+  }, [hasAccess, fetchBankMutations]);
 
   /* =====================================================
-     AUTO LOAD NEXT
+     APPROVE — AUTO (RPC)
   ===================================================== */
-  useEffect(() => {
-    const last = rowVirtualizer.getVirtualItems().at(-1);
-    if (last && last.index >= rows.length - 5) fetchMore();
-  }, [rowVirtualizer.getVirtualItems(), rows.length, fetchMore]);
+  const handleApprove = async (mutation: BankMutation) => {
+  if (!user?.id) {
+    toast({
+      title: "Error",
+      description: "User tidak valid",
+      variant: "destructive",
+    });
+    return;
+  }
 
-  /* =====================================================
-     SUMMARY
-  ===================================================== */
-  useEffect(() => {
-    supabase
-      .from("vw_mutation_summary_global")
-      .select("*")
-      .single()
-      .then(({ data }) => setSummary(data as Summary));
-  }, []);
-
-  /* =====================================================
-     REALTIME UPDATE
-  ===================================================== */
-  useEffect(() => {
-    const ch = supabase
-      .channel("bank-mutations-rt")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "tabel_mutations" },
-        (p) => {
-          const u = p.new as BankMutation;
-
-          setRows((prev) =>
-            prev.map((r) => (r.id === u.id ? { ...r, ...u } : r))
-          );
-
-          setHighlighted((s) => new Set(s).add(u.id));
-          setTimeout(() => {
-            setHighlighted((s) => {
-              const n = new Set(s);
-              n.delete(u.id);
-              return n;
-            });
-          }, HIGHLIGHT_MS);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, []);
-
-  /* =====================================================
-     BULK APPROVE
-  ===================================================== */
-  const bulkApprove = async () => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-
+  try {
     const { error } = await supabase.rpc(
-      "approve_and_process_bank_mutations_bulk",
+      "approve_bank_mutation_auto",
       {
-        p_mutation_ids: ids,
-        p_approved_by: user?.id,
+        p_mutation_id: mutation.id, // ✅ PAKAI PARAMETER
+        p_user_id: user.id,
       }
     );
 
-    if (error) {
-      toast({ title: "Bulk gagal", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Bulk approve sukses", description: `${ids.length} transaksi` });
-      setSelected(new Set());
-    }
-  };
+    if (error) throw error;
+
+    toast({
+      title: "Approval Berhasil",
+      description: "Mutasi dijurnal otomatis",
+    });
+
+    fetchBankMutations(); // refresh tabel
+  } catch (err: any) {
+    toast({
+      title: "Approval Gagal",
+      description: err.message,
+      variant: "destructive",
+    });
+  }
+};
 
   /* =====================================================
      HELPERS
@@ -266,23 +166,47 @@ export default function BankMutationsManagement() {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(v);
+    }).format(v || 0);
+
+  const statusVariant = (status: string) => {
+    if (status === "approved") return "default";
+    if (status === "pending") return "outline";
+    return "secondary";
+  };
+
+  /* =====================================================
+     NO ACCESS
+  ===================================================== */
+  if (!hasAccess) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-red-500">
+              Anda tidak memiliki akses ke halaman ini.
+            </p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>
+              Kembali ke Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   /* =====================================================
      RENDER
   ===================================================== */
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Bank Mutations</CardTitle>
+            <CardTitle>Bank Mutations Management</CardTitle>
             <CardDescription>
-              Default Draft · Bulk Approve · Realtime
+              Approval mutasi bank otomatis ke jurnal
             </CardDescription>
           </div>
-
-          {/* 🔙 BACK TO HOME */}
           <Button
             variant="outline"
             onClick={() => navigate("/")}
@@ -294,84 +218,106 @@ export default function BankMutationsManagement() {
         </CardHeader>
 
         <CardContent>
-          {/* SUMMARY */}
-          {summary && (
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <Card><CardContent>IN<br />{formatRupiah(summary.total_in)}</CardContent></Card>
-              <Card><CardContent>OUT<br />{formatRupiah(summary.total_out)}</CardContent></Card>
-              <Card><CardContent>SALDO<br />{formatRupiah(summary.saldo)}</CardContent></Card>
-            </div>
-          )}
-
           {/* FILTER */}
-          <div className="grid grid-cols-6 gap-2 mb-3">
-            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} onKeyDown={(e) => e.key === "Enter" && resetAndReload()} />
-            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} onKeyDown={(e) => e.key === "Enter" && resetAndReload()} />
-            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-              <SelectTrigger />
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft (Default)</SelectItem>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="raw">Raw</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="all">Semua</SelectItem>
               </SelectContent>
             </Select>
-            <Input placeholder="Cari deskripsi" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && resetAndReload()} />
-            <Button onClick={resetAndReload}>Refresh</Button>
-            {canApprove && (
-              <Button disabled={selected.size === 0} className="bg-green-600" onClick={bulkApprove}>
-                Bulk Approve ({selected.size})
-              </Button>
-            )}
-          </div>
 
-          {/* LIST */}
-          <div ref={parentRef} className="h-[70vh] overflow-auto border rounded relative">
-            <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
-              {rowVirtualizer.getVirtualItems().map((v) => {
-                const r = rows[v.index];
-                if (!r) return null;
-
-                const selectable = r.approval_status === "draft";
-
-                return (
-                  <div
-                    key={r.id}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${v.start}px)`,
-                    }}
-                    className={`border-b p-2 grid grid-cols-5 gap-2 items-center ${
-                      highlighted.has(r.id) ? "bg-yellow-100 animate-pulse" : ""
-                    }`}
-                  >
-                    <Checkbox
-                      disabled={!selectable}
-                      checked={selected.has(r.id)}
-                      onCheckedChange={(v) => {
-                        if (!selectable) return;
-                        setSelected((s) => {
-                          const n = new Set(s);
-                          v ? n.add(r.id) : n.delete(r.id);
-                          return n;
-                        });
-                      }}
-                    />
-                    <div>{new Date(r.transaction_date).toLocaleDateString("id-ID")}</div>
-                    <div className="truncate">{r.description}</div>
-                    <div className="text-right">{formatRupiah(r.amount)}</div>
-                    <Badge>{r.approval_status}</Badge>
-                  </div>
-                );
-              })}
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                placeholder="Cari deskripsi..."
+                value={searchDesc}
+                onChange={(e) => setSearchDesc(e.target.value)}
+              />
             </div>
 
-            {loading && (
-              <div className="absolute bottom-2 w-full flex justify-center">
-                <Loader2 className="animate-spin" />
-              </div>
-            )}
+            <Button onClick={fetchBankMutations}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+            </Button>
+          </div>
+
+          {/* TABLE */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      Tidak ada data
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        {row.date
+                          ? new Date(row.date).toLocaleDateString("id-ID")
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {row.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatRupiah(row.amount)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={statusVariant(row.status)}>
+                          {row.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{row.source || "-"}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={row.status === "approved"}
+                          onClick={() => handleApprove(row)}
+                          className={
+                            row.status === "approved"
+                              ? "opacity-50 cursor-not-allowed"
+                              : "hover:bg-green-50 hover:border-green-500 hover:text-green-700"
+                          }
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

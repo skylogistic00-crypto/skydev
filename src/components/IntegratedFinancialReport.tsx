@@ -904,6 +904,7 @@ export default function IntegratedFinancialReport() {
                         <SelectItem value="Uang Muka">Uang Muka</SelectItem>
                         <SelectItem value="Top Up Uang Muka">Top Up Uang Muka</SelectItem>
                         <SelectItem value="Penyelesaian Uang Muka">Penyelesaian Uang Muka</SelectItem>
+                        <SelectItem value="Setoran Modal">Setoran Modal</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

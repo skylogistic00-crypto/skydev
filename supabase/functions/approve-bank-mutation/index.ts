@@ -9,11 +9,15 @@ const corsHeaders = {
 
 interface BankMutation {
   id: string;
+  date: string;
   mutation_date: string;
   description: string;
+  amount: number;
   debit: number;
   credit: number;
   balance: number;
+  status: string;
+  source: string;
   pp: string;
   kas_bank: string;
   pos: string;
@@ -34,13 +38,35 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { mutation_ids, user_id } = await req.json();
+    const { mutation_ids, user_id, p_debit_account_code, p_credit_account_code } = await req.json();
 
     if (!mutation_ids || mutation_ids.length === 0) {
       return new Response(
         JSON.stringify({ error: "mutation_ids wajib diisi" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // If debit/credit account codes provided from frontend, validate them
+    let frontendDebitAccount: any = null;
+    let frontendCreditAccount: any = null;
+
+    if (p_debit_account_code) {
+      const { data: debitAcc } = await supabase
+        .from("chart_of_accounts")
+        .select("id, account_code, account_name, account_type")
+        .eq("account_code", p_debit_account_code)
+        .single();
+      frontendDebitAccount = debitAcc;
+    }
+
+    if (p_credit_account_code) {
+      const { data: creditAcc } = await supabase
+        .from("chart_of_accounts")
+        .select("id, account_code, account_name, account_type")
+        .eq("account_code", p_credit_account_code)
+        .single();
+      frontendCreditAccount = creditAcc;
     }
 
     // SECURITY: Validate user role (Admin / Accounting only)
@@ -83,77 +109,53 @@ serve(async (req) => {
           continue;
         }
 
-        // VALIDASI WAJIB
-        const validationErrors: string[] = [];
+        // Use frontend-provided accounts if available, otherwise use mutation data
+        let debitAccountData = frontendDebitAccount;
+        let creditAccountData = frontendCreditAccount;
 
-        // 1. akun tidak null
-        if (!mutation.akun) {
-          validationErrors.push("Akun wajib diisi");
-        }
-
-        // 2. sub_akun tidak null
-        if (!mutation.sub_akun) {
-          validationErrors.push("Sub Akun wajib diisi");
-        }
-
-        // 3. debit XOR credit (salah satu harus ada, tidak boleh keduanya atau tidak ada)
-        const hasDebit = mutation.debit && mutation.debit > 0;
-        const hasCredit = mutation.credit && mutation.credit > 0;
-        
-        if (hasDebit && hasCredit) {
-          validationErrors.push("Debit dan Credit tidak boleh keduanya terisi");
-        }
-        if (!hasDebit && !hasCredit) {
-          validationErrors.push("Debit atau Credit harus diisi");
-        }
-
-        // 4. kas_bank valid
-        if (!mutation.kas_bank) {
-          validationErrors.push("Kas/Bank wajib diisi");
-        } else {
-          // Validate kas_bank exists in chart_of_accounts
-          const { data: kasBank, error: kasBankError } = await supabase
+        // If not provided from frontend, try to use mutation's existing data
+        if (!debitAccountData && mutation.akun) {
+          const { data: akunData } = await supabase
             .from("chart_of_accounts")
-            .select("id, account_code, account_name")
+            .select("id, account_code, account_name, account_type")
+            .eq("account_code", mutation.akun)
+            .single();
+          debitAccountData = akunData;
+        }
+
+        if (!creditAccountData && mutation.kas_bank) {
+          const { data: kasBankData } = await supabase
+            .from("chart_of_accounts")
+            .select("id, account_code, account_name, account_type")
             .eq("account_code", mutation.kas_bank)
             .single();
-
-          if (kasBankError || !kasBank) {
-            validationErrors.push("Kas/Bank tidak valid");
-          }
+          creditAccountData = kasBankData;
         }
 
-        if (validationErrors.length > 0) {
+        // Validate required accounts
+        if (!debitAccountData || !creditAccountData) {
           results.push({ 
             id: mutationId, 
             success: false, 
-            error: validationErrors.join(", ") 
+            error: "Debit Account dan Credit Account wajib dipilih" 
           });
           continue;
         }
 
-        // Get account details
-        const { data: akunData } = await supabase
-          .from("chart_of_accounts")
-          .select("id, account_code, account_name, account_type")
-          .eq("account_code", mutation.akun)
-          .single();
-
-        const { data: kasBankData } = await supabase
-          .from("chart_of_accounts")
-          .select("id, account_code, account_name, account_type")
-          .eq("account_code", mutation.kas_bank)
-          .single();
-
-        if (!akunData || !kasBankData) {
-          results.push({ id: mutationId, success: false, error: "Data akun tidak valid" });
+        // Get amount from mutation
+        const amount = mutation.amount || mutation.debit || mutation.credit || 0;
+        if (amount <= 0) {
+          results.push({ 
+            id: mutationId, 
+            success: false, 
+            error: "Amount harus lebih dari 0" 
+          });
           continue;
         }
 
         // Create journal entry
         const journalDescription = `Mutasi Bank: ${mutation.description || ""}`;
-        const transactionDate = mutation.mutation_date || new Date().toISOString().split("T")[0];
-        const amount = hasDebit ? mutation.debit : mutation.credit;
+        const transactionDate = mutation.date || mutation.mutation_date || new Date().toISOString().split("T")[0];
 
         // Insert journal_entries
         const { data: journalEntry, error: journalError } = await supabase
@@ -177,52 +179,27 @@ serve(async (req) => {
           continue;
         }
 
-        // Insert journal_entry_lines
-        const journalLines = [];
-
-        if (hasDebit) {
-          // Debit: uang keluar dari bank
-          // Debit akun beban/aset, Credit kas/bank
-          journalLines.push({
+        // Insert journal_entry_lines using frontend-selected accounts
+        const journalLines = [
+          {
             journal_entry_id: journalEntry.id,
-            account_id: akunData.id,
-            account_code: akunData.account_code,
-            account_name: akunData.account_name,
+            account_id: debitAccountData.id,
+            account_code: debitAccountData.account_code,
+            account_name: debitAccountData.account_name,
             debit: amount,
             credit: 0,
             description: mutation.description,
-          });
-          journalLines.push({
+          },
+          {
             journal_entry_id: journalEntry.id,
-            account_id: kasBankData.id,
-            account_code: kasBankData.account_code,
-            account_name: kasBankData.account_name,
+            account_id: creditAccountData.id,
+            account_code: creditAccountData.account_code,
+            account_name: creditAccountData.account_name,
             debit: 0,
             credit: amount,
             description: mutation.description,
-          });
-        } else {
-          // Credit: uang masuk ke bank
-          // Debit kas/bank, Credit akun pendapatan/hutang
-          journalLines.push({
-            journal_entry_id: journalEntry.id,
-            account_id: kasBankData.id,
-            account_code: kasBankData.account_code,
-            account_name: kasBankData.account_name,
-            debit: amount,
-            credit: 0,
-            description: mutation.description,
-          });
-          journalLines.push({
-            journal_entry_id: journalEntry.id,
-            account_id: akunData.id,
-            account_code: akunData.account_code,
-            account_name: akunData.account_name,
-            debit: 0,
-            credit: amount,
-            description: mutation.description,
-          });
-        }
+          },
+        ];
 
         const { error: linesError } = await supabase
           .from("journal_entry_lines")
@@ -256,10 +233,11 @@ serve(async (req) => {
           console.error("General ledger error:", glError);
         }
 
-        // Update bank_mutation status
+        // Update bank_mutation status to approved
         const { error: updateError } = await supabase
           .from("bank_mutations")
           .update({
+            status: "approved",
             approval_status: "approved",
             mapping_status: "approved",
             journal_entry_id: journalEntry.id,
