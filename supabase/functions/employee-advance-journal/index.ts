@@ -1,4 +1,4 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 import { createSupabaseClient } from "@shared/supabase-client.ts";
 import { getAccountCOA, getAccountCOAByCode } from "@shared/coa-helper.ts";
 
@@ -25,10 +25,7 @@ interface AdvanceJournalRequest {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { 
-      headers: corsHeaders, 
-      status: 200 
-    });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {

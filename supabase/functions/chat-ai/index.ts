@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +10,7 @@ const CORS = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      status: 204, 
-      headers: CORS 
-    });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   const { message } = await req.json().catch(() => ({}));

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +24,10 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import { Loader2, ArrowLeft, CheckCircle, Search, Upload } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle, Search, Upload, FileText, XCircle } from "lucide-react";
 import OCRScanButton from "./OCRScanButton";
+import { TaxExtractionModal } from "./TaxExtractionModal";
+import { OCRBankMutationMatchDialog } from "@/components/OCRBankMutationMatchDialog";
 
 /* =====================================================
    TYPES — VIEW
@@ -41,10 +43,28 @@ interface BankMutationView {
   credit_account_name: string | null;
   balance: number | null;
   bukti_url: string | null;
-  approval_status: "approved" | "rejected" | null;
+  approval_status: "approved" | "rejected" | "waiting_approval" | null;
   approved_by: string | null;
   approved_at: string | null;
   created_at: string;
+  ocr_text: string | null;
+  invoice_id: string | null;
+  dpp_amount: number | null;
+  ppn_amount: number | null;
+  pph_amount: number | null;
+  gross_amount: number | null;
+  tax_extraction_status: string | null;
+
+  vat_amount?: number | null;
+  stamp_amount?: number | null;
+  transaction_type?: string | null;
+  revenue_account_code?: string | null;
+  expense_account_code?: string | null;
+  vat_output_account_code?: string | null;
+  vat_input_account_code?: string | null;
+
+  invoice_storage_bucket?: string | null;
+  invoice_file_path?: string | null;
 }
 
 /* =====================================================
@@ -74,6 +94,32 @@ export default function BankMutationsManagement() {
   const [loading, setLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [cancelingOcrId, setCancelingOcrId] = useState<string | null>(null);
+  const [taxExtractionModal, setTaxExtractionModal] = useState<{
+    open: boolean;
+    bankMutationId: string;
+    ocrText: string;
+  }>({ open: false, bankMutationId: "", ocrText: "" });
+
+  const [extractedTaxIds, setExtractedTaxIds] = useState<Set<string>>(new Set());
+
+  const [globalOcrMatch, setGlobalOcrMatch] = useState<{
+    open: boolean;
+    candidates: Array<{ row: { id: string; date: string | null; description: string | null; debit: number | null; credit: number | null }; score: number }>;
+    selectedId: string | null;
+    fallbackMatch: { date?: string | null; amount?: number | null; description?: string | null };
+    ocrText: string;
+    filePath: string;
+    publicUrl: string;
+  }>({
+    open: false,
+    candidates: [],
+    selectedId: null,
+    fallbackMatch: {},
+    ocrText: "",
+    filePath: "",
+    publicUrl: "",
+  });
 
   /* ================= FILTER ================= */
   const [dateFrom, setDateFrom] = useState("");
@@ -84,6 +130,24 @@ export default function BankMutationsManagement() {
   /* =====================================================
      FETCH — VIEW ONLY
   ===================================================== */
+  const markTaxExtracted = useCallback(
+    (bankMutationId: string) => {
+      setExtractedTaxIds((prev) => {
+        const next = new Set(prev);
+        next.add(bankMutationId);
+        return next;
+      });
+
+      // Also update current rows immediately for better UX
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === bankMutationId ? { ...r, tax_extraction_status: "extracted" } : r
+        )
+      );
+    },
+    [setRows]
+  );
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -103,7 +167,23 @@ export default function BankMutationsManagement() {
         approval_status,
         approved_by,
         approved_at,
-        created_at
+        created_at,
+        ocr_text,
+        invoice_id,
+        dpp_amount,
+        ppn_amount,
+        pph_amount,
+        gross_amount,
+        tax_extraction_status,
+        vat_amount,
+        stamp_amount,
+        transaction_type,
+        revenue_account_code,
+        expense_account_code,
+        vat_output_account_code,
+        vat_input_account_code,
+        invoice_storage_bucket,
+        invoice_file_path
       `)
       .order("created_at", { ascending: false });
 
@@ -140,7 +220,9 @@ export default function BankMutationsManagement() {
   }, [hasAccess, fetchData]);
 
   /* =====================================================
-     APPROVE → UPDATE bank_mutations (TRIGGER HANDLE JURNAL)
+     APPROVE → UPDATE bank_mutations.approval_status
+     Catatan: Tombol Approve di UI HANYA mengubah kolom approval_status.
+     Proses jurnal (jika ada) ditangani oleh trigger/database.
   ===================================================== */
   const handleApprove = async (row: BankMutationView) => {
     if (!user?.id) {
@@ -157,6 +239,7 @@ export default function BankMutationsManagement() {
     try {
       setApprovingId(row.id);
 
+      // Button Approve: ONLY update approval_status on bank_mutations
       const { error } = await supabase
         .from("bank_mutations")
         .update({
@@ -169,7 +252,11 @@ export default function BankMutationsManagement() {
 
       if (error) throw error;
 
-      // Refresh data, dan kembalikan filter ke pending agar data yang baru di-approve hilang dari tampilan
+      toast({
+        title: "Approved",
+        description: "Mutasi berhasil di-approve",
+      });
+
       setStatusFilter("pending");
       fetchData();
     } catch (err: any) {
@@ -209,7 +296,11 @@ export default function BankMutationsManagement() {
       // Update bukti_url di bank_mutations
       const { error: updateError } = await supabase
         .from("bank_mutations")
-        .update({ bukti_url: urlData.publicUrl })
+        .update({
+          bukti_url: urlData.publicUrl,
+          invoice_storage_bucket: "mutation-evidence",
+          invoice_file_path: filePath,
+        })
         .eq("id", rowId);
 
       if (updateError) throw updateError;
@@ -228,6 +319,74 @@ export default function BankMutationsManagement() {
       });
     } finally {
       setUploadingId(null);
+    }
+  };
+
+  /* =====================================================
+     HANDLE OCR RESULT (persist to bank_mutations)
+  ===================================================== */
+  const handleOCRPersisted = async (rowId: string, publicUrl: string, filePath: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from("bank_mutations")
+        .update({
+          bukti_url: publicUrl,
+          invoice_storage_bucket: "mutation-evidence",
+          invoice_file_path: filePath,
+        })
+        .eq("id", rowId);
+
+      if (updateError) throw updateError;
+
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Simpan bukti gagal",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  /* =====================================================
+     CANCEL OCR (WAJIB)
+  ===================================================== */
+  const handleCancelOCR = async (row: BankMutationView) => {
+    if (row.approval_status === "approved") return;
+
+    try {
+      setCancelingOcrId(row.id);
+
+      // Hapus evidence + OCR fields di row (client-side). Jika perlu juga hapus file storage,
+      // sebaiknya dilakukan via edge function/service role, karena client (anon) sering tidak
+      // punya izin delete file.
+      const { error } = await supabase
+        .from("bank_mutations")
+        .update({
+          bukti_url: null,
+          ocr_text: null,
+          invoice_storage_bucket: null,
+          invoice_file_path: null,
+        })
+        .eq("id", row.id)
+        .is("approval_status", null);
+
+      if (error) throw error;
+
+      toast({
+        title: "OCR dibatalkan",
+        description: "Bukti + hasil OCR dihapus dari data mutasi",
+      });
+
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Cancel OCR gagal",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setCancelingOcrId(null);
     }
   };
 
@@ -279,10 +438,18 @@ export default function BankMutationsManagement() {
           </div>
           <div className="flex gap-2">
             <OCRScanButton
-              onImageUploaded={(url, filePath) => {
-                toast({
-                  title: "Gambar berhasil diupload",
-                  description: `File: ${filePath}`,
+              // Global scan: ALWAYS fallback mode (no bankMutationId). Persist only after user confirms in dialog.
+              bucketName="mutation-evidence"
+              folderPath="mutation-evidence"
+              onFallbackCandidates={({ candidates, fallbackMatch, ocrText, filePath, publicUrl }) => {
+                setGlobalOcrMatch({
+                  open: true,
+                  candidates,
+                  selectedId: candidates?.[0]?.row?.id ?? null,
+                  fallbackMatch,
+                  ocrText,
+                  filePath,
+                  publicUrl,
                 });
               }}
             />
@@ -329,12 +496,16 @@ export default function BankMutationsManagement() {
                   <TableHead className="w-[100px] min-w-[100px]">Date</TableHead>
                   <TableHead className="w-[200px] min-w-[200px]">Description</TableHead>
                   <TableHead className="w-[180px] min-w-[180px]">Category</TableHead>
+                  <TableHead className="w-[200px] min-w-[200px]">Account Name</TableHead>
                   <TableHead className="w-[120px] min-w-[120px] text-right">Debit</TableHead>
                   <TableHead className="w-[120px] min-w-[120px] text-right">Credit</TableHead>
-                  <TableHead className="w-[200px] min-w-[200px]">Account Name</TableHead>
                   <TableHead className="w-[150px] min-w-[150px] text-right">Balance</TableHead>
+                  <TableHead className="w-[120px] min-w-[120px] text-right">Amount</TableHead>
+                  <TableHead className="w-[100px] min-w-[100px] text-center">Direction</TableHead>
                   <TableHead className="w-[100px] min-w-[100px] text-center">Bukti</TableHead>
-                  <TableHead className="w-[80px] min-w-[80px] text-center">Status</TableHead>
+                  {statusFilter !== "pending" && (
+                    <TableHead className="w-[80px] min-w-[80px] text-center">Status</TableHead>
+                  )}
                   <TableHead className="w-[100px] min-w-[100px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -342,13 +513,13 @@ export default function BankMutationsManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10">
+                    <TableCell colSpan={statusFilter === "pending" ? 11 : 12} className="text-center py-10">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={statusFilter === "pending" ? 11 : 12} className="text-center py-10 text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -373,17 +544,29 @@ export default function BankMutationsManagement() {
                         <TableCell className="text-sm">
                           {row.category || "-"}
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {accountName}
+                        </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {row.debit ? formatRupiah(row.debit) : "-"}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {row.credit ? formatRupiah(row.credit) : "-"}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {accountName}
-                        </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {row.balance ? formatRupiah(row.balance) : "-"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {row.debit ? formatRupiah(row.debit) : row.credit ? formatRupiah(row.credit) : "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.debit ? (
+                            <span className="text-red-600 font-semibold">OUT</span>
+                          ) : row.credit ? (
+                            <span className="text-green-600 font-semibold">IN</span>
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {row.bukti_url ? (
@@ -396,58 +579,113 @@ export default function BankMutationsManagement() {
                               Lihat
                             </a>
                           ) : (
-                            <label className="cursor-pointer">
-                              <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                className="hidden"
-                                disabled={uploadingId === row.id}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleUploadBukti(row.id, file);
+                            <div className="flex items-center justify-center">
+                              <OCRScanButton
+                                bankMutationId={row.id}
+                                bucketName="mutation-evidence"
+                                folderPath="mutation-evidence"
+                                extractedFields={{
+                                  bukti_url: row.bukti_url ?? null,
+                                  dpp_amount: row.dpp_amount ?? null,
+                                  vat_amount: (row as any).vat_amount ?? null,
+                                  stamp_amount: (row as any).stamp_amount ?? null,
+                                  transaction_type: (row as any).transaction_type ?? null,
+                                  revenue_account_code: (row as any).revenue_account_code ?? null,
+                                  expense_account_code: (row as any).expense_account_code ?? null,
+                                  vat_output_account_code: (row as any).vat_output_account_code ?? null,
+                                  vat_input_account_code: (row as any).vat_input_account_code ?? null,
+                                }}
+                                onImageUploaded={() => {
+                                  // Upload != OCR success. Keep quiet here; we'll toast only after edge function success.
                                 }}
                               />
+                            </div>
+                          )}
+                        </TableCell>
+                        {statusFilter !== "pending" && (
+                          <TableCell className="text-center">
+                            {row.approval_status ? (
+                              <Badge 
+                                variant={statusVariant(row.approval_status)}
+                                className="text-xs"
+                              >
+                                {row.approval_status}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {(row.tax_extraction_status === "extracted" || extractedTaxIds.has(row.id)) && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                Tax Extracted
+                              </Badge>
+                            )}
+                            {row.ocr_text && (
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                disabled={uploadingId === row.id}
+                                onClick={() => {
+                                  setTaxExtractionModal({
+                                    open: true,
+                                    bankMutationId: row.id,
+                                    ocrText: row.ocr_text || "",
+                                  });
+                                }}
                                 className="h-8 px-2"
-                                asChild
+                                title="Extract Tax Info"
                               >
-                                <span>
-                                  {uploadingId === row.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Upload className="h-4 w-4" />
-                                  )}
-                                </span>
+                                <FileText className="h-4 w-4 text-purple-600" />
+                                {(row.tax_extraction_status === "extracted" || extractedTaxIds.has(row.id)) && (
+                                  <CheckCircle className="h-3 w-3 text-green-600 ml-1" />
+                                )}
                               </Button>
-                            </label>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge 
-                            variant={statusVariant(row.approval_status)}
-                            className="text-xs"
-                          >
-                            {row.approval_status || "pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={approvingId === row.id || !!row.approval_status}
-                            onClick={() => handleApprove(row)}
-                            className="h-8 px-3"
-                          >
-                            {approvingId === row.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 mr-1" />
                             )}
-                            Approve
-                          </Button>
+
+                            {/* Cancel OCR (wajib). Locked when approved, only allowed when waiting_approval */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={
+                                cancelingOcrId === row.id ||
+                                row.approval_status === "approved" ||
+                                row.approval_status !== "waiting_approval" ||
+                                !row.bukti_url
+                              }
+                              onClick={() => handleCancelOCR(row)}
+                              className="h-8 px-2"
+                              title={
+                                row.approval_status === "approved"
+                                  ? "Tidak bisa cancel: sudah approved"
+                                  : row.approval_status !== "waiting_approval"
+                                    ? "Cancel OCR hanya boleh saat waiting_approval"
+                                    : "Cancel OCR"
+                              }
+                            >
+                              {cancelingOcrId === row.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              )}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={approvingId === row.id || !!row.approval_status}
+                              onClick={() => handleApprove(row)}
+                              className="h-8 px-3"
+                            >
+                              {approvingId === row.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                              )}
+                              Approve
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -458,6 +696,96 @@ export default function BankMutationsManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Global OCR Match Dialog */}
+      <OCRBankMutationMatchDialog
+        open={globalOcrMatch.open}
+        onOpenChange={(open) => setGlobalOcrMatch((s) => ({ ...s, open }))}
+        candidates={globalOcrMatch.candidates}
+        selectedId={globalOcrMatch.selectedId}
+        onSelect={(id) => setGlobalOcrMatch((s) => ({ ...s, selectedId: id }))}
+        target={globalOcrMatch.fallbackMatch}
+        onCancel={() =>
+          setGlobalOcrMatch({
+            open: false,
+            candidates: [],
+            selectedId: null,
+            fallbackMatch: {},
+            ocrText: "",
+            filePath: "",
+            publicUrl: "",
+          })
+        }
+        onConfirm={async () => {
+          if (!globalOcrMatch.selectedId) return;
+
+          const { error } = await supabase.functions.invoke(
+            "supabase-functions-ai-ocr-bank-mutation",
+            {
+              body: {
+                bank_mutation_id: globalOcrMatch.selectedId,
+                image_url: globalOcrMatch.publicUrl,
+                bucket: "mutation-evidence",
+                filePath: globalOcrMatch.filePath,
+                ocrText: globalOcrMatch.ocrText,
+                extracted: {
+                  bukti_url: globalOcrMatch.publicUrl,
+                },
+              },
+            }
+          );
+
+          if (error) {
+            console.error("[OCR][SAVE][GLOBAL_CONFIRM] gagal simpan OCR ke bank_mutations", {
+              bankMutationId: globalOcrMatch.selectedId,
+              filePath: globalOcrMatch.filePath,
+              publicUrl: globalOcrMatch.publicUrl,
+              error,
+            });
+            toast({
+              title: "Gagal menyimpan OCR",
+              description: error.message,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          toast({
+            title: "Berhasil",
+            description: "OCR tersimpan ke baris mutasi yang dipilih",
+          });
+
+          setGlobalOcrMatch({
+            open: false,
+            candidates: [],
+            selectedId: null,
+            fallbackMatch: {},
+            ocrText: "",
+            filePath: "",
+            publicUrl: "",
+          });
+
+          fetchData();
+        }}
+      />
+
+      {/* Tax Extraction Modal */}
+      <TaxExtractionModal
+        bankMutationId={taxExtractionModal.bankMutationId}
+        ocrText={taxExtractionModal.ocrText}
+        open={taxExtractionModal.open}
+        onOpenChange={(open) =>
+          setTaxExtractionModal({ ...taxExtractionModal, open })
+        }
+        onSuccess={() => {
+          toast({
+            title: "Success",
+            description: "Tax data extracted successfully",
+          });
+          markTaxExtracted(taxExtractionModal.bankMutationId);
+          fetchData(); // Refresh data
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
@@ -25,7 +26,7 @@ async function runSqlQuery(sqlQuery: string) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {

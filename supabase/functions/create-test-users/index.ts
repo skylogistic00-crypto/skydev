@@ -1,3 +1,4 @@
+import { corsHeaders } from "./_shared/cors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
@@ -23,8 +24,9 @@ const testUsers: UserAccount[] = [
 ]
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders, status: 200 });
+  })
   }
 
   try {

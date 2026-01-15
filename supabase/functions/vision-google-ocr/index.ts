@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { corsHeaders } from "./_shared/cors.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -485,7 +486,7 @@ function extractKTPData(text: string): KTPData {
 Deno.serve(async (req) => {
   // Handle CORS preflight - MUST return immediately with 200 OK
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS, status: 200 });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {

@@ -714,20 +714,6 @@ export type Database = {
             foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -1160,9 +1146,8 @@ export type Database = {
           approved_by: string | null
           balance: number | null
           bank_account: string | null
-          bank_account_number: number | null
+          bank_account_code: string | null
           bank_name: string | null
-          bank_reference_id: string | null
           bukti: string | null
           bukti_url: string | null
           category: string | null
@@ -1179,15 +1164,21 @@ export type Database = {
           debit_account_code: string | null
           debit_account_name: string | null
           description: string | null
+          dpp_amount: number | null
           evidence_url: string | null
+          expense_account_code: string | null
           fingerprint: string | null
+          gross_amount: number | null
           id: string
+          invoice_file_path: string | null
+          invoice_id: string | null
+          invoice_number: string | null
+          invoice_storage_bucket: string | null
           journal_entry_id: string | null
           journal_ref: string | null
           kas_bank: string | null
           mapping_snapshot: Json | null
           mapping_status: string | null
-          matched: string | null
           ocr_confidence: number | null
           ocr_data: Json | null
           ocr_detected_amount: string | null
@@ -1195,25 +1186,35 @@ export type Database = {
           ocr_detected_date: string | null
           ocr_text: string | null
           payment_type: string | null
-          posted_at: string | null
           posting_date: string | null
-          processed: string | null
+          pph_amount: number | null
+          ppn_amount: number | null
           pushed_to_supabase: string | null
           raw_data: Json | null
           raw_mutation_id: string | null
           raw_payload: string | null
           reference: string | null
           reference_number: string | null
+          revenue_account_code: string | null
           source: string | null
           source_table: string | null
+          stamp_amount: string | null
           status: string | null
           supabase_table: string | null
+          tax_document_type: string | null
+          tax_extraction_confidence: number | null
+          tax_extraction_status: string | null
+          tax_extraction_timestamp: string | null
           transaction_date: string | null
           transaction_direction: string | null
           transaction_type: string | null
           updated_at: string | null
           upload_id: string | null
           user_id: string | null
+          vat_account_code: string | null
+          vat_amount: number | null
+          vat_input_account_code: string | null
+          vat_output_account_code: string | null
         }
         Insert: {
           amount?: number
@@ -1222,9 +1223,8 @@ export type Database = {
           approved_by?: string | null
           balance?: number | null
           bank_account?: string | null
-          bank_account_number?: number | null
+          bank_account_code?: string | null
           bank_name?: string | null
-          bank_reference_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
           category?: string | null
@@ -1241,15 +1241,21 @@ export type Database = {
           debit_account_code?: string | null
           debit_account_name?: string | null
           description?: string | null
+          dpp_amount?: number | null
           evidence_url?: string | null
+          expense_account_code?: string | null
           fingerprint?: string | null
+          gross_amount?: number | null
           id?: string
+          invoice_file_path?: string | null
+          invoice_id?: string | null
+          invoice_number?: string | null
+          invoice_storage_bucket?: string | null
           journal_entry_id?: string | null
           journal_ref?: string | null
           kas_bank?: string | null
           mapping_snapshot?: Json | null
           mapping_status?: string | null
-          matched?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
           ocr_detected_amount?: string | null
@@ -1257,25 +1263,35 @@ export type Database = {
           ocr_detected_date?: string | null
           ocr_text?: string | null
           payment_type?: string | null
-          posted_at?: string | null
           posting_date?: string | null
-          processed?: string | null
+          pph_amount?: number | null
+          ppn_amount?: number | null
           pushed_to_supabase?: string | null
           raw_data?: Json | null
           raw_mutation_id?: string | null
           raw_payload?: string | null
           reference?: string | null
           reference_number?: string | null
+          revenue_account_code?: string | null
           source?: string | null
           source_table?: string | null
+          stamp_amount?: string | null
           status?: string | null
           supabase_table?: string | null
+          tax_document_type?: string | null
+          tax_extraction_confidence?: number | null
+          tax_extraction_status?: string | null
+          tax_extraction_timestamp?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
           upload_id?: string | null
           user_id?: string | null
+          vat_account_code?: string | null
+          vat_amount?: number | null
+          vat_input_account_code?: string | null
+          vat_output_account_code?: string | null
         }
         Update: {
           amount?: number
@@ -1284,9 +1300,8 @@ export type Database = {
           approved_by?: string | null
           balance?: number | null
           bank_account?: string | null
-          bank_account_number?: number | null
+          bank_account_code?: string | null
           bank_name?: string | null
-          bank_reference_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
           category?: string | null
@@ -1303,15 +1318,21 @@ export type Database = {
           debit_account_code?: string | null
           debit_account_name?: string | null
           description?: string | null
+          dpp_amount?: number | null
           evidence_url?: string | null
+          expense_account_code?: string | null
           fingerprint?: string | null
+          gross_amount?: number | null
           id?: string
+          invoice_file_path?: string | null
+          invoice_id?: string | null
+          invoice_number?: string | null
+          invoice_storage_bucket?: string | null
           journal_entry_id?: string | null
           journal_ref?: string | null
           kas_bank?: string | null
           mapping_snapshot?: Json | null
           mapping_status?: string | null
-          matched?: string | null
           ocr_confidence?: number | null
           ocr_data?: Json | null
           ocr_detected_amount?: string | null
@@ -1319,25 +1340,35 @@ export type Database = {
           ocr_detected_date?: string | null
           ocr_text?: string | null
           payment_type?: string | null
-          posted_at?: string | null
           posting_date?: string | null
-          processed?: string | null
+          pph_amount?: number | null
+          ppn_amount?: number | null
           pushed_to_supabase?: string | null
           raw_data?: Json | null
           raw_mutation_id?: string | null
           raw_payload?: string | null
           reference?: string | null
           reference_number?: string | null
+          revenue_account_code?: string | null
           source?: string | null
           source_table?: string | null
+          stamp_amount?: string | null
           status?: string | null
           supabase_table?: string | null
+          tax_document_type?: string | null
+          tax_extraction_confidence?: number | null
+          tax_extraction_status?: string | null
+          tax_extraction_timestamp?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
           upload_id?: string | null
           user_id?: string | null
+          vat_account_code?: string | null
+          vat_amount?: number | null
+          vat_input_account_code?: string | null
+          vat_output_account_code?: string | null
         }
         Relationships: [
           {
@@ -2872,6 +2903,30 @@ export type Database = {
           trans_type?: string | null
           updated_at?: string | null
           usage_role?: string | null
+        }
+        Relationships: []
+      }
+      company_profile: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          legal_name: string
+          npwp: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_name: string
+          npwp: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          legal_name?: string
+          npwp?: string
         }
         Relationships: []
       }
@@ -5452,20 +5507,6 @@ export type Database = {
             foreignKeyName: "fk_gl_journal"
             columns: ["journal_id"]
             isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "fk_gl_journal"
-            columns: ["journal_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "fk_gl_journal"
-            columns: ["journal_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -5475,20 +5516,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "general_ledger_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "general_ledger_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
           },
           {
             foreignKeyName: "general_ledger_journal_entry_id_fkey"
@@ -5956,29 +5983,8 @@ export type Database = {
             foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_accounting_wms_transaction_id_fkey"
-            columns: ["wms_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["wms_transaction_id"]
           },
           {
             foreignKeyName: "inventory_movements_accounting_wms_transaction_id_fkey"
@@ -6121,7 +6127,6 @@ export type Database = {
       journal_entries: {
         Row: {
           account_code: string | null
-          account_id: string | null
           account_name: string | null
           account_number: string | null
           account_type: string | null
@@ -6134,7 +6139,6 @@ export type Database = {
           bank_mutation_id: string | null
           bukti: string | null
           bukti_url: string | null
-          code_booking: string | null
           confidence_score: number | null
           created_at: string | null
           created_by: string | null
@@ -6150,30 +6154,15 @@ export type Database = {
           description: string | null
           disbursement_id: string | null
           entry_date: string | null
-          handled_by_user_id: string | null
           id: string
           is_void: boolean | null
-          jenis_transaksi: string | null
           journal_date: string | null
-          journal_number: string | null
           journal_ref: string | null
-          kategori: string | null
           keterangan: string | null
-          license_plate: string | null
-          make: string | null
           memo: string | null
-          model: string | null
-          nama: string | null
-          note: string | null
-          payee_name: string | null
-          payer_name: string | null
-          posting_date: string | null
-          reference: string | null
           reference_id: string | null
           reference_number: string | null
-          reference_type: string | null
           sales_transactions_id: string | null
-          service_type: string | null
           source_file: string | null
           source_id: string | null
           source_ref: string | null
@@ -6183,8 +6172,6 @@ export type Database = {
           status: string | null
           stock_adjustment_id: string | null
           stock_movement_id: string | null
-          sumber_penerimaan: string | null
-          sumber_pengeluaran: string | null
           tanggal: string | null
           total_credit: number | null
           total_debit: number | null
@@ -6192,13 +6179,9 @@ export type Database = {
           transaction_id: string | null
           transaction_type: string | null
           updated_at: string | null
-          vehicle_type: string | null
-          void_date: string | null
-          void_reason: string | null
         }
         Insert: {
           account_code?: string | null
-          account_id?: string | null
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
@@ -6211,7 +6194,6 @@ export type Database = {
           bank_mutation_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          code_booking?: string | null
           confidence_score?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -6227,30 +6209,15 @@ export type Database = {
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
-          handled_by_user_id?: string | null
           id?: string
           is_void?: boolean | null
-          jenis_transaksi?: string | null
           journal_date?: string | null
-          journal_number?: string | null
           journal_ref?: string | null
-          kategori?: string | null
           keterangan?: string | null
-          license_plate?: string | null
-          make?: string | null
           memo?: string | null
-          model?: string | null
-          nama?: string | null
-          note?: string | null
-          payee_name?: string | null
-          payer_name?: string | null
-          posting_date?: string | null
-          reference?: string | null
           reference_id?: string | null
           reference_number?: string | null
-          reference_type?: string | null
           sales_transactions_id?: string | null
-          service_type?: string | null
           source_file?: string | null
           source_id?: string | null
           source_ref?: string | null
@@ -6260,8 +6227,6 @@ export type Database = {
           status?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
-          sumber_penerimaan?: string | null
-          sumber_pengeluaran?: string | null
           tanggal?: string | null
           total_credit?: number | null
           total_debit?: number | null
@@ -6269,13 +6234,9 @@ export type Database = {
           transaction_id?: string | null
           transaction_type?: string | null
           updated_at?: string | null
-          vehicle_type?: string | null
-          void_date?: string | null
-          void_reason?: string | null
         }
         Update: {
           account_code?: string | null
-          account_id?: string | null
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
@@ -6288,7 +6249,6 @@ export type Database = {
           bank_mutation_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          code_booking?: string | null
           confidence_score?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -6304,30 +6264,15 @@ export type Database = {
           description?: string | null
           disbursement_id?: string | null
           entry_date?: string | null
-          handled_by_user_id?: string | null
           id?: string
           is_void?: boolean | null
-          jenis_transaksi?: string | null
           journal_date?: string | null
-          journal_number?: string | null
           journal_ref?: string | null
-          kategori?: string | null
           keterangan?: string | null
-          license_plate?: string | null
-          make?: string | null
           memo?: string | null
-          model?: string | null
-          nama?: string | null
-          note?: string | null
-          payee_name?: string | null
-          payer_name?: string | null
-          posting_date?: string | null
-          reference?: string | null
           reference_id?: string | null
           reference_number?: string | null
-          reference_type?: string | null
           sales_transactions_id?: string | null
-          service_type?: string | null
           source_file?: string | null
           source_id?: string | null
           source_ref?: string | null
@@ -6337,8 +6282,6 @@ export type Database = {
           status?: string | null
           stock_adjustment_id?: string | null
           stock_movement_id?: string | null
-          sumber_penerimaan?: string | null
-          sumber_pengeluaran?: string | null
           tanggal?: string | null
           total_credit?: number | null
           total_debit?: number | null
@@ -6346,9 +6289,6 @@ export type Database = {
           transaction_id?: string | null
           transaction_type?: string | null
           updated_at?: string | null
-          vehicle_type?: string | null
-          void_date?: string | null
-          void_reason?: string | null
         }
         Relationships: [
           {
@@ -6445,20 +6385,6 @@ export type Database = {
             foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
-          },
-          {
-            foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -6511,20 +6437,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_id_fkey"
-            columns: ["journal_id"]
-            isOneToOne: false
-            referencedRelation: "v_wms_reversal_audit"
-            referencedColumns: ["journal_entry_id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_id_fkey"
-            columns: ["journal_id"]
-            isOneToOne: false
-            referencedRelation: "view_general_ledger"
-            referencedColumns: ["journal_id"]
           },
           {
             foreignKeyName: "journal_entry_lines_journal_id_fkey"
@@ -9959,15 +9871,20 @@ export type Database = {
           debit_account_name: string | null
           description: string | null
           direction: string
+          dpp_amount: number | null
           evidence_url: string | null
           fingerprint: string | null
+          gross_amount: number | null
           id: string
           imported_at: string
+          invoice_id: string | null
           is_locked: boolean
           mutation_date: string | null
           ocr_text: string | null
           payment_type: string | null
           posted_at: string | null
+          pph_amount: number | null
+          ppn_amount: number | null
           processed: boolean
           processed_at: string | null
           processed_id: string | null
@@ -10006,15 +9923,20 @@ export type Database = {
           debit_account_name?: string | null
           description?: string | null
           direction: string
+          dpp_amount?: number | null
           evidence_url?: string | null
           fingerprint?: string | null
+          gross_amount?: number | null
           id?: string
           imported_at?: string
+          invoice_id?: string | null
           is_locked?: boolean
           mutation_date?: string | null
           ocr_text?: string | null
           payment_type?: string | null
           posted_at?: string | null
+          pph_amount?: number | null
+          ppn_amount?: number | null
           processed?: boolean
           processed_at?: string | null
           processed_id?: string | null
@@ -10053,15 +9975,20 @@ export type Database = {
           debit_account_name?: string | null
           description?: string | null
           direction?: string
+          dpp_amount?: number | null
           evidence_url?: string | null
           fingerprint?: string | null
+          gross_amount?: number | null
           id?: string
           imported_at?: string
+          invoice_id?: string | null
           is_locked?: boolean
           mutation_date?: string | null
           ocr_text?: string | null
           payment_type?: string | null
           posted_at?: string | null
+          pph_amount?: number | null
+          ppn_amount?: number | null
           processed?: boolean
           processed_at?: string | null
           processed_id?: string | null
@@ -12025,55 +11952,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_wms_reversal_audit: {
-        Row: {
-          account_code: string | null
-          credit: number | null
-          debit: number | null
-          entry_date: string | null
-          is_fatal: boolean | null
-          is_period_locked: boolean | null
-          journal_entry_id: string | null
-          movement_type: string | null
-          movement_value: number | null
-          processed: boolean | null
-          qty: number | null
-          reference_type: string | null
-          reversed: boolean | null
-          sku: string | null
-          transaction_date: string | null
-          wms_reference: string | null
-          wms_transaction_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_journal_entries_account"
-            columns: ["account_code"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["account_code"]
-          },
-          {
-            foreignKeyName: "fk_journal_entries_account"
-            columns: ["account_code"]
-            isOneToOne: false
-            referencedRelation: "vw_cash_account_balance"
-            referencedColumns: ["account_code"]
-          },
-        ]
-      }
-      view_general_ledger: {
-        Row: {
-          account_code: string | null
-          account_name: string | null
-          credit: number | null
-          date: string | null
-          debit: number | null
-          journal_id: string | null
-          reference: string | null
-        }
-        Relationships: []
-      }
       vw_attendance_with_employee: {
         Row: {
           attendance_date: string | null
@@ -12098,6 +11976,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vw_bank_mutation_journal_summary: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bank_amount: number | null
+          category: string | null
+          created_at: string | null
+          credit: number | null
+          credit_account_code: string | null
+          debit: number | null
+          debit_account_code: string | null
+          description: string | null
+          mutation_date: string | null
+          mutation_id: string | null
+          source: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
+      vw_bank_mutations_ui: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          balance: number | null
+          bukti_url: string | null
+          category: string | null
+          created_at: string | null
+          credit: number | null
+          credit_account_code: string | null
+          debit: number | null
+          debit_account_code: string | null
+          description: string | null
+          mutation_date: string | null
+          mutation_id: string | null
+          ocr_detected_counterparty: string | null
+        }
+        Relationships: []
       }
       vw_cash_account_balance: {
         Row: {

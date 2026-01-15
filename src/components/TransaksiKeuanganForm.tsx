@@ -1225,8 +1225,8 @@ export default function TransaksiKeuanganForm() {
         },
       );
 
-      if (!response.ok) {
-        throw new Error(`OCR processing failed: ${response.statusText}`);
+      if (!responseData) {
+        throw new Error("OCR processing failed: empty response");
       }
 
       const ocrData = await response.json();

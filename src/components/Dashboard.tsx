@@ -189,7 +189,7 @@ export default function Dashboard() {
           {currentView === "overview" ? (
             <>
               {/* Mutation Summary */}
-              <div className=\"mb-8\">
+              <div className="mb-8">
                 <MutationSummaryCard />
               </div>
 

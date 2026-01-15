@@ -1,8 +1,8 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders, status: 200 });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {
@@ -713,7 +713,7 @@ async function tryDirectGoogleVision(imageUrl: string): Promise<string> {
       `https://vision.googleapis.com/v1/images:annotate?key=${googleApiKey}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({
           requests: [
             {

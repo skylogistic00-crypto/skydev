@@ -1,4 +1,4 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     // The signup-multi-entity function code
-    const functionCode = `import { corsHeaders } from "@shared/cors.ts";
+    const functionCode = `import { corsHeaders } from "./_shared/cors.ts";
 import { createSupabaseClient } from "@shared/supabase-client.ts";
 import { validateEmail, validatePassword, validateRequiredFields } from "@shared/validation.ts";
 

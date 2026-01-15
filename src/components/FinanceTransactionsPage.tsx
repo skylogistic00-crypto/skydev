@@ -243,7 +243,7 @@ export default function FinanceTransactionsPage({
       const { data: raw, error } = await supabase.functions.invoke(
         "supabase-functions-vision-google-ocr",
         {
-          body: { signedUrl },
+          body: { image_url: signedUrl },
         },
       );
 

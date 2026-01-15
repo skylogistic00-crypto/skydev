@@ -1001,6 +1001,7 @@ export default function EmployeeAdvanceForm() {
                     <Label>Jumlah Uang Muka *</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="0"
                       value={advanceForm.amount || ""}
                       onChange={(e) =>
@@ -1009,6 +1010,7 @@ export default function EmployeeAdvanceForm() {
                           amount: parseFloat(e.target.value) || 0,
                         })
                       }
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
                     />
                   </div>
 
@@ -1259,6 +1261,7 @@ export default function EmployeeAdvanceForm() {
                     <Label>Jumlah *</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="0"
                       value={settlementForm.amount || ""}
                       onChange={(e) => {
@@ -1269,6 +1272,7 @@ export default function EmployeeAdvanceForm() {
                           total: amount + settlementForm.ppn,
                         });
                       }}
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
                     />
                   </div>
 
@@ -1487,6 +1491,7 @@ export default function EmployeeAdvanceForm() {
                     <Label>Jumlah Dikembalikan *</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="0"
                       value={returnForm.amount || ""}
                       onChange={(e) =>
@@ -1495,6 +1500,7 @@ export default function EmployeeAdvanceForm() {
                           amount: parseFloat(e.target.value) || 0,
                         })
                       }
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
                     />
                   </div>
 

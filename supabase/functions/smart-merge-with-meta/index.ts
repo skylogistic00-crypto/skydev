@@ -1,4 +1,4 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 type SourceType = "user" | "ocr";
 type DocumentType = string;

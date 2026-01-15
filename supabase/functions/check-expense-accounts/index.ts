@@ -1,13 +1,11 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 const endpoint = "https://api.picaos.com/v1/passthrough/v1/projects";
 const actionId = "conn_mod_def::GC40SckOddE::NFFu2-49QLyGsPBdfweitg";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {

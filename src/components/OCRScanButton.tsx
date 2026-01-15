@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { parseFallbackMatchFromOCRText } from "@/utils/ocrFallbackParser";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +13,47 @@ import { supabase } from "@/lib/supabase";
 import imageCompression from "browser-image-compression";
 import { useToast } from "@/components/ui/use-toast";
 
+import type { OCRFallbackMatch } from "@/utils/ocrFallbackParser";
+
 interface OCRScanButtonProps {
   onImageUploaded?: (url: string, filePath: string) => void;
   onTextExtracted?: (text: string) => void;
+  /**
+   * If set, OCRScanButton will save directly to that bank_mutations row.
+   * For Global OCR (fallback mode), DO NOT pass this.
+   */
+  bankMutationId?: string;
+  /**
+   * Legacy alias. Prefer bankMutationId.
+   */
+  rowId?: string;
+  /**
+   * Global scan fallback matching metadata.
+   * IMPORTANT: must come from OCR parsing (not manual user input).
+   */
+  fallbackMatch?: OCRFallbackMatch;
+  /** Optional: extracted fields to be saved into bank_mutations (in addition to bukti_url & ocr_text) */
+  extractedFields?: {
+    bukti_url?: string | null;
+    dpp_amount?: number | null;
+    vat_amount?: number | null;
+    stamp_amount?: number | null;
+    transaction_type?: "SALES" | "EXPENSE" | null;
+    revenue_account_code?: string | null;
+    expense_account_code?: string | null;
+    vat_output_account_code?: string | null;
+    vat_input_account_code?: string | null;
+  };
+  /**
+   * Called when global scan returns match candidates.
+   */
+  onFallbackCandidates?: (payload: {
+    candidates: Array<{ row: { id: string; date: string | null; description: string | null; debit: number | null; credit: number | null }; score: number }>;
+    fallbackMatch: OCRFallbackMatch;
+    ocrText: string;
+    filePath: string;
+    publicUrl: string;
+  }) => void;
   bucketName?: string;
   folderPath?: string;
 }
@@ -22,7 +61,15 @@ interface OCRScanButtonProps {
 export default function OCRScanButton({
   onImageUploaded,
   onTextExtracted,
-  bucketName = "documents",
+  bankMutationId,
+  rowId,
+  fallbackMatch,
+  extractedFields,
+  onFallbackCandidates,
+  // Default ke bucket yang memang dipakai untuk OCR receipts di project ini
+  // Default ke bucket yang memang dipakai untuk OCR receipts di project ini.
+  // NOTE: untuk Bank Mutation, komponen pemanggil sudah override ke bucketName="mutation-evidence".
+  bucketName = "ocr-receipts",
   folderPath = "ocr-scans",
 }: OCRScanButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,18 +116,21 @@ export default function OCRScanButton({
         data: { publicUrl },
       } = supabase.storage.from(bucketName).getPublicUrl(filePath);
 
-      toast({
-        title: "Upload berhasil",
-        description: "Gambar berhasil diupload",
-      });
+      // Upload success is not the same as OCR/DB success.
+      // Avoid showing a generic success toast here to prevent misleading UX.
 
       // 5. Callback with URL
+      // IMPORTANT: UI should not treat upload as "OCR success".
+      // Use this callback only to propagate URL/path; do not show "success" toast here.
       if (onImageUploaded) {
         onImageUploaded(publicUrl, data.path);
       }
 
-      // 6. Call Google Vision OCR if onTextExtracted is provided
-      if (onTextExtracted) {
+      // 6. Call Google Vision OCR
+      // IMPORTANT: Previously this only ran when onTextExtracted was provided.
+      // That can lead to "upload success but no OCR/DB update and no logs".
+      // We always run the OCR pipeline; onTextExtracted is optional.
+      if (true) {
         try {
           // Convert file to base64
           const reader = new FileReader();
@@ -103,9 +153,164 @@ export default function OCRScanButton({
             }
           );
 
-          if (!ocrError && ocrData?.extracted_text) {
-            onTextExtracted(ocrData.extracted_text);
+          if (ocrError) {
+            console.error("Vision OCR invoke error:", ocrError);
+            toast({
+              title: "OCR gagal",
+              description: ocrError.message,
+              variant: "destructive",
+            });
+            return;
           }
+
+          const extractedText =
+            ocrData?.extracted_text || ocrData?.text || ocrData?.fullText || null;
+
+          if (!extractedText) {
+            console.warn("[OCR][VISION] response has no text", { ocrData, bucket: bucketName, filePath });
+            toast({
+              title: "OCR gagal",
+              description: "OCR tidak mengembalikan teks",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Always log end-to-end OCR context so we can debug cases where file uploaded but DB not updated
+          const derivedFallback = parseFallbackMatchFromOCRText(extractedText);
+          const effectiveBankMutationId = bankMutationId ?? rowId;
+          console.log("[OCR][FLOW]", {
+            mode: effectiveBankMutationId ? "SAVE" : "FALLBACK",
+            bankMutationId: effectiveBankMutationId ?? null,
+            bucket: bucketName,
+            filePath,
+            publicUrl,
+            derivedFallback,
+          });
+
+          if (onTextExtracted) onTextExtracted(extractedText);
+
+          // Mode 1: Global OCR (fallback) -> do NOT save yet, ask user to choose target row
+          if (!effectiveBankMutationId) {
+            if (!onFallbackCandidates) {
+              toast({
+                title: "OCR selesai",
+                description: "Pilih baris mutasi dulu untuk menyimpan hasil OCR",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            const { data: persistData, error: persistError } = await supabase.functions.invoke(
+              "supabase-functions-ai-ocr-bank-mutation",
+              {
+                body: {
+                  fallback: {
+                    date: derivedFallback?.date ?? null,
+                    amount: derivedFallback?.amount ?? null,
+                    description: derivedFallback?.description ?? null,
+                  },
+                  image_url: publicUrl,
+                  bucket: bucketName,
+                  filePath,
+                  ocrText: extractedText,
+                  extracted: {
+                    bukti_url: publicUrl,
+                    ...(extractedFields || {}),
+                  },
+                },
+              }
+            );
+
+            if (persistError) {
+              console.error("[OCR][FALLBACK] gagal ambil kandidat bank_mutations", {
+                error: persistError,
+                filePath,
+                bucket: bucketName,
+                publicUrl,
+                fallback: fallbackMatch || derivedFallback,
+              });
+              toast({
+                title: "OCR gagal",
+                description: persistError.message,
+                variant: "destructive",
+              });
+              return;
+            }
+
+            if (!persistData?.candidates) {
+              console.error("[OCR][FALLBACK] edge function tidak mengembalikan candidates", {
+                persistData,
+                filePath,
+                bucket: bucketName,
+                publicUrl,
+              });
+              toast({
+                title: "OCR gagal",
+                description: "Edge function tidak mengembalikan kandidat matching",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            onFallbackCandidates({
+              candidates: persistData.candidates,
+              fallbackMatch: fallbackMatch || derivedFallback,
+              ocrText: extractedText,
+              filePath,
+              publicUrl,
+            });
+            return;
+          }
+
+          // Mode 2: Direct save to specific bank_mutations row
+          const { data: persistData, error: persistError } = await supabase.functions.invoke(
+            "supabase-functions-ai-ocr-bank-mutation",
+            {
+              body: {
+                bank_mutation_id: effectiveBankMutationId,
+                image_url: publicUrl,
+                bucket: bucketName,
+                filePath,
+                ocrText: extractedText,
+                extracted: {
+                  bukti_url: publicUrl,
+                  ...(extractedFields || {}),
+                },
+              },
+            }
+          );
+
+          if (persistError) {
+            console.error("[OCR][SAVE] gagal simpan OCR ke bank_mutations", {
+              bankMutationId: effectiveBankMutationId,
+              error: persistError,
+              filePath,
+              bucket: bucketName,
+              publicUrl,
+            });
+            toast({
+              title: "Simpan OCR gagal",
+              description: persistError.message,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          const matchedId = (persistData as any)?.matched?.id;
+          if (!matchedId) {
+            console.warn("[OCR][SAVE] edge function success tapi matched.id kosong (indikasi tidak update DB)", {
+              persistData,
+              bankMutationId: effectiveBankMutationId,
+              filePath,
+              bucket: bucketName,
+              publicUrl,
+            });
+          }
+          toast({
+            title: "OCR berhasil",
+            description: matchedId ? `OCR tersimpan ke mutasi: ${matchedId}` : "OCR tersimpan",
+          });
         } catch (ocrErr) {
           console.error("OCR processing error:", ocrErr);
         }

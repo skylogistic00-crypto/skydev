@@ -1,4 +1,4 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 // Utility: Convert string to snake_case
 function toSnakeCase(str: string): string {

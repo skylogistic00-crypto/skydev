@@ -1,4 +1,4 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 interface AnggotaKeluarga {
   nama: string;
@@ -438,7 +438,7 @@ async function performOCR(imageUrl: string, fileType?: string): Promise<string> 
           `https://vision.googleapis.com/v1/images:annotate?key=${googleApiKey}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
             body: JSON.stringify({
               requests: [
                 {

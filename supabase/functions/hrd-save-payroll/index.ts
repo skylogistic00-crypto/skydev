@@ -1,12 +1,9 @@
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 import { createSupabaseClient } from "@shared/supabase-client.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      headers: corsHeaders, 
-      status: 204 
-    });
+    return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {

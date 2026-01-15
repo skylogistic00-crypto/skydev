@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { corsHeaders } from "./_shared/cors.ts";
 
 // Helper function to determine account type based on intent code
 // Must match check constraint: 'Aset', 'Kewajiban', 'Ekuitas', 'Pendapatan', 'Beban Pokok Penjualan', 'Beban Operasional', 'Pendapatan & Beban Lain-lain'
@@ -116,10 +117,6 @@ function getUsageRole(accountCode: string, accountName: string): string | null {
   return "other";
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_KEY") || "";

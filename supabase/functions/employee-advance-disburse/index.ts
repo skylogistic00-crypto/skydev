@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from "@shared/supabase-client.ts";
-import { corsHeaders } from "@shared/cors.ts";
+import { corsHeaders } from "./_shared/cors.ts";
 
 interface DisbursementRequest {
   advance_id: string;
