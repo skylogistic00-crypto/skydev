@@ -19,11 +19,15 @@ interface TaxExtractionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  /**
+   * Optional: called with the extracted payload so the parent can update row state immediately
+   * without refetching.
+   */
+  onExtracted?: (data: ExtractedTaxData) => void;
 }
 
 interface ExtractedTaxData {
   invoice_id: string;
-  invoice_type?: "TAX" | "NON_TAX";
   dpp_amount: number;
   ppn_amount: number;
   pph_amount: number;
@@ -36,6 +40,7 @@ export function TaxExtractionModal({
   open,
   onOpenChange,
   onSuccess,
+  onExtracted,
 }: TaxExtractionModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +93,7 @@ export function TaxExtractionModal({
 
       setExtractedData(result.data);
       setSuccess(true);
+      onExtracted?.(result.data);
       onSuccess?.();
     } catch (err: any) {
       setError(err.message || "An error occurred");

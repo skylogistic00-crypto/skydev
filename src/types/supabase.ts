@@ -714,6 +714,13 @@ export type Database = {
             foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -1042,6 +1049,77 @@ export type Database = {
           },
         ]
       }
+      bank_mutation_journal_drafts: {
+        Row: {
+          bank_mutation_id: string
+          created_at: string
+          created_by: string | null
+          draft_lines: Json
+          id: string
+          posted_at: string | null
+          status: string
+          total_credit: number
+          total_debit: number
+          transaction_link_id: string
+          updated_at: string
+        }
+        Insert: {
+          bank_mutation_id: string
+          created_at?: string
+          created_by?: string | null
+          draft_lines: Json
+          id?: string
+          posted_at?: string | null
+          status?: string
+          total_credit?: number
+          total_debit?: number
+          transaction_link_id: string
+          updated_at?: string
+        }
+        Update: {
+          bank_mutation_id?: string
+          created_at?: string
+          created_by?: string | null
+          draft_lines?: Json
+          id?: string
+          posted_at?: string | null
+          status?: string
+          total_credit?: number
+          total_debit?: number
+          transaction_link_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_bm_journal_drafts_bank_mutation"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bm_journal_drafts_bank_mutation"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutation_journal_summary"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "fk_bm_journal_drafts_bank_mutation"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutations_ui"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "fk_bm_journal_drafts_transaction_link"
+            columns: ["transaction_link_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_mutation_uploads: {
         Row: {
           approval_status: string | null
@@ -1151,6 +1229,7 @@ export type Database = {
           bukti: string | null
           bukti_url: string | null
           category: string | null
+          confidence_score: string | null
           counterpartyname: string | null
           counterpartyrole: string | null
           counterpartytype: string | null
@@ -1167,13 +1246,20 @@ export type Database = {
           dpp_amount: number | null
           evidence_url: string | null
           expense_account_code: string | null
+          faktur_pajak_file_path: string | null
+          faktur_pajak_storage_bucket: string | null
+          faktur_pajak_url: string | null
           fingerprint: string | null
           gross_amount: number | null
           id: string
+          invoice_date: string | null
           invoice_file_path: string | null
           invoice_id: string | null
           invoice_number: string | null
           invoice_storage_bucket: string | null
+          invoice_type: string | null
+          invoice_url: string | null
+          is_taxable: boolean | null
           journal_entry_id: string | null
           journal_ref: string | null
           kas_bank: string | null
@@ -1184,8 +1270,10 @@ export type Database = {
           ocr_detected_amount: string | null
           ocr_detected_counterparty: string | null
           ocr_detected_date: string | null
+          ocr_result: string | null
           ocr_text: string | null
           payment_type: string | null
+          posted_at: string | null
           posting_date: string | null
           pph_amount: number | null
           ppn_amount: number | null
@@ -1205,6 +1293,8 @@ export type Database = {
           tax_extraction_confidence: number | null
           tax_extraction_status: string | null
           tax_extraction_timestamp: string | null
+          tax_invoice_date: string | null
+          tax_invoice_number: string | null
           transaction_date: string | null
           transaction_direction: string | null
           transaction_type: string | null
@@ -1228,6 +1318,7 @@ export type Database = {
           bukti?: string | null
           bukti_url?: string | null
           category?: string | null
+          confidence_score?: string | null
           counterpartyname?: string | null
           counterpartyrole?: string | null
           counterpartytype?: string | null
@@ -1244,13 +1335,20 @@ export type Database = {
           dpp_amount?: number | null
           evidence_url?: string | null
           expense_account_code?: string | null
+          faktur_pajak_file_path?: string | null
+          faktur_pajak_storage_bucket?: string | null
+          faktur_pajak_url?: string | null
           fingerprint?: string | null
           gross_amount?: number | null
           id?: string
+          invoice_date?: string | null
           invoice_file_path?: string | null
           invoice_id?: string | null
           invoice_number?: string | null
           invoice_storage_bucket?: string | null
+          invoice_type?: string | null
+          invoice_url?: string | null
+          is_taxable?: boolean | null
           journal_entry_id?: string | null
           journal_ref?: string | null
           kas_bank?: string | null
@@ -1261,8 +1359,10 @@ export type Database = {
           ocr_detected_amount?: string | null
           ocr_detected_counterparty?: string | null
           ocr_detected_date?: string | null
+          ocr_result?: string | null
           ocr_text?: string | null
           payment_type?: string | null
+          posted_at?: string | null
           posting_date?: string | null
           pph_amount?: number | null
           ppn_amount?: number | null
@@ -1282,6 +1382,8 @@ export type Database = {
           tax_extraction_confidence?: number | null
           tax_extraction_status?: string | null
           tax_extraction_timestamp?: string | null
+          tax_invoice_date?: string | null
+          tax_invoice_number?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
@@ -1305,6 +1407,7 @@ export type Database = {
           bukti?: string | null
           bukti_url?: string | null
           category?: string | null
+          confidence_score?: string | null
           counterpartyname?: string | null
           counterpartyrole?: string | null
           counterpartytype?: string | null
@@ -1321,13 +1424,20 @@ export type Database = {
           dpp_amount?: number | null
           evidence_url?: string | null
           expense_account_code?: string | null
+          faktur_pajak_file_path?: string | null
+          faktur_pajak_storage_bucket?: string | null
+          faktur_pajak_url?: string | null
           fingerprint?: string | null
           gross_amount?: number | null
           id?: string
+          invoice_date?: string | null
           invoice_file_path?: string | null
           invoice_id?: string | null
           invoice_number?: string | null
           invoice_storage_bucket?: string | null
+          invoice_type?: string | null
+          invoice_url?: string | null
+          is_taxable?: boolean | null
           journal_entry_id?: string | null
           journal_ref?: string | null
           kas_bank?: string | null
@@ -1338,8 +1448,10 @@ export type Database = {
           ocr_detected_amount?: string | null
           ocr_detected_counterparty?: string | null
           ocr_detected_date?: string | null
+          ocr_result?: string | null
           ocr_text?: string | null
           payment_type?: string | null
+          posted_at?: string | null
           posting_date?: string | null
           pph_amount?: number | null
           ppn_amount?: number | null
@@ -1359,6 +1471,8 @@ export type Database = {
           tax_extraction_confidence?: number | null
           tax_extraction_status?: string | null
           tax_extraction_timestamp?: string | null
+          tax_invoice_date?: string | null
+          tax_invoice_number?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
@@ -4997,6 +5111,7 @@ export type Database = {
           notes: string | null
           reference_id: string
           reference_table: string
+          rejection_reason: string | null
           source_id: string | null
           source_table: string | null
           transaction_date: string | null
@@ -5016,6 +5131,7 @@ export type Database = {
           notes?: string | null
           reference_id: string
           reference_table: string
+          rejection_reason?: string | null
           source_id?: string | null
           source_table?: string | null
           transaction_date?: string | null
@@ -5035,6 +5151,7 @@ export type Database = {
           notes?: string | null
           reference_id?: string
           reference_table?: string
+          rejection_reason?: string | null
           source_id?: string | null
           source_table?: string | null
           transaction_date?: string | null
@@ -5507,6 +5624,13 @@ export type Database = {
             foreignKeyName: "fk_gl_journal"
             columns: ["journal_id"]
             isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gl_journal"
+            columns: ["journal_id"]
+            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -5515,6 +5639,13 @@ export type Database = {
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
             referencedColumns: ["id"]
           },
           {
@@ -5983,6 +6114,13 @@ export type Database = {
             foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_accounting_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -5995,32 +6133,72 @@ export type Database = {
           },
         ]
       }
-      invoice_payments: {
+      invoices: {
         Row: {
-          amount: number | null
           bank_mutation_id: string | null
+          confidence_score: number | null
+          created_at: string
+          dpp: number
           id: string
-          invoice_id: string | null
-          invoice_type: string | null
-          payment_date: string | null
+          invoice_date: string
+          invoice_number: string
+          ocr_result: Json | null
+          pph: number | null
+          ppn: number | null
+          total: number
+          updated_at: string
         }
         Insert: {
-          amount?: number | null
           bank_mutation_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dpp: number
           id?: string
-          invoice_id?: string | null
-          invoice_type?: string | null
-          payment_date?: string | null
+          invoice_date: string
+          invoice_number: string
+          ocr_result?: Json | null
+          pph?: number | null
+          ppn?: number | null
+          total: number
+          updated_at?: string
         }
         Update: {
-          amount?: number | null
           bank_mutation_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dpp?: number
           id?: string
-          invoice_id?: string | null
-          invoice_type?: string | null
-          payment_date?: string | null
+          invoice_date?: string
+          invoice_number?: string
+          ocr_result?: Json | null
+          pph?: number | null
+          ppn?: number | null
+          total?: number
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bank_mutation_journal_summary"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bank_mutations_ui"
+            referencedColumns: ["mutation_id"]
+          },
+        ]
       }
       item_brand_mapping: {
         Row: {
@@ -6127,6 +6305,7 @@ export type Database = {
       journal_entries: {
         Row: {
           account_code: string | null
+          account_id: string | null
           account_name: string | null
           account_number: string | null
           account_type: string | null
@@ -6182,6 +6361,7 @@ export type Database = {
         }
         Insert: {
           account_code?: string | null
+          account_id?: string | null
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
@@ -6237,6 +6417,7 @@ export type Database = {
         }
         Update: {
           account_code?: string | null
+          account_id?: string | null
           account_name?: string | null
           account_number?: string | null
           account_type?: string | null
@@ -6385,6 +6566,13 @@ export type Database = {
             foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_items_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
             referencedRelation: "vw_journal_summary"
             referencedColumns: ["id"]
           },
@@ -6436,6 +6624,13 @@ export type Database = {
             columns: ["journal_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries_remaining_balance"
             referencedColumns: ["id"]
           },
           {
@@ -10074,6 +10269,73 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_invoices: {
+        Row: {
+          bank_mutation_id: string | null
+          confidence_score: number | null
+          created_at: string
+          dpp: number
+          id: string
+          ocr_result: Json | null
+          pph: number | null
+          ppn: number
+          tax_invoice_date: string
+          tax_invoice_number: string
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          bank_mutation_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dpp: number
+          id?: string
+          ocr_result?: Json | null
+          pph?: number | null
+          ppn: number
+          tax_invoice_date: string
+          tax_invoice_number: string
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          bank_mutation_id?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dpp?: number
+          id?: string
+          ocr_result?: Json | null
+          pph?: number | null
+          ppn?: number
+          tax_invoice_date?: string
+          tax_invoice_number?: string
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bank_mutation_journal_summary"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bank_mutations_ui"
+            referencedColumns: ["mutation_id"]
+          },
+        ]
+      }
       tax_reminders: {
         Row: {
           completed_at: string | null
@@ -10685,6 +10947,90 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_transaction_summary"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_links: {
+        Row: {
+          bank_mutation_id: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          match_status: string
+          tax_invoice_id: string | null
+        }
+        Insert: {
+          bank_mutation_id: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          match_status: string
+          tax_invoice_id?: string | null
+        }
+        Update: {
+          bank_mutation_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          match_status?: string
+          tax_invoice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_transaction_links_bank"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transaction_links_bank"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutation_journal_summary"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "fk_transaction_links_bank"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutations_ui"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "fk_transaction_links_invoice"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transaction_links_tax_invoice"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_links_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "bank_mutations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_links_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutation_journal_summary"
+            referencedColumns: ["mutation_id"]
+          },
+          {
+            foreignKeyName: "transaction_links_bank_mutation_id_fkey"
+            columns: ["bank_mutation_id"]
+            isOneToOne: true
+            referencedRelation: "vw_bank_mutations_ui"
+            referencedColumns: ["mutation_id"]
           },
         ]
       }
@@ -11925,6 +12271,116 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_entries_remaining_balance: {
+        Row: {
+          account_code: string | null
+          account_id: string | null
+          account_name: string | null
+          account_number: string | null
+          account_type: string | null
+          amount: number | null
+          approval_log: Json | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          attachment_url: string | null
+          bank_mutation_id: string | null
+          bukti: string | null
+          bukti_url: string | null
+          confidence_score: number | null
+          created_at: string | null
+          created_by: string | null
+          credit: number | null
+          credit_account: string | null
+          credit_account_code: string | null
+          credit_account_name: string | null
+          date: string | null
+          debit: number | null
+          debit_account: string | null
+          debit_account_code: string | null
+          debit_account_name: string | null
+          description: string | null
+          disbursement_id: string | null
+          entry_date: string | null
+          id: string | null
+          is_void: boolean | null
+          journal_date: string | null
+          journal_ref: string | null
+          keterangan: string | null
+          memo: string | null
+          reference_id: string | null
+          reference_number: string | null
+          remaining_balance: number | null
+          sales_transactions_id: string | null
+          source_file: string | null
+          source_id: string | null
+          source_ref: string | null
+          source_reference: string | null
+          source_table: string | null
+          source_type: string | null
+          status: string | null
+          stock_adjustment_id: string | null
+          stock_movement_id: string | null
+          tanggal: string | null
+          total_credit: number | null
+          total_debit: number | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_type: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_code"]
+          },
+          {
+            foreignKeyName: "fk_journal_entries_account"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "vw_cash_account_balance"
+            referencedColumns: ["account_code"]
+          },
+          {
+            foreignKeyName: "fk_journal_stock_adj"
+            columns: ["stock_adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "stock_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_stock_adj"
+            columns: ["stock_adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "stock_adjustments_with_supplier"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_sales_transactions_fk"
+            columns: ["sales_transactions_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movement"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_adjustments_with_supplier: {
         Row: {
           created_at: string | null
@@ -12987,6 +13443,10 @@ export type Database = {
         }[]
       }
       normalize_account_type: { Args: { input: string }; Returns: string }
+      post_journal_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
       post_journal_to_general_ledger: {
         Args: { p_journal_id: string }
         Returns: undefined

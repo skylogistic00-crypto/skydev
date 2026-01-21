@@ -19,6 +19,17 @@ interface OCRScanButtonProps {
   onImageUploaded?: (url: string, filePath: string) => void;
   onTextExtracted?: (text: string) => void;
   /**
+   * Fires after the edge function successfully persists OCR results.
+   * Useful to update UI immediately without a full refresh.
+   */
+  onPersisted?: (payload: {
+    bankMutationId?: string;
+    publicUrl: string;
+    filePath: string;
+    ocrText: string;
+    matchedId?: string;
+  }) => void;
+  /**
    * If set, OCRScanButton will save directly to that bank_mutations row.
    * For Global OCR (fallback mode), DO NOT pass this.
    */
@@ -61,6 +72,7 @@ interface OCRScanButtonProps {
 export default function OCRScanButton({
   onImageUploaded,
   onTextExtracted,
+  onPersisted,
   bankMutationId,
   rowId,
   fallbackMatch,
@@ -311,6 +323,16 @@ export default function OCRScanButton({
             title: "OCR berhasil",
             description: matchedId ? `OCR tersimpan ke mutasi: ${matchedId}` : "OCR tersimpan",
           });
+
+          if (onPersisted) {
+            onPersisted({
+              bankMutationId: effectiveBankMutationId,
+              publicUrl,
+              filePath,
+              ocrText: extractedText,
+              matchedId,
+            });
+          }
         } catch (ocrErr) {
           console.error("OCR processing error:", ocrErr);
         }

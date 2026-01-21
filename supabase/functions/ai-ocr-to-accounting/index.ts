@@ -290,7 +290,7 @@ Deno.serve(async (req) => {
         .from("journal_entries")
         .insert([
           {
-            entry_date,
+            transaction_date: entry_date,
             description,
             total_amount,
             status: "draft",

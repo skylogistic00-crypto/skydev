@@ -81,6 +81,9 @@ interface GLTransaction {
   debit: number;
   credit: number;
   entry_id: string;
+  created_at?: string;
+  journal_ref?: string;
+  akun_lawan?: string;
 }
 
 export default function IntegratedFinancialReport() {
@@ -288,13 +291,14 @@ export default function IntegratedFinancialReport() {
     setLoadingJournal(true);
     try {
       let query = supabase
-        .from("journal_entries")
+        .from("journal_entries_remaining_balance")
         .select(
-          "*, tanggal, account_code, account_name, debit, credit, transaction_date, journal_ref, source_id",
+          "*, transaction_date, journal_ref, source_id, account_code, account_name, description, debit, credit, debit_account_code, debit_account_name, credit_account_code, credit_account_name, remaining_balance",
         )
+        // Show newest first in Journal Entries table.
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
-        .order("journal_ref", { ascending: false });
+        .order("id", { ascending: false });
 
       if (journalStartDate) {
         query = query.gte("transaction_date", journalStartDate);
@@ -330,31 +334,27 @@ export default function IntegratedFinancialReport() {
       // Enrich journal entries with account names and jenis_transaksi
       const enrichedEntries =
         journalData?.map((entry) => {
-          // Determine jenis_transaksi based on reference_type
-          let jenisTransaksi = '-';
-          
-          if (entry.reference_type === 'cash_disbursement') {
-            jenisTransaksi = 'Pengeluaran';
-          } else if (entry.reference_type === 'cash_receipts') {
-            jenisTransaksi = 'Penerimaan';
-          } else if (entry.reference_type === 'purchase_transactions') {
-            jenisTransaksi = 'Pembelian';
-          } else if (entry.reference_type === 'sales_transactions') {
-            jenisTransaksi = 'Penjualan';
-          } else if (entry.reference_type === 'internal_usage') {
-            jenisTransaksi = 'Pemakaian Internal';
-          } else if (entry.reference_type === 'employee_advances') {
-            jenisTransaksi = 'Kasbon Karyawan';
-          } else if (entry.jenis_transaksi) {
-            jenisTransaksi = entry.jenis_transaksi;
-          }
+          // Determine jenis_transaksi (do not depend on reference_type)
+          const jenisTransaksi =
+            entry.transaction_type || entry.jenis_transaksi || entry.reference_type || "-";
 
           return {
             ...entry,
+            // Ensure UI uses `description` consistently
+            description:
+              (entry as any).description ??
+              (entry as any).deskripsi ??
+              (entry as any).memo ??
+              (entry as any).keterangan ??
+              "",
             debit_account_name:
-              entry.debit_account_name || coaMap.get(entry.debit_account) || "-",
+              entry.debit_account_name ||
+              coaMap.get(entry.debit_account_code || entry.debit_account) ||
+              "-",
             credit_account_name:
-              entry.credit_account_name || coaMap.get(entry.credit_account) || "-",
+              entry.credit_account_name ||
+              coaMap.get(entry.credit_account_code || entry.credit_account) ||
+              "-",
             jenis_transaksi: jenisTransaksi,
           };
         }) || [];
@@ -540,7 +540,7 @@ export default function IntegratedFinancialReport() {
   const getTransactionsForAccount = (accountCode: string): GLTransaction[] => {
     const transactions: GLTransaction[] = [];
 
-    journalEntries.forEach((entry) => {
+    journalEntries.forEach((entry: any) => {
       const code =
         (entry.account_code ||
           entry.debit_account_code ||
@@ -549,20 +549,25 @@ export default function IntegratedFinancialReport() {
           "") as string;
       if (!code) return;
 
+      if (code !== accountCode) return;
+
       const debitVal = Number(entry.debit || 0);
       const creditVal = Number(entry.credit || 0);
 
-      if (code === accountCode) {
-        transactions.push({
-          date: entry.transaction_date || entry.tanggal || entry.entry_date,
-          created_at: (entry as any).created_at,
-          journal_ref: (entry as any).journal_ref,
-          description: entry.description || entry.entry_number || entry.journal_ref,
-          debit: debitVal,
-          credit: creditVal,
-          entry_id: entry.id,
-        });
-      }
+      const akunLawan = debitVal > 0
+        ? (entry.credit_account_name || entry.credit_account_code || entry.credit_account || "-")
+        : (entry.debit_account_name || entry.debit_account_code || entry.debit_account || "-");
+
+      transactions.push({
+        date: entry.transaction_date || entry.tanggal || entry.entry_date,
+        created_at: entry.created_at,
+        journal_ref: entry.journal_ref,
+        akun_lawan: akunLawan,
+        description: entry.description || entry.entry_number || entry.journal_ref,
+        debit: debitVal,
+        credit: creditVal,
+        entry_id: entry.id,
+      });
     });
 
     return transactions.sort((a: any, b: any) => {
@@ -570,13 +575,17 @@ export default function IntegratedFinancialReport() {
       const bDate = new Date(b.date).getTime();
       if (aDate !== bDate) return aDate - bDate;
 
+      const aRef = String(a.journal_ref || "");
+      const bRef = String(b.journal_ref || "");
+      const refCmp = aRef.localeCompare(bRef);
+      if (refCmp !== 0) return refCmp;
+
       const aCreated = new Date(a.created_at || 0).getTime();
       const bCreated = new Date(b.created_at || 0).getTime();
       if (aCreated !== bCreated) return aCreated - bCreated;
 
-      const aRef = (a.journal_ref || "").toString();
-      const bRef = (b.journal_ref || "").toString();
-      return aRef.localeCompare(bRef);
+      // Final deterministic tiebreaker
+      return String(a.entry_id || "").localeCompare(String(b.entry_id || ""));
     });
   };
 
@@ -610,6 +619,7 @@ export default function IntegratedFinancialReport() {
     const hasChildren = childAccounts.length > 0;
     const isExpanded = expandedAccounts.has(account.account_code);
     const transactions = level === 3 ? getTransactionsForAccount(account.account_code) : [];
+    const shouldShowTransactions = level === 3 && isExpanded;
     
     // Calculate totals for this account (including children for level 1 & 2)
     const { totalDebit, totalCredit } = calculateAccountTotals(account.account_code, level);
@@ -620,47 +630,59 @@ export default function IntegratedFinancialReport() {
     return (
       <div key={account.id}>
         <div
-          className={`flex items-center py-2 px-4 hover:bg-gray-50 cursor-pointer border-b ${
-            level === 1 ? "bg-blue-50 font-bold" : level === 2 ? "bg-gray-50 font-semibold" : ""
+          className={`grid grid-cols-[40px_140px_1fr_160px_160px_160px]
+          items-center py-2 px-4 hover:bg-gray-50 cursor-pointer border-b 
+          ${level === 1 ? "bg-blue-50 font-bold" : level === 2 ? "bg-gray-50 font-semibold" : ""
           }`}
           style={{ paddingLeft: `${level * 20}px` }}
-          onClick={() => hasChildren && toggleAccount(account.account_code)}
+          onClick={() => toggleAccount(account.account_code)}
         >
-          {hasChildren && (
-            <span className="mr-2">
-              {isExpanded ? (
+          {/* expand icon */}
+          <div className="flex justify-center">
+            {hasChildren &&
+              (isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
-              )}
-            </span>
-          )}
-          {!hasChildren && <span className="mr-2 w-4"></span>}
-          <span className="font-mono mr-4">{account.account_code}</span>
-          <span className="flex-1">{account.account_name}</span>
-          <>
-            <span className="font-mono text-right w-32 mr-4">
-              {totalDebit !== 0 ? formatRupiah(totalDebit) : "-"}
-            </span>
-            <span className="font-mono text-right w-32 mr-4">
-              {totalCredit !== 0 ? formatRupiah(totalCredit) : "-"}
-            </span>
-            <span className="font-mono text-right w-32">
-              {formatRupiah(Math.abs(balance))}
-            </span>
-          </>
+              ))}
+            </div>
+
+          {/* kode akun */}
+          <div className="font-mono whitespace-nowrap">
+           {account.account_code}
+          </div>
+
+          {/* nama akun */}
+          <div className="truncate">
+            {account.account_name}
+          </div>
+
+          {/* total debit */}
+          <div className="text-right font-mono tabular-nums whitespace-nowrap">
+            {totalDebit !== 0 ? formatRupiah(totalDebit) : "-"}
+          </div>
+
+          {/* total kredit */}
+          <div className="text-right font-mono tabular-nums whitespace-nowrap">
+            {totalCredit !== 0 ? formatRupiah(totalCredit) : "-"}
+          </div>
+
+          {/* saldo */}
+          <div className="text-right font-mono tabular-nums whitespace-nowrap">
+            {formatRupiah(Math.abs(balance))}
+          </div>
         </div>
 
-        {level === 3 && isExpanded && transactions.length > 0 && (
+        {shouldShowTransactions && transactions.length > 0 && (
           <div className="bg-gray-50 border-b">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-100">
                   <TableHead className="w-32">Tanggal</TableHead>
-                  <TableHead>Deskripsi</TableHead>
+                  <TableHead className="w-40">Ref</TableHead>
+                  <TableHead>Akun Lawan</TableHead>
                   <TableHead className="text-right w-32">Debit</TableHead>
                   <TableHead className="text-right w-32">Kredit</TableHead>
-                  <TableHead className="text-right w-32">Saldo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -677,15 +699,17 @@ export default function IntegratedFinancialReport() {
                       <TableCell className="font-mono text-sm">
                         {new Date(trans.date).toLocaleDateString("id-ID")}
                       </TableCell>
-                      <TableCell className="text-sm">{trans.description}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {trans.journal_ref || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {trans.akun_lawan || "-"}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {trans.debit > 0 ? formatRupiah(trans.debit) : "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {trans.credit > 0 ? formatRupiah(trans.credit) : "-"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatRupiah(Math.abs(runningBalance))}
                       </TableCell>
                     </TableRow>
                   );
@@ -809,13 +833,15 @@ export default function IntegratedFinancialReport() {
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <div className="bg-gray-100 flex items-center py-2 px-4 font-bold border-b">
-                <span className="mr-2 w-4"></span>
-                <span className="font-mono mr-4 w-32">Kode Akun</span>
-                <span className="flex-1">Nama Akun</span>
-                <span className="text-right w-32 mr-4">Total Debit</span>
-                <span className="text-right w-32 mr-4">Total Kredit</span>
-                <span className="text-right w-32">Saldo</span>
+              <div className="bg-gray-100 grid grid-cols-[40px_140px_1fr_160px_160px_160px]
+                items-center py-2 px-4 font-bold border-b"
+              > 
+                <span></span>
+                <span className="font-mono">Kode Akun</span>
+                <span>Nama Akun</span>
+                <span className="text-right">Total Debit</span>
+                <span className="text-right">Total Kredit</span>
+                <span className="text-right">Saldo</span>
               </div>
               {coaAccounts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -955,15 +981,24 @@ export default function IntegratedFinancialReport() {
                           }, {}),
                       ).flatMap(([ref, entries], groupIndex) =>
                         [...entries]
+                          // Keep deterministic order inside one journal_ref:
+                          // 1) debit row first
+                          // 2) then credit row
+                          // 3) then by created_at/id to avoid random flip
                           .sort((a: any, b: any) => {
-                            const aDebit = (a.debit || 0) > 0;
-                            const bDebit = (b.debit || 0) > 0;
-                            const aCredit = (a.credit || 0) > 0;
-                            const bCredit = (b.credit || 0) > 0;
-
+                            const aDebit = Number(a.debit || 0) > 0;
+                            const bDebit = Number(b.debit || 0) > 0;
                             if (aDebit !== bDebit) return aDebit ? -1 : 1;
+
+                            const aCredit = Number(a.credit || 0) > 0;
+                            const bCredit = Number(b.credit || 0) > 0;
                             if (aCredit !== bCredit) return aCredit ? 1 : -1;
-                            return 0;
+
+                            const aCreated = new Date((a as any).created_at || 0).getTime();
+                            const bCreated = new Date((b as any).created_at || 0).getTime();
+                            if (aCreated !== bCreated) return aCreated - bCreated;
+
+                            return String(a.id || "").localeCompare(String(b.id || ""));
                           })
                           .map((entry: any, idx: number) => {
                             const dateVal = entry.transaction_date || entry.tanggal || entry.entry_date;
@@ -1033,45 +1068,10 @@ export default function IntegratedFinancialReport() {
                                 {isCredit ? formatRupiah(entry.credit || 0) : "-"}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {(() => {
-                                  const accountCode =
-                                    entry.account_code ||
-                                    entry.debit_account_code ||
-                                    entry.credit_account_code ||
-                                    "";
-                                  if (!accountCode) return "-";
-
-                                  const entryDate = new Date(
-                                    entry.transaction_date || entry.tanggal || entry.entry_date,
-                                  ).getTime();
-
-                                  const transactions = getTransactionsForAccount(accountCode);
-                                  const saldo = transactions
-                                    .filter((t: any) => {
-                                       const entryCreatedAt = new Date((entry as any).created_at || 0).getTime();
-                                       const entryRef = ((entry as any).journal_ref || "").toString();
-
-                                       const tDate = new Date(t.date).getTime();
-                                       if (tDate < entryDate) return true;
-                                       if (tDate > entryDate) return false;
-
-                                       const tCreated = new Date(t.created_at || 0).getTime();
-                                       if (tCreated < entryCreatedAt) return true;
-                                       if (tCreated > entryCreatedAt) return false;
-
-                                       const tRef = (t.journal_ref || "").toString();
-                                       if (tRef && entryRef && tRef <= entryRef) return true;
-
-                                       return false;
-                                     })
-                                    .reduce(
-                                      (sum, t) =>
-                                        sum + Number(t.debit || 0) - Number(t.credit || 0),
-                                      0,
-                                    );
-
-                                  return formatRupiah(saldo);
-                                })()}
+                                {typeof (entry as any).remaining_balance === "number" ||
+                                typeof (entry as any).remaining_balance === "string"
+                                  ? formatRupiah(Number((entry as any).remaining_balance || 0))
+                                  : "-"}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Button

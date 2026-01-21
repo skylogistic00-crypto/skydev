@@ -8,24 +8,42 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { disbursement_id } = body;
+    const { disbursement_id, action, bank_mutation_id } = body;
 
-    if (!disbursement_id) {
-      return new Response(
-        JSON.stringify({ success: false, error: "disbursement_id is required" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
+    // Support multiple actions from the client
+    const resolvedAction: string = action ?? "post_cash_disbursement";
+
+    if (resolvedAction === "post_bank_mutation") {
+      if (!bank_mutation_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: "bank_mutation_id is required" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+    } else {
+      if (!disbursement_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: "disbursement_id is required" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
+    const SUPABASE_SERVICE_KEY =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_KEY")!;
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     // Call Supabase RPC directly
-    const { data, error } = await supabase.rpc('post_cash_disbursement_to_journal', {
-      p_disbursement_id: disbursement_id
-    });
+    const { data, error } =
+      resolvedAction === "post_bank_mutation"
+        ? await supabase.rpc("post_journal_bank_mutation", {
+            p_bank_mutation_id: bank_mutation_id,
+          })
+        : await supabase.rpc("post_cash_disbursement_to_journal", {
+            p_disbursement_id: disbursement_id,
+          });
 
     if (error) {
       console.error("RPC Error:", error);

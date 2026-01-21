@@ -48,7 +48,18 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createSupabaseClient(req);
-    const rawBody = (await req.json()) as ReqBody;
+
+    const rawBodyText = await req.text();
+    let rawBody: ReqBody;
+    try {
+      rawBody = rawBodyText ? (JSON.parse(rawBodyText) as ReqBody) : ({} as ReqBody);
+    } catch (e) {
+      console.error("Invalid JSON body", { rawBodyText });
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid JSON body" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
 
     const bankMutationId = rawBody.bank_mutation_id ?? rawBody.rowId ?? null;
     const imageUrl = rawBody.image_url ?? rawBody.extracted?.bukti_url ?? rawBody.publicUrl ?? null;
@@ -151,22 +162,27 @@ Deno.serve(async (req) => {
 
     const extracted = rawBody.extracted ?? {};
 
+    const updatePayload: Record<string, unknown> = {
+      bukti_url: imageUrl,
+      invoice_storage_bucket: bucket,
+      invoice_file_path: filePath,
+      ocr_text: ocrText,
+      dpp_amount: extracted.dpp_amount ?? null,
+      vat_amount: extracted.vat_amount ?? null,
+      stamp_amount: extracted.stamp_amount ?? null,
+      revenue_account_code: extracted.revenue_account_code ?? null,
+      expense_account_code: extracted.expense_account_code ?? null,
+      vat_output_account_code: extracted.vat_output_account_code ?? null,
+      vat_input_account_code: extracted.vat_input_account_code ?? null,
+    };
+
+    if (extracted.transaction_type !== undefined && extracted.transaction_type !== null) {
+      updatePayload.transaction_type = extracted.transaction_type;
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from("bank_mutations")
-      .update({
-        bukti_url: imageUrl,
-        invoice_storage_bucket: bucket,
-        invoice_file_path: filePath,
-        ocr_text: ocrText,
-        dpp_amount: extracted.dpp_amount ?? null,
-        vat_amount: extracted.vat_amount ?? null,
-        stamp_amount: extracted.stamp_amount ?? null,
-        transaction_type: extracted.transaction_type ?? null,
-        revenue_account_code: extracted.revenue_account_code ?? null,
-        expense_account_code: extracted.expense_account_code ?? null,
-        vat_output_account_code: extracted.vat_output_account_code ?? null,
-        vat_input_account_code: extracted.vat_input_account_code ?? null,
-      })
+      .update(updatePayload)
       .eq("id", bankMutationId)
       .select("id")
       .maybeSingle();

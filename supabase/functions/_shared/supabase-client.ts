@@ -4,9 +4,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 // - Uses SERVICE key by default (server-side)
 // - If an Authorization header exists, forwards it so RLS/auth can apply.
 export function createSupabaseClient(req: Request) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceKey =
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_KEY")!;
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_KEY") ?? "";
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error(
+      "Missing required env vars for Supabase Edge Function client: SUPABASE_URL and SUPABASE_SERVICE_KEY"
+    );
+  }
 
   const authHeader = req.headers.get("authorization") ?? "";
 
@@ -22,7 +28,9 @@ export function createSupabaseClient(req: Request) {
 }
 
 // Backwards-compatible aliases used across existing functions
-export const createClient = (req: Request) => createSupabaseClient(req);
+// Backwards-compatible aliases used across existing functions
+// NOTE: Avoid shadowing the imported `createClient` from supabase-js.
+export const createClientFromRequest = (req: Request) => createSupabaseClient(req);
 
 export const createSupabaseAdminClient = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

@@ -102,7 +102,6 @@ Deno.serve(async (req) => {
         // OCR integrated accounting fields
         vat_amount: 0,
         stamp_amount: 0,
-        transaction_type: null,
         revenue_account_code: null,
         expense_account_code: null,
         vat_output_account_code: null,
