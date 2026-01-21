@@ -680,7 +680,7 @@ export default function IntegratedFinancialReport() {
                 <TableRow className="bg-gray-100">
                   <TableHead className="w-32">Tanggal</TableHead>
                   <TableHead className="w-40">Ref</TableHead>
-                  <TableHead>Akun Lawan</TableHead>
+                  <TableHead>Akun Lawan / Deskripsi</TableHead>
                   <TableHead className="text-right w-32">Debit</TableHead>
                   <TableHead className="text-right w-32">Kredit</TableHead>
                 </TableRow>
@@ -703,7 +703,15 @@ export default function IntegratedFinancialReport() {
                         {trans.journal_ref || "-"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {trans.akun_lawan || "-"}
+                        <div className="font-medium">
+                          {trans.akun_lawan || "-"}
+                        </div>
+
+                          {trans.description && (
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                          {trans.description}
+                        </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {trans.debit > 0 ? formatRupiah(trans.debit) : "-"}
@@ -950,7 +958,7 @@ export default function IntegratedFinancialReport() {
                       <TableHead>Bukti</TableHead>
                       <TableHead className="text-right">Debit</TableHead>
                       <TableHead className="text-right">Kredit</TableHead>
-                      <TableHead className="text-right w-36">Sisa Saldo</TableHead>
+    
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -958,7 +966,7 @@ export default function IntegratedFinancialReport() {
                     {journalEntries.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={11}
+                          colSpan={10}
                           className="text-center py-8 text-gray-500"
                         >
                           Tidak ada data
@@ -1067,12 +1075,7 @@ export default function IntegratedFinancialReport() {
                               <TableCell className="text-right font-mono">
                                 {isCredit ? formatRupiah(entry.credit || 0) : "-"}
                               </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {typeof (entry as any).remaining_balance === "number" ||
-                                typeof (entry as any).remaining_balance === "string"
-                                  ? formatRupiah(Number((entry as any).remaining_balance || 0))
-                                  : "-"}
-                              </TableCell>
+
                               <TableCell className="text-center">
                                 <Button
                                   variant="ghost"
@@ -1096,7 +1099,7 @@ export default function IntegratedFinancialReport() {
                   </TableBody>
                   <tfoot>
                     <TableRow className="bg-gray-50 font-semibold">
-                      <TableCell colSpan={8} className="text-right">
+                      <TableCell colSpan={7} className="text-right">
                         Total
                       </TableCell>
                       <TableCell className="text-right font-mono">
