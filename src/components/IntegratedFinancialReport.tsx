@@ -540,9 +540,34 @@ export default function IntegratedFinancialReport() {
       const debitVal = Number(entry.debit || 0);
       const creditVal = Number(entry.credit || 0);
 
-      const akunLawan = debitVal > 0
-        ? (entry.credit_account_name || entry.credit_account_code || entry.credit_account || "-")
-        : (entry.debit_account_name || entry.debit_account_code || entry.debit_account || "-");
+      const isDebit = debitVal > 0;
+      const isCredit = creditVal > 0;
+
+      const relatedEntries = journalEntries.filter((e: any) => {
+        if (e.journal_ref !== entry.journal_ref) return false;
+        if (e.id === entry.id) return false;
+
+        const eDebit = Number(e.debit || 0) > 0;
+        const eCredit = Number(e.credit || 0) > 0;
+
+        // akun lawan harus berlawanan sisi
+        if (isDebit && eCredit) return true;
+        if (isCredit && eDebit) return true;
+
+        return false;
+      });
+
+      const akunLawan =
+        relatedEntries.length > 0
+          ? Array.from(
+            new Map(
+              relatedEntries.map((e) => [
+                e.account_code,
+                `${e.account_code} - ${e.account_name}`,
+              ])
+            ).values()
+          ).join(", ")
+        : "-";
 
       transactions.push({
         date: entry.transaction_date || entry.tanggal || entry.entry_date,
