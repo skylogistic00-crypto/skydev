@@ -53,17 +53,14 @@ interface FinancialReportData {
 
 interface JournalEntry {
   id: string;
-  entry_number: string;
-  entry_date: string;
-  description: string;
-  debit_account: string;
-  credit_account: string;
+  transaction_date: string;
+  journal_ref?: string;
+  account_code: string;
+  account_name: string;
+  description?: string;
   debit: number;
   credit: number;
   created_at: string;
-  journal_ref?: string;
-  debit_account_name?: string;
-  credit_account_name?: string;
 }
 
 interface COAAccount {
@@ -291,10 +288,11 @@ export default function IntegratedFinancialReport() {
     setLoadingJournal(true);
     try {
       let query = supabase
-        .from("journal_entries_remaining_balance")
-        .select(
-          "*, transaction_date, journal_ref, source_id, account_code, account_name, description, debit, credit, debit_account_code, debit_account_name, credit_account_code, credit_account_name, remaining_balance",
+        .from("journal_entries")
+        .select(  
+          "id, transaction_date, journal_ref, transaction_type, source_id, account_code, account_name, description, debit, credit, bukti, bukti_url, created_at"
         )
+
         // Show newest first in Journal Entries table.
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
@@ -347,14 +345,6 @@ export default function IntegratedFinancialReport() {
               (entry as any).memo ??
               (entry as any).keterangan ??
               "",
-            debit_account_name:
-              entry.debit_account_name ||
-              coaMap.get(entry.debit_account_code || entry.debit_account) ||
-              "-",
-            credit_account_name:
-              entry.credit_account_name ||
-              coaMap.get(entry.credit_account_code || entry.credit_account) ||
-              "-",
             jenis_transaksi: jenisTransaksi,
           };
         }) || [];
@@ -541,12 +531,8 @@ export default function IntegratedFinancialReport() {
     const transactions: GLTransaction[] = [];
 
     journalEntries.forEach((entry: any) => {
-      const code =
-        (entry.account_code ||
-          entry.debit_account_code ||
-          entry.credit_account_code ||
-          entry.accountCode ||
-          "") as string;
+      const code = entry.account_code as string;
+
       if (!code) return;
 
       if (code !== accountCode) return;
@@ -1040,10 +1026,10 @@ export default function IntegratedFinancialReport() {
                                 </TableCell>
                               )}
                               <TableCell className="font-mono">
-                                {entry.account_code || entry.debit_account_code || entry.credit_account_code || "-"}
+                                {entry.account_code || "-"}
                               </TableCell>
                               <TableCell>
-                                {entry.account_name || entry.debit_account_name || entry.credit_account_name || "-"}
+                                {entry.account_name || "-"}
                               </TableCell>
                               <TableCell className="text-sm">
                                 <div

@@ -61,7 +61,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
 
   bankMutationId: string | null;
-  transactionLinkId: string | null;
+  transactionLinkId?: string | null;
 
   bankMutationDate?: string | null;
   jenisTransaksi?: string | null;
@@ -70,6 +70,7 @@ type Props = {
 
   onSaved?: () => void;
   onCancelled?: () => void;
+  onPosted?: () => void;
 };
 
 const numberValue = (v: unknown) => {
@@ -92,6 +93,7 @@ export function BankMutationJournalPreviewDialog({
   defaultLines,
   onSaved,
   onCancelled,
+  onPosted,
 }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -186,10 +188,10 @@ export function BankMutationJournalPreviewDialog({
   }, [lines]);
 
   const persist = async (status: JournalDraftStatus) => {
-    if (!bankMutationId || !transactionLinkId) {
+    if (!bankMutationId) {
       toast({
         title: "Error",
-        description: "bankMutationId / transactionLinkId tidak ditemukan",
+        description: "bankMutationId tidak ditemukan",
         variant: "destructive",
       });
       return;
@@ -200,7 +202,7 @@ export function BankMutationJournalPreviewDialog({
 
       const payload = {
         bank_mutation_id: bankMutationId,
-        transaction_link_id: transactionLinkId,
+        transaction_link_id: transactionLinkId ?? null,
         draft_lines: ensurePerRowBankCounters(lines),
         total_debit: totals.totalDebit,
         total_credit: totals.totalCredit,
@@ -249,6 +251,7 @@ export function BankMutationJournalPreviewDialog({
         }
 
         toast({ title: "Posted", description: "Jurnal berhasil diposting" });
+        onPosted?.();
         onSaved?.();
         onOpenChange(false);
         return;

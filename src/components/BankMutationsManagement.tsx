@@ -64,6 +64,7 @@ interface BankMutationView {
   approved_at: string | null;
   created_at: string;
   ocr_text: string | null;
+  journal_status?: 'draft' | 'posted' | null;
 
   // Tax extraction result (legacy/denormalized fields)
   // NOTE: source-of-truth hasil extract ada di tables `invoices` dan `tax_invoices`.
@@ -265,7 +266,14 @@ export default function BankMutationsManagement() {
         is_taxable,
         faktur_pajak_url,
         faktur_pajak_storage_bucket,
-        faktur_pajak_file_path
+        faktur_pajak_file_path,
+        transaction_direction,
+        transaction_type,
+
+        bank_mutation_journal_drafts (
+          status,
+          created_at
+        )
       `)
       .order("created_at", { ascending: false });
 
@@ -319,7 +327,30 @@ export default function BankMutationsManagement() {
       });
     }
 
-    setRows(baseRows);
+    const rowsWithJournalStatus = baseRows.map((r: any) => {
+      const rawDrafts = r.bank_mutation_journal_drafts;
+
+      const drafts = Array.isArray(rawDrafts)
+        ? rawDrafts
+        : rawDrafts
+          ? [rawDrafts]
+          : [];
+
+      const latestDraft = drafts.reduce(
+        (latest: any, cur: any) =>
+          !latest || new Date(cur.created_at) > new Date(latest.created_at)
+            ? cur
+            : latest,
+        null
+      );
+
+      return {
+        ...r,
+        journal_status: latestDraft?.status ?? null,
+      };
+    });
+
+    setRows(rowsWithJournalStatus);
     setLoading(false);
   }, [dateFrom, dateTo, searchDesc, statusFilter, toast]);
 
@@ -345,16 +376,8 @@ export default function BankMutationsManagement() {
     try {
       setApprovingId(row.id);
 
-      const { data: link, error: linkError } = await supabase
-        .from("transaction_links" as any)
-        .select("id")
-        .eq("bank_mutation_id", row.id)
-        .maybeSingle();
-
-      if (linkError) throw linkError;
-      if (!(link as any)?.id) {
-        throw new Error("Transaction link belum ada untuk mutasi ini");
-      }
+      // Non Pajak: tidak perlu cek transaction_links.
+      // Langsung buka Journal Preview Dialog.
 
       const { data: existingDraft, error: draftError } = await supabase
         .from("bank_mutation_journal_drafts" as any)
@@ -374,10 +397,10 @@ export default function BankMutationsManagement() {
       setJournalPreview({
         open: true,
         bankMutationId: row.id,
-        transactionLinkId: (link as any).id,
+        transactionLinkId: null,
         defaultLines,
         bankMutationDate: (row as any).date ?? null,
-        jenisTransaksi: (row as any).direction ?? null,
+        jenisTransaksi: row.transaction_type ?? null,
       });
     } catch (err: any) {
       toast({
@@ -681,13 +704,13 @@ export default function BankMutationsManagement() {
                           {row.debit ? formatRupiah(row.debit) : row.credit ? formatRupiah(row.credit) : "-"}
                         </TableCell>
                         <TableCell className="text-center">
-                          {row.debit ? (
-                            <span className="text-red-600 font-semibold">OUT</span>
-                          ) : row.credit ? (
-                            <span className="text-green-600 font-semibold">IN</span>
-                          ) : (
-                            "-"
-                          )}
+                        {row.transaction_direction === "OUT" ? (
+                          <span className="text-red-600 font-semibold">OUT</span>
+                        ) : row.transaction_direction === "IN" ? (
+                          <span className="text-green-600 font-semibold">IN</span>
+                        ) : (
+                          "-"
+                        )}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
@@ -1270,10 +1293,18 @@ export default function BankMutationsManagement() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={approvingId === row.id || !!row.approval_status}
+                              disabled={
+                                approvingId === row.id ||
+                               row.journal_status === 'posted'
+                              }
                               onClick={() => handleApprove(row)}
-                              className="h-8 px-3"
+                              title={
+                                row.journal_status === 'posted'
+                                  ? 'Jurnal sudah diposting'
+                                  : 'Approve'
+                              }
                             >
+
                               {approvingId === row.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
