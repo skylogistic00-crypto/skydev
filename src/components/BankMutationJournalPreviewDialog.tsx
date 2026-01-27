@@ -3,6 +3,7 @@ import * as React from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { Trash2 } from "lucide-react";
 
 import {
   Dialog,
@@ -66,6 +67,11 @@ type Props = {
   bankMutationDate?: string | null;
   jenisTransaksi?: string | null;
 
+  direction?: "IN" | "OUT" | null;
+  buktiUrl?: string | null;
+  invoiceUrl?: string | null;
+  fakturPajakUrl?: string | null;
+
   defaultLines: JournalDraftLine[];
 
   onSaved?: () => void;
@@ -90,6 +96,12 @@ export function BankMutationJournalPreviewDialog({
   transactionLinkId,
   bankMutationDate,
   jenisTransaksi,
+
+  direction,
+  buktiUrl,
+  invoiceUrl,
+  fakturPajakUrl,
+
   defaultLines,
   onSaved,
   onCancelled,
@@ -175,15 +187,20 @@ export function BankMutationJournalPreviewDialog({
   }, [open, toast]);
 
   const totals = React.useMemo(() => {
-    // Totals shown in UI represent what user inputs (non-bank lines)
-    const nonBank = lines.filter((l) => !l.is_bank_counter);
-    const totalDebit = nonBank.reduce((acc, l) => acc + numberValue(l.debit), 0);
-    const totalCredit = nonBank.reduce((acc, l) => acc + numberValue(l.credit), 0);
+    const totalDebit = lines.reduce(
+      (acc, l) => acc + numberValue(l.debit),
+      0
+    );
+
+    const totalCredit = lines.reduce(
+      (acc, l) => acc + numberValue(l.credit),
+      0
+    );
+
     return {
       totalDebit,
       totalCredit,
-      // Bank counter line is auto-computed to always balance
-      balanced: true,
+      balanced: totalDebit === totalCredit,
     };
   }, [lines]);
 
@@ -295,15 +312,55 @@ export function BankMutationJournalPreviewDialog({
               </DialogDescription>
             </div>
 
-            <div className="w-[340px] rounded-md border bg-muted/20 p-3 text-sm">
+            <div className="w-[420px] rounded-md border bg-muted/20 p-3 text-sm">
               <div className="grid grid-cols-12 gap-x-3 gap-y-2">
                 <div className="col-span-5 text-muted-foreground">Tanggal</div>
                 <div className="col-span-7 font-medium">
-                  {bankMutationDate ? new Date(bankMutationDate).toLocaleDateString() : "-"}
+                  {bankMutationDate ? new Date(bankMutationDate).toLocaleDateString("id-ID") : "-"}
                 </div>
 
                 <div className="col-span-5 text-muted-foreground">Jenis Transaksi</div>
                 <div className="col-span-7 font-medium">{jenisTransaksi ?? "-"}</div>
+
+                <div className="col-span-5 text-muted-foreground">Direction</div>
+                <div className="col-span-7 font-semibold">
+                  {direction === "IN" && <span className="text-green-600">IN</span>}
+                  {direction === "OUT" && <span className="text-red-600">OUT</span>}
+                  {!direction && "-"}
+                </div>
+
+                <div className="col-span-5 text-muted-foreground">Bukti</div>
+                <div className="col-span-7">
+                  {buktiUrl ? (
+                    <a href={buktiUrl} target="_blank" className="text-blue-600 underline">
+                      Lihat
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </div>
+
+                <div className="col-span-5 text-muted-foreground">Invoice</div>
+                <div className="col-span-7">
+                  {invoiceUrl ? (
+                    <a href={invoiceUrl} target="_blank" className="text-blue-600 underline">
+                      Lihat
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </div>
+
+                <div className="col-span-5 text-muted-foreground">Faktur Pajak</div>
+                <div className="col-span-7">
+                  {fakturPajakUrl ? (
+                    <a href={fakturPajakUrl} target="_blank" className="text-blue-600 underline">
+                      Lihat
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -457,7 +514,7 @@ export function BankMutationJournalPreviewDialog({
                           }
                           disabled={!!l.is_bank_counter}
                         >
-                          
+                          <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </TableCell>
                     </TableRow>

@@ -107,6 +107,78 @@ interface BankMutationView {
 }
 
 /* =====================================================
+   JOURNAL GROUP (COLLAPSIBLE SECTION)
+===================================================== */
+function JournalGroup({
+  title,
+  items,
+  open,
+  onToggle,
+}: {
+  title: string;
+  items: BankMutationView[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Card className="border">
+      <CardHeader
+        className="flex flex-row items-center justify-between cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          <Badge variant="secondary" className="text-xs">
+            {items.length}
+          </Badge>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {open ? "Tutup" : "Buka"}
+        </span>
+      </CardHeader>
+
+      {open && (
+        <CardContent className="pt-0">
+          {items.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4">
+              Tidak ada data
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead className="text-right">Jumlah</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {item.date
+                        ? new Date(item.date).toLocaleDateString("id-ID")
+                        : "-"}
+                    </TableCell>
+                    <TableCell>{item.description ?? "-"}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {item.amount !== null && item.amount !== undefined
+                        ? item.amount.toLocaleString("id-ID")
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+
+/* =====================================================
    COMPONENT
 ===================================================== */
 export default function BankMutationsManagement() {
@@ -142,6 +214,10 @@ export default function BankMutationsManagement() {
     defaultLines: JournalDraftLine[];
     bankMutationDate: string | null;
     jenisTransaksi: string | null;
+    direction?: "IN" | "OUT" | null;
+    buktiUrl?: string | null;
+    invoiceUrl?: string | null;
+    fakturPajakUrl?: string | null;
   }>({
     open: false,
     bankMutationId: null,
@@ -200,9 +276,95 @@ export default function BankMutationsManagement() {
   const [searchDesc, setSearchDesc] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("pending");
 
+/* ================= JOURNAL TARGET STATE ================= */
+  const [cashDisbursements, setCashDisbursements] = useState<any[]>([]);
+  const [cashReceipts, setCashReceipts] = useState<any[]>([]);
+  const [capitalContributions, setCapitalContributions] = useState<any[]>([]);
+  const [employeeAdvances, setEmployeeAdvances] = useState<any[]>([]);
+
+/* ================= GROUP EXPAND STATE ================= */
+  const [expandedGroups, setExpandedGroups] = useState({
+    penerimaan: false,
+    pengeluaran: false,
+    setoran_modal: false,
+    kasbon: false,
+  });
+
+  const toggleGroup = (key: keyof typeof expandedGroups) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const groupedJournals = useMemo(() => {
+    return {
+      penerimaan: cashReceipts,
+      pengeluaran: cashDisbursements,
+      setoran_modal: capitalContributions,
+      kasbon: employeeAdvances,
+    };
+  }, [
+    cashReceipts,
+    cashDisbursements,
+    capitalContributions,
+    employeeAdvances,
+  ]);
+
   /* =====================================================
      FETCH — VIEW ONLY
   ===================================================== */
+const fetchJournalTargets = useCallback(async () => {
+  const [
+    { data: disb },
+    { data: recv },
+    { data: cap },
+    { data: adv },
+  ] = await Promise.all([
+    supabase.from("cash_disbursement").select("*").order("created_at", { ascending: false }),
+    supabase.from("cash_and_bank_receipts").select("*").order("created_at", { ascending: false }),
+    supabase.from("capital_contributions").select("*").order("created_at", { ascending: false }),
+    supabase.from("employee_advances").select("*").order("created_at", { ascending: false }),
+  ]);
+
+  setCashDisbursements(
+    (disb ?? []).map((r: any) => ({
+      id: r.id,
+      date: r.transaction_date ?? r.created_at,
+      description: r.description,
+      amount: r.amount, // PENGELUARAN
+    }))
+  );
+
+  setCashReceipts(
+    (recv ?? []).map((r: any) => ({
+      id: r.id,
+      date: r.transaction_date ?? r.created_at,
+      description: r.description,
+      amount: r.amount, // PENERIMAAN
+    }))
+  );
+
+  setCapitalContributions(
+    (cap ?? []).map((r: any) => ({
+      id: r.id,
+      date: r.transaction_date ?? r.created_at,
+      description: r.description,
+      amount: r.amount,
+    }))
+  );
+
+  setEmployeeAdvances(
+    (adv ?? []).map((r: any) => ({
+      id: r.id,
+      date: r.transaction_date ?? r.created_at,
+      description: r.description,
+      amount: r.amount,
+    }))
+  );
+}, []);
+
+  
   const markTaxExtracted = useCallback(
     (bankMutationId: string) => {
       setExtractedTaxIds((prev) => {
@@ -355,8 +517,12 @@ export default function BankMutationsManagement() {
   }, [dateFrom, dateTo, searchDesc, statusFilter, toast]);
 
   useEffect(() => {
-    if (hasAccess) fetchData();
-  }, [hasAccess, fetchData]);
+    if (hasAccess) {
+      fetchData();
+      fetchJournalTargets();
+    }
+  }, [hasAccess, fetchData, fetchJournalTargets]);
+
 
   /* =====================================================
      APPROVE → OPEN PREVIEW (SAVE/POST/CANCEL to bank_mutation_journal_drafts)
@@ -401,6 +567,11 @@ export default function BankMutationsManagement() {
         defaultLines,
         bankMutationDate: (row as any).date ?? null,
         jenisTransaksi: row.transaction_type ?? null,
+
+        direction: row.transaction_direction ?? null,
+        buktiUrl: row.bukti_url ?? null,
+        invoiceUrl: row.invoice_url ?? null,
+        fakturPajakUrl: row.faktur_pajak_url ?? null,
       });
     } catch (err: any) {
       toast({
@@ -629,6 +800,7 @@ export default function BankMutationsManagement() {
 
           {/* TABLE */}
           <div className="border rounded-lg overflow-x-auto">
+          
             <Table className="min-w-[1400px]">
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -1112,13 +1284,13 @@ export default function BankMutationsManagement() {
 
                         {/* Tax Extraction (extract + view result) */}
                         <TableCell className="text-center">
-                          <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-2">
                             {(!!row.linked_tax_invoice_id || row.tax_extraction_status === "extracted" || extractedTaxIds.has(row.id)) && (
                               <Badge
                                 variant="secondary"
                                 className={cn("text-[10px]", row.is_taxable !== true && "opacity-50")}
                               >
-                                Tax Extracted
+                                Extracted
                               </Badge>
                             )}
 
@@ -1183,9 +1355,7 @@ export default function BankMutationsManagement() {
                                 }
                               >
                                 <FileText className={cn("h-4 w-4", row.is_taxable !== true ? "text-muted-foreground" : "text-purple-600")} />
-                                {(!!row.linked_tax_invoice_id || row.tax_extraction_status === "extracted" || extractedTaxIds.has(row.id)) && (
-                                  <CheckCircle className={cn("h-3 w-3 ml-1", row.is_taxable !== true ? "text-muted-foreground" : "text-green-600")} />
-                                )}
+
                               </Button>
                             )}
 
@@ -1321,6 +1491,47 @@ export default function BankMutationsManagement() {
               </TableBody>
             </Table>
           </div>
+
+          <div className="mt-6 space-y-3">
+
+            {groupedJournals.penerimaan.length > 0 && (
+              <JournalGroup
+                title="Penerimaan"
+                items={groupedJournals.penerimaan}
+                open={expandedGroups.penerimaan}
+                onToggle={() => toggleGroup("penerimaan")}
+              />
+            )}
+
+            {groupedJournals.pengeluaran.length > 0 && (
+              <JournalGroup
+                title="Pengeluaran"
+                items={groupedJournals.pengeluaran}
+                open={expandedGroups.pengeluaran}
+                onToggle={() => toggleGroup("pengeluaran")}
+              />
+            )}
+
+            {groupedJournals.setoran_modal.length > 0 && (
+              <JournalGroup
+                title="Setoran Modal"
+                items={groupedJournals.setoran_modal}
+                open={expandedGroups.setoran_modal}
+                onToggle={() => toggleGroup("setoran_modal")}
+              />
+            )}
+
+            {groupedJournals.kasbon.length > 0 && (
+              <JournalGroup
+                title="Kasbon Karyawan"
+                items={groupedJournals.kasbon}
+                open={expandedGroups.kasbon}
+                onToggle={() => toggleGroup("kasbon")}
+              />
+            )}
+          </div>
+
+
         </CardContent>
       </Card>
 
@@ -1460,6 +1671,18 @@ export default function BankMutationsManagement() {
                 );
             }
 
+            setRows((prev) =>
+              prev.map((r) =>
+                r.id === invoiceExtractConfirm.bankMutationId
+                  ? {
+                    ...r,
+                    linked_invoice_id: inserted.id,
+                  }
+                : r
+              )
+            );
+
+
             setInvoiceExtractConfirm({ open: false, bankMutationId: "", preview: null, mode: "confirm" });
           } finally {
             setInvoiceExtractSaving(false);
@@ -1531,9 +1754,16 @@ export default function BankMutationsManagement() {
                 );
             }
 
-            // NOTE: hasil extract Faktur Pajak disimpan ke `tax_invoices`.
-            // Jangan persist hasil extract ke `bank_mutations`.
-            // Status setelah refresh akan ditentukan dari relasi `transaction_links` (tax_invoice_id).
+            setRows((prev) =>
+              prev.map((r) =>
+                r.id === taxInvoiceExtractConfirm.bankMutationId
+                  ? {
+                    ...r,
+                    linked_tax_invoice_id: inserted.id,
+                  }
+                : r
+              )
+            );
 
             setExtractedTaxIds((prev) => {
               const nextSet = new Set(prev);
@@ -1591,10 +1821,19 @@ export default function BankMutationsManagement() {
         transactionLinkId={journalPreview.transactionLinkId}
         bankMutationDate={journalPreview.bankMutationDate}
         jenisTransaksi={journalPreview.jenisTransaksi}
+
+        direction={journalPreview.direction}
+        buktiUrl={journalPreview.buktiUrl}
+        invoiceUrl={journalPreview.invoiceUrl}
+        fakturPajakUrl={journalPreview.fakturPajakUrl}
+
         defaultLines={journalPreview.defaultLines}
         onSaved={() => fetchData()}
         onCancelled={() => fetchData()}
-        onPosted={() => fetchData()}
+        onPosted={() => {
+          fetchData();
+          fetchJournalTargets();
+          }}
       />
     </div>
   );
