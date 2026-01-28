@@ -44,6 +44,7 @@ export type JournalDraftLine = {
   coa_code?: string | null;
   coa_name?: string | null;
   description?: string | null;
+  normal_balance?: "debit" | "credit" | null;
   debit?: number | null;
   credit?: number | null;
 
@@ -55,6 +56,7 @@ type CoaOption = {
   id: string;
   account_code: string | null;
   account_name: string | null;
+  normal_balance: "debit" | "credit";
 };
 
 type Props = {
@@ -71,6 +73,8 @@ type Props = {
   buktiUrl?: string | null;
   invoiceUrl?: string | null;
   fakturPajakUrl?: string | null;
+
+  bankMutationDescription?: string | null; // ⬅️ TAMBAHAN
 
   defaultLines: JournalDraftLine[];
 
@@ -101,7 +105,7 @@ export function BankMutationJournalPreviewDialog({
   buktiUrl,
   invoiceUrl,
   fakturPajakUrl,
-
+  bankMutationDescription, // ⬅️ WAJIB
   defaultLines,
   onSaved,
   onCancelled,
@@ -125,7 +129,9 @@ export function BankMutationJournalPreviewDialog({
         coa_id: null,
         coa_code: BANK_COUNTER.coa_code,
         coa_name: BANK_COUNTER.coa_name,
-        description: "Counter (otomatis)",
+        description: l.description
+          ? `${l.description}`
+          : "Counter (otomatis)",
         debit: l.credit && l.credit > 0 ? l.credit : null,
         credit: l.debit && l.debit > 0 ? l.debit : null,
         is_bank_counter: true,
@@ -135,11 +141,27 @@ export function BankMutationJournalPreviewDialog({
     return withCounters;
   }, []);
 
+  const normalizeByNormalBalance = (lines: JournalDraftLine[]) =>
+    lines.map((l) => {
+      if (l.is_bank_counter) return l;
+
+      if (l.normal_balance === "debit") {
+        return { ...l, credit: null };
+      }
+
+      if (l.normal_balance === "credit") {
+        return { ...l, debit: null };
+      }
+
+      return l;
+    });
+
   const setLinesAuto = React.useCallback(
-    (updater: (prev: JournalDraftLine[]) => JournalDraftLine[]) => {
+    (updater) => {
       setLines((prev) => {
-        const updated = updater(prev);
-        return ensurePerRowBankCounters(updated);
+          const updated = updater(prev);
+          const normalized = normalizeByNormalBalance(updated);
+          return ensurePerRowBankCounters(normalized);
       });
     },
     [ensurePerRowBankCounters]
@@ -156,7 +178,21 @@ export function BankMutationJournalPreviewDialog({
 
     // Only generate bank counter rows if user already has at least 1 non-bank row.
     const nonBankCount = initial.filter((l) => !l.is_bank_counter).length;
-    setLines(() => (nonBankCount > 0 ? ensurePerRowBankCounters(initial) : []));
+    setLines(() =>
+      nonBankCount > 0
+        ? ensurePerRowBankCounters(
+            initial.map((l) =>
+              l.is_bank_counter
+              ? l
+              : {
+                  ...l,
+                  normal_balance: l.normal_balance?.toLowerCase() ?? null,
+                  description: l.description ?? bankMutationDescription ?? null,
+                }
+          )
+        )
+      : []
+  );
   }, [open, defaultLines, ensurePerRowBankCounters]);
 
   React.useEffect(() => {
@@ -166,12 +202,17 @@ export function BankMutationJournalPreviewDialog({
         setCoaLoading(true);
         const { data, error } = await supabase
           .from("chart_of_accounts" as any)
-          .select("id, account_code, account_name")
+          .select("id, account_code, account_name, normal_balance")
           .eq("level", 3)
           .order("account_code", { ascending: true });
 
         if (error) throw error;
-        setCoaOptions(((data ?? []) as any) as CoaOption[]);
+        setCoaOptions(
+          (data ?? []).map((c: any) => ({
+            ...c,
+            normal_balance: c.normal_balance?.toLowerCase(), // ⬅️ KUNCI
+          }))
+        );
       } catch (err: any) {
         toast({
           title: "Gagal memuat COA",
@@ -419,6 +460,9 @@ export function BankMutationJournalPreviewDialog({
                                                   coa_id: opt.id,
                                                   coa_code: opt.account_code,
                                                   coa_name: opt.account_name,
+                                                  normal_balance: opt.normal_balance,
+                                                  debit: opt.normal_balance === "credit" ? null : p.debit,
+                                                  credit: opt.normal_balance === "debit" ? null : p.credit,
                                                   is_bank_counter: false,
                                                 }
                                               : p
@@ -459,19 +503,16 @@ export function BankMutationJournalPreviewDialog({
                           className="text-right"
                           inputMode="decimal"
                           value={l.debit ?? ""}
-                          disabled={!!l.is_bank_counter || numberValue(l.credit) > 0}
+                          disabled={
+                            !!l.is_bank_counter ||
+                            l.normal_balance === "credit"
+                          }
                           onChange={(e) => {
-                            const raw = e.target.value;
-                            const parsed = raw === "" ? null : numberValue(raw);
+                            const parsed = e.target.value === "" ? null : numberValue(e.target.value);
                             setLinesAuto((prev) =>
                               prev.map((p, i) =>
-                                i === idx
-                                  ? {
-                                      ...p,
-                                      debit: parsed,
-                                      credit: parsed && parsed > 0 ? null : p.credit,
-                                      is_bank_counter: false,
-                                    }
+                              i === idx
+                                ? { ...p, debit: parsed, credit: null }
                                   : p
                               )
                             );
@@ -483,20 +524,17 @@ export function BankMutationJournalPreviewDialog({
                           className="text-right"
                           inputMode="decimal"
                           value={l.credit ?? ""}
-                          disabled={!!l.is_bank_counter || numberValue(l.debit) > 0}
+                          disabled={
+                            !!l.is_bank_counter ||
+                            l.normal_balance === "debit"
+                          }
                           onChange={(e) => {
-                            const raw = e.target.value;
-                            const parsed = raw === "" ? null : numberValue(raw);
+                            const parsed = e.target.value === "" ? null : numberValue(e.target.value);
                             setLinesAuto((prev) =>
                               prev.map((p, i) =>
-                                i === idx
-                                  ? {
-                                      ...p,
-                                      credit: parsed,
-                                      debit: parsed && parsed > 0 ? null : p.debit,
-                                      is_bank_counter: false,
-                                    }
-                                  : p
+                              i === idx
+                                ? { ...p, credit: parsed, debit: null }
+                                : p
                               )
                             );
                           }}
@@ -541,7 +579,7 @@ export function BankMutationJournalPreviewDialog({
                         coa_id: null,
                         coa_code: null,
                         coa_name: null,
-                        description: null,
+                        description: bankMutationDescription ?? null, // ⬅️ AUTO
                         debit: null,
                         credit: null,
                         is_bank_counter: false,
