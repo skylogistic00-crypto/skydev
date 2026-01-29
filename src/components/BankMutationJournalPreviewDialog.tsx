@@ -141,27 +141,11 @@ export function BankMutationJournalPreviewDialog({
     return withCounters;
   }, []);
 
-  const normalizeByNormalBalance = (lines: JournalDraftLine[]) =>
-    lines.map((l) => {
-      if (l.is_bank_counter) return l;
-
-      if (l.normal_balance === "debit") {
-        return { ...l, credit: null };
-      }
-
-      if (l.normal_balance === "credit") {
-        return { ...l, debit: null };
-      }
-
-      return l;
-    });
-
   const setLinesAuto = React.useCallback(
     (updater) => {
       setLines((prev) => {
-          const updated = updater(prev);
-          const normalized = normalizeByNormalBalance(updated);
-          return ensurePerRowBankCounters(normalized);
+        const updated = updater(prev);
+        return ensurePerRowBankCounters(updated);
       });
     },
     [ensurePerRowBankCounters]
@@ -503,16 +487,17 @@ export function BankMutationJournalPreviewDialog({
                           className="text-right"
                           inputMode="decimal"
                           value={l.debit ?? ""}
-                          disabled={
-                            !!l.is_bank_counter ||
-                            l.normal_balance === "credit"
-                          }
+                          disabled={!!l.is_bank_counter || numberValue(l.credit) > 0}
                           onChange={(e) => {
                             const parsed = e.target.value === "" ? null : numberValue(e.target.value);
                             setLinesAuto((prev) =>
                               prev.map((p, i) =>
-                              i === idx
-                                ? { ...p, debit: parsed, credit: null }
+                                i === idx
+                                  ? {
+                                    ...p,
+                                    debit: parsed,
+                                    credit: parsed ? null : p.credit,
+                                    }
                                   : p
                               )
                             );
@@ -524,17 +509,18 @@ export function BankMutationJournalPreviewDialog({
                           className="text-right"
                           inputMode="decimal"
                           value={l.credit ?? ""}
-                          disabled={
-                            !!l.is_bank_counter ||
-                            l.normal_balance === "debit"
-                          }
+                          disabled={!!l.is_bank_counter || numberValue(l.debit) > 0}
                           onChange={(e) => {
                             const parsed = e.target.value === "" ? null : numberValue(e.target.value);
                             setLinesAuto((prev) =>
                               prev.map((p, i) =>
-                              i === idx
-                                ? { ...p, credit: parsed, debit: null }
-                                : p
+                                i === idx
+                                  ? {
+                                    ...p,
+                                    credit: parsed,
+                                    debit: parsed ? null : p.debit,
+                                    }
+                                  : p
                               )
                             );
                           }}
