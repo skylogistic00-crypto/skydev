@@ -1060,7 +1060,7 @@ export type Database = {
           status: string
           total_credit: number
           total_debit: number
-          transaction_link_id: string
+          transaction_link_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1073,7 +1073,7 @@ export type Database = {
           status?: string
           total_credit?: number
           total_debit?: number
-          transaction_link_id: string
+          transaction_link_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1086,7 +1086,7 @@ export type Database = {
           status?: string
           total_credit?: number
           total_debit?: number
-          transaction_link_id?: string
+          transaction_link_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1993,49 +1993,55 @@ export type Database = {
         Row: {
           amount: number
           bukti_url: string | null
+          category: string | null
+          counterpartyname: string | null
           created_at: string
           created_by: string | null
-          credit_account_code: string | null
-          credit_account_name: string | null
-          debit_account_code: string | null
-          debit_account_name: string | null
           description: string | null
           id: string
-          payment_method: string | null
-          reference_no: string | null
+          journal_ref: string | null
+          source_id: string | null
+          source_mutation_id: string | null
+          source_table: string | null
+          status: string | null
           transaction_date: string
+          transaction_direction: string | null
           transaction_type: string | null
         }
         Insert: {
           amount?: number
           bukti_url?: string | null
+          category?: string | null
+          counterpartyname?: string | null
           created_at?: string
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description?: string | null
           id?: string
-          payment_method?: string | null
-          reference_no?: string | null
+          journal_ref?: string | null
+          source_id?: string | null
+          source_mutation_id?: string | null
+          source_table?: string | null
+          status?: string | null
           transaction_date: string
+          transaction_direction?: string | null
           transaction_type?: string | null
         }
         Update: {
           amount?: number
           bukti_url?: string | null
+          category?: string | null
+          counterpartyname?: string | null
           created_at?: string
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description?: string | null
           id?: string
-          payment_method?: string | null
-          reference_no?: string | null
+          journal_ref?: string | null
+          source_id?: string | null
+          source_mutation_id?: string | null
+          source_table?: string | null
+          status?: string | null
           transaction_date?: string
+          transaction_direction?: string | null
           transaction_type?: string | null
         }
         Relationships: []
@@ -2063,46 +2069,20 @@ export type Database = {
       }
       cash_and_bank_receipts: {
         Row: {
-          account_code: string | null
-          account_code_credit: string | null
-          account_name: string | null
-          account_name_credit: string | null
-          account_type: string | null
-          account_type_credit: string | null
           amount: number
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
-          bank_account: string | null
           bukti: string | null
+          bukti_url: string | null
           category: string | null
-          coa_cash_code: string | null
-          coa_cash_id: string | null
-          coa_contra_code: string | null
-          coa_revenue_account: string | null
-          coa_revenue_code: string | null
-          counterparty_name: string | null
-          counterparty_role: string | null
-          counterparty_type: string | null
+          counterpartyname: string | null
           created_at: string | null
           created_by: string | null
-          credit_account_code: string | null
-          credit_account_name: string | null
-          debit_account_code: string | null
-          debit_account_name: string | null
           description: string | null
           id: string
           journal_ref: string | null
-          nama_penerima: string | null
-          notes: string | null
-          ocr_data: Json | null
-          ocr_id: string | null
-          payer_name: string | null
-          payment_method: string | null
-          payment_type: string | null
-          reference_number: string | null
-          source: string | null
-          source_destination: string | null
+          source_id: string | null
           source_mutation_id: string | null
           source_table: string | null
           status: string | null
@@ -2112,46 +2092,20 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          account_code?: string | null
-          account_code_credit?: string | null
-          account_name?: string | null
-          account_name_credit?: string | null
-          account_type?: string | null
-          account_type_credit?: string | null
           amount: number
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
-          bank_account?: string | null
           bukti?: string | null
+          bukti_url?: string | null
           category?: string | null
-          coa_cash_code?: string | null
-          coa_cash_id?: string | null
-          coa_contra_code?: string | null
-          coa_revenue_account?: string | null
-          coa_revenue_code?: string | null
-          counterparty_name?: string | null
-          counterparty_role?: string | null
-          counterparty_type?: string | null
+          counterpartyname?: string | null
           created_at?: string | null
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description?: string | null
           id?: string
           journal_ref?: string | null
-          nama_penerima?: string | null
-          notes?: string | null
-          ocr_data?: Json | null
-          ocr_id?: string | null
-          payer_name?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          reference_number?: string | null
-          source?: string | null
-          source_destination?: string | null
+          source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -2161,46 +2115,20 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          account_code?: string | null
-          account_code_credit?: string | null
-          account_name?: string | null
-          account_name_credit?: string | null
-          account_type?: string | null
-          account_type_credit?: string | null
           amount?: number
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
-          bank_account?: string | null
           bukti?: string | null
+          bukti_url?: string | null
           category?: string | null
-          coa_cash_code?: string | null
-          coa_cash_id?: string | null
-          coa_contra_code?: string | null
-          coa_revenue_account?: string | null
-          coa_revenue_code?: string | null
-          counterparty_name?: string | null
-          counterparty_role?: string | null
-          counterparty_type?: string | null
+          counterpartyname?: string | null
           created_at?: string | null
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description?: string | null
           id?: string
           journal_ref?: string | null
-          nama_penerima?: string | null
-          notes?: string | null
-          ocr_data?: Json | null
-          ocr_id?: string | null
-          payer_name?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          reference_number?: string | null
-          source?: string | null
-          source_destination?: string | null
+          source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
           status?: string | null
@@ -2213,201 +2141,72 @@ export type Database = {
       }
       cash_disbursement: {
         Row: {
-          account_code: string | null
-          account_name: string | null
           amount: number | null
           approval_status: string | null
-          approved: string | null
           approved_at: string | null
           approved_by: string | null
-          attachment_url: string | null
-          bank_account: string | null
-          bank_account_id: string | null
           bukti: string | null
           bukti_url: string | null
-          cash_account_id: string | null
           category: string | null
-          coa_cash_account_code: string | null
-          coa_cash_id: string | null
-          coa_expense_account_code: string | null
-          coa_expense_id: string | null
-          coa_id: string | null
-          cost_center_id: string | null
-          counterparty_name: string | null
-          counterparty_role: string | null
-          counterparty_type: string | null
+          counterpartyname: string | null
           created_at: string | null
           created_by: string | null
-          credit_account_code: string | null
-          credit_account_name: string | null
-          currency_code: string | null
-          debit_account_code: string | null
-          debit_account_name: string | null
           description: string
-          document_number: string | null
-          evidence_url: string | null
-          exchange_rate: number | null
           id: string
           journal_ref: string | null
-          normalized_amount: number | null
-          notes: string | null
-          ocr_data: Json | null
-          ocr_id: string | null
-          payee_name: string | null
-          payment_method: string | null
-          payment_type: string | null
-          reference_number: string | null
-          rejection_reason: string | null
-          source: string | null
           source_id: string | null
           source_mutation_id: string | null
           source_table: string | null
-          status: string | null
-          tanggal: string | null
-          tax_amount: number | null
-          tax_code: string | null
-          tax_type: string | null
           transaction_date: string | null
           transaction_direction: string | null
           transaction_type: string | null
           updated_at: string | null
         }
         Insert: {
-          account_code?: string | null
-          account_name?: string | null
           amount?: number | null
           approval_status?: string | null
-          approved?: string | null
           approved_at?: string | null
           approved_by?: string | null
-          attachment_url?: string | null
-          bank_account?: string | null
-          bank_account_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          cash_account_id?: string | null
           category?: string | null
-          coa_cash_account_code?: string | null
-          coa_cash_id?: string | null
-          coa_expense_account_code?: string | null
-          coa_expense_id?: string | null
-          coa_id?: string | null
-          cost_center_id?: string | null
-          counterparty_name?: string | null
-          counterparty_role?: string | null
-          counterparty_type?: string | null
+          counterpartyname?: string | null
           created_at?: string | null
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          currency_code?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description: string
-          document_number?: string | null
-          evidence_url?: string | null
-          exchange_rate?: number | null
           id?: string
           journal_ref?: string | null
-          normalized_amount?: number | null
-          notes?: string | null
-          ocr_data?: Json | null
-          ocr_id?: string | null
-          payee_name?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          reference_number?: string | null
-          rejection_reason?: string | null
-          source?: string | null
           source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
-          status?: string | null
-          tanggal?: string | null
-          tax_amount?: number | null
-          tax_code?: string | null
-          tax_type?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
         }
         Update: {
-          account_code?: string | null
-          account_name?: string | null
           amount?: number | null
           approval_status?: string | null
-          approved?: string | null
           approved_at?: string | null
           approved_by?: string | null
-          attachment_url?: string | null
-          bank_account?: string | null
-          bank_account_id?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          cash_account_id?: string | null
           category?: string | null
-          coa_cash_account_code?: string | null
-          coa_cash_id?: string | null
-          coa_expense_account_code?: string | null
-          coa_expense_id?: string | null
-          coa_id?: string | null
-          cost_center_id?: string | null
-          counterparty_name?: string | null
-          counterparty_role?: string | null
-          counterparty_type?: string | null
+          counterpartyname?: string | null
           created_at?: string | null
           created_by?: string | null
-          credit_account_code?: string | null
-          credit_account_name?: string | null
-          currency_code?: string | null
-          debit_account_code?: string | null
-          debit_account_name?: string | null
           description?: string
-          document_number?: string | null
-          evidence_url?: string | null
-          exchange_rate?: number | null
           id?: string
           journal_ref?: string | null
-          normalized_amount?: number | null
-          notes?: string | null
-          ocr_data?: Json | null
-          ocr_id?: string | null
-          payee_name?: string | null
-          payment_method?: string | null
-          payment_type?: string | null
-          reference_number?: string | null
-          rejection_reason?: string | null
-          source?: string | null
           source_id?: string | null
           source_mutation_id?: string | null
           source_table?: string | null
-          status?: string | null
-          tanggal?: string | null
-          tax_amount?: number | null
-          tax_code?: string | null
-          tax_type?: string | null
           transaction_date?: string | null
           transaction_direction?: string | null
           transaction_type?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_cd_coa_cash"
-            columns: ["coa_cash_account_code"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["account_code"]
-          },
-          {
-            foreignKeyName: "fk_cd_coa_cash"
-            columns: ["coa_cash_account_code"]
-            isOneToOne: false
-            referencedRelation: "vw_cash_account_balance"
-            referencedColumns: ["account_code"]
-          },
-        ]
+        Relationships: []
       }
       cash_receipts_payments: {
         Row: {
@@ -3178,6 +2977,65 @@ export type Database = {
         }
         Relationships: []
       }
+      currenciesx: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          precision: number
+          symbol: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          precision?: number
+          symbol?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          precision?: number
+          symbol?: string | null
+        }
+        Relationships: []
+      }
+      currency_ratesx: {
+        Row: {
+          created_at: string
+          currency_id: string
+          id: string
+          rate_to_base: number
+          valid_from: string
+        }
+        Insert: {
+          created_at?: string
+          currency_id: string
+          id?: string
+          rate_to_base: number
+          valid_from: string
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string
+          id?: string
+          rate_to_base?: number
+          valid_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currency_ratesx_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -3829,6 +3687,119 @@ export type Database = {
         }
         Relationships: []
       }
+      deliveriesx: {
+        Row: {
+          cancelled_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          customer_name: string | null
+          delivery_date: string
+          delivery_no: string
+          done_at: string | null
+          id: string
+          origin_ref: string | null
+          sales_order_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivery_date?: string
+          delivery_no?: string
+          done_at?: string | null
+          id?: string
+          origin_ref?: string | null
+          sales_order_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivery_date?: string
+          delivery_no?: string
+          done_at?: string | null
+          id?: string
+          origin_ref?: string | null
+          sales_order_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      deliveryx_lines: {
+        Row: {
+          created_at: string
+          delivery_id: string
+          id: string
+          line_no: number
+          notes: string | null
+          product_id: string | null
+          product_name: string
+          qty: number
+          unit_price: number | null
+          uom: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id: string
+          id?: string
+          line_no?: number
+          notes?: string | null
+          product_id?: string | null
+          product_name: string
+          qty?: number
+          unit_price?: number | null
+          uom?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string
+          id?: string
+          line_no?: number
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          unit_price?: number | null
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveryx_lines_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveriesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deliveryx_sequences: {
+        Row: {
+          id: number
+          last_number: number
+          seq_date: string
+        }
+        Insert: {
+          id?: never
+          last_number?: number
+          seq_date?: string
+        }
+        Update: {
+          id?: never
+          last_number?: number
+          seq_date?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           code: string | null
@@ -4350,10 +4321,8 @@ export type Database = {
           approved_by: string | null
           bukti: string | null
           bukti_url: string | null
-          cash_disbursement_id: string | null
           category: string | null
           coa_account_code: string
-          counterparty_name: string | null
           created_at: string | null
           created_by: string | null
           credit_account_code: string | null
@@ -4389,10 +4358,8 @@ export type Database = {
           approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          cash_disbursement_id?: string | null
           category?: string | null
           coa_account_code: string
-          counterparty_name?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -4428,10 +4395,8 @@ export type Database = {
           approved_by?: string | null
           bukti?: string | null
           bukti_url?: string | null
-          cash_disbursement_id?: string | null
           category?: string | null
           coa_account_code?: string
-          counterparty_name?: string | null
           created_at?: string | null
           created_by?: string | null
           credit_account_code?: string | null
@@ -6133,6 +6098,116 @@ export type Database = {
           },
         ]
       }
+      invoice_linesx: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_pct: number
+          id: string
+          invoice_id: string
+          is_down_payment: boolean
+          line_subtotal: number
+          line_tax: number
+          line_total: number
+          product_id: string | null
+          qty: number
+          sales_order_line_id: string | null
+          service_fulfillment_line_id: string | null
+          stock_move_id: string | null
+          tax_id: string | null
+          unit_price: number
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          invoice_id: string
+          is_down_payment?: boolean
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          sales_order_line_id?: string | null
+          service_fulfillment_line_id?: string | null
+          stock_move_id?: string | null
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          invoice_id?: string
+          is_down_payment?: boolean
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          sales_order_line_id?: string | null
+          service_fulfillment_line_id?: string | null
+          stock_move_id?: string | null
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_linesx_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoicesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_sales_order_line_id_fkey"
+            columns: ["sales_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "sales_order_linesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_service_fulfillment_line_id_fkey"
+            columns: ["service_fulfillment_line_id"]
+            isOneToOne: false
+            referencedRelation: "service_fulfillment_linesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_stock_move_id_fkey"
+            columns: ["stock_move_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_linesx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           bank_mutation_id: string | null
@@ -6197,6 +6272,79 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_bank_mutations_ui"
             referencedColumns: ["mutation_id"]
+          },
+        ]
+      }
+      invoicesx: {
+        Row: {
+          amount_due: number
+          created_at: string
+          currency_id: string
+          customer_id: string
+          due_date: string | null
+          exchange_rate: number
+          grand_total: number
+          id: string
+          invoice_date: string
+          invoice_no: string
+          source_sales_order_id: string | null
+          status: string
+          subtotal: number
+          tax_total: number
+        }
+        Insert: {
+          amount_due?: number
+          created_at?: string
+          currency_id: string
+          customer_id: string
+          due_date?: string | null
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          invoice_date?: string
+          invoice_no: string
+          source_sales_order_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+        }
+        Update: {
+          amount_due?: number
+          created_at?: string
+          currency_id?: string
+          customer_id?: string
+          due_date?: string | null
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          invoice_date?: string
+          invoice_no?: string
+          source_sales_order_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoicesx_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoicesx_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "partnersx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoicesx_source_sales_order_id_fkey"
+            columns: ["source_sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_ordersx"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7311,6 +7459,41 @@ export type Database = {
         }
         Relationships: []
       }
+      locationsx: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          type: string
+          warehouse_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          type: string
+          warehouse_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locationsx_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lots: {
         Row: {
           created_at: string | null
@@ -7718,6 +7901,59 @@ export type Database = {
         }
         Relationships: []
       }
+      partnersx: {
+        Row: {
+          billing_address: string | null
+          code: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_customer: boolean
+          is_vendor: boolean
+          name: string
+          payment_terms_id: string | null
+          phone: string | null
+          shipping_address: string | null
+          tax_id: string | null
+        }
+        Insert: {
+          billing_address?: string | null
+          code?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_customer?: boolean
+          is_vendor?: boolean
+          name: string
+          payment_terms_id?: string | null
+          phone?: string | null
+          shipping_address?: string | null
+          tax_id?: string | null
+        }
+        Update: {
+          billing_address?: string | null
+          code?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_customer?: boolean
+          is_vendor?: boolean
+          name?: string
+          payment_terms_id?: string | null
+          phone?: string | null
+          shipping_address?: string | null
+          tax_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnersx_payment_terms_id_fkey"
+            columns: ["payment_terms_id"]
+            isOneToOne: false
+            referencedRelation: "payment_termsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_resets: {
         Row: {
           created_at: string | null
@@ -7744,6 +7980,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_allocationsx: {
+        Row: {
+          amount_applied: number
+          created_at: string
+          id: string
+          invoice_id: string
+          payment_id: string
+        }
+        Insert: {
+          amount_applied?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          payment_id: string
+        }
+        Update: {
+          amount_applied?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocationsx_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoicesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocationsx_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "paymentsx"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_methods: {
         Row: {
@@ -7817,6 +8092,30 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_termsx: {
+        Row: {
+          created_at: string
+          days_due: number | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          days_due?: number | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          days_due?: number | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -7849,6 +8148,63 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      paymentsx: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_id: string
+          customer_id: string
+          exchange_rate: number
+          id: string
+          method: string | null
+          payment_date: string
+          payment_no: string
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency_id: string
+          customer_id: string
+          exchange_rate?: number
+          id?: string
+          method?: string | null
+          payment_date?: string
+          payment_no: string
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_id?: string
+          customer_id?: string
+          exchange_rate?: number
+          id?: string
+          method?: string | null
+          payment_date?: string
+          payment_no?: string
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paymentsx_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paymentsx_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "partnersx"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll: {
         Row: {
@@ -8128,6 +8484,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pickingsx: {
+        Row: {
+          created_at: string
+          done_date: string | null
+          id: string
+          picking_no: string
+          sales_order_id: string
+          scheduled_date: string | null
+          status: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          done_date?: string | null
+          id?: string
+          picking_no: string
+          sales_order_id: string
+          scheduled_date?: string | null
+          status?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          done_date?: string | null
+          id?: string
+          picking_no?: string
+          sales_order_id?: string
+          scheduled_date?: string | null
+          status?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickingsx_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_ordersx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickingsx_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           created_at: string | null
@@ -8228,6 +8632,67 @@ export type Database = {
           volume?: number | null
         }
         Relationships: []
+      }
+      productsx: {
+        Row: {
+          created_at: string
+          default_currency_id: string | null
+          default_price: number
+          id: string
+          is_active: boolean
+          name: string
+          sku: string | null
+          tax_id: string | null
+          type: string
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_currency_id?: string | null
+          default_price?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          sku?: string | null
+          tax_id?: string | null
+          type: string
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_currency_id?: string | null
+          default_price?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          sku?: string | null
+          tax_id?: string | null
+          type?: string
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productsx_default_currency_id_fkey"
+            columns: ["default_currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productsx_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productsx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profit_centers: {
         Row: {
@@ -8541,6 +9006,173 @@ export type Database = {
           },
         ]
       }
+      quotation_linesx: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_pct: number
+          id: string
+          line_subtotal: number
+          line_tax: number
+          line_total: number
+          product_id: string | null
+          qty: number
+          quotation_id: string
+          requested_warehouse_id: string | null
+          tax_id: string | null
+          unit_price: number
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          quotation_id: string
+          requested_warehouse_id?: string | null
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          qty?: number
+          quotation_id?: string
+          requested_warehouse_id?: string | null
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_linesx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_linesx_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotationsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_linesx_requested_warehouse_id_fkey"
+            columns: ["requested_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_linesx_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_linesx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotationsx: {
+        Row: {
+          created_at: string
+          currency_id: string
+          customer_id: string
+          exchange_rate: number
+          grand_total: number
+          id: string
+          payment_terms_id: string | null
+          quotation_date: string
+          quotation_no: string
+          status: string
+          subtotal: number
+          tax_total: number
+          valid_until: string | null
+          warehouse_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency_id: string
+          customer_id: string
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          payment_terms_id?: string | null
+          quotation_date?: string
+          quotation_no: string
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          valid_until?: string | null
+          warehouse_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string
+          customer_id?: string
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          payment_terms_id?: string | null
+          quotation_date?: string
+          quotation_no?: string
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          valid_until?: string | null
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotationsx_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotationsx_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "partnersx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotationsx_payment_terms_id_fkey"
+            columns: ["payment_terms_id"]
+            isOneToOne: false
+            referencedRelation: "payment_termsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotationsx_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       racks: {
         Row: {
           capacity: number | null
@@ -8690,6 +9322,172 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_order_linesx: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_pct: number
+          id: string
+          line_subtotal: number
+          line_tax: number
+          line_total: number
+          product_id: string | null
+          product_type: string | null
+          qty_delivered: number
+          qty_invoiced: number
+          qty_ordered: number
+          sales_order_id: string
+          tax_id: string | null
+          unit_price: number
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          product_type?: string | null
+          qty_delivered?: number
+          qty_invoiced?: number
+          qty_ordered?: number
+          sales_order_id: string
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_pct?: number
+          id?: string
+          line_subtotal?: number
+          line_tax?: number
+          line_total?: number
+          product_id?: string | null
+          product_type?: string | null
+          qty_delivered?: number
+          qty_invoiced?: number
+          qty_ordered?: number
+          sales_order_id?: string
+          tax_id?: string | null
+          unit_price?: number
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_order_linesx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_linesx_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_ordersx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_linesx_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_linesx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_ordersx: {
+        Row: {
+          created_at: string
+          currency_id: string
+          customer_id: string
+          exchange_rate: number
+          grand_total: number
+          id: string
+          invoice_policy: string
+          order_date: string
+          so_no: string
+          source_quotation_id: string | null
+          status: string
+          subtotal: number
+          tax_total: number
+          warehouse_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency_id: string
+          customer_id: string
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          invoice_policy?: string
+          order_date?: string
+          so_no: string
+          source_quotation_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          warehouse_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string
+          customer_id?: string
+          exchange_rate?: number
+          grand_total?: number
+          id?: string
+          invoice_policy?: string
+          order_date?: string
+          so_no?: string
+          source_quotation_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_ordersx_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_ordersx_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "partnersx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_ordersx_source_quotation_id_fkey"
+            columns: ["source_quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotationsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_ordersx_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_transactions: {
         Row: {
           account_code: string | null
@@ -8836,6 +9634,106 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "vw_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_fulfillment_linesx: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          qty_done: number
+          sales_order_line_id: string
+          service_fulfillment_id: string
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          qty_done?: number
+          sales_order_line_id: string
+          service_fulfillment_id: string
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          qty_done?: number
+          sales_order_line_id?: string
+          service_fulfillment_id?: string
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_fulfillment_linesx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_fulfillment_linesx_sales_order_line_id_fkey"
+            columns: ["sales_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "sales_order_linesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_fulfillment_linesx_service_fulfillment_id_fkey"
+            columns: ["service_fulfillment_id"]
+            isOneToOne: false
+            referencedRelation: "service_fulfillmentsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_fulfillment_linesx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_fulfillmentsx: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          fulfillment_no: string
+          id: string
+          notes: string | null
+          sales_order_id: string
+          start_date: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          fulfillment_no: string
+          id?: string
+          notes?: string | null
+          sales_order_id: string
+          start_date?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          fulfillment_no?: string
+          id?: string
+          notes?: string | null
+          sales_order_id?: string
+          start_date?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_fulfillmentsx_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_ordersx"
             referencedColumns: ["id"]
           },
         ]
@@ -9904,6 +10802,137 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_movesx: {
+        Row: {
+          created_at: string
+          dest_location_id: string | null
+          id: string
+          picking_id: string
+          product_id: string | null
+          qty: number
+          sales_order_line_id: string | null
+          source_location_id: string | null
+          uom_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dest_location_id?: string | null
+          id?: string
+          picking_id: string
+          product_id?: string | null
+          qty?: number
+          sales_order_line_id?: string | null
+          source_location_id?: string | null
+          uom_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dest_location_id?: string | null
+          id?: string
+          picking_id?: string
+          product_id?: string | null
+          qty?: number
+          sales_order_line_id?: string | null
+          source_location_id?: string | null
+          uom_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movesx_dest_location_id_fkey"
+            columns: ["dest_location_id"]
+            isOneToOne: false
+            referencedRelation: "locationsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movesx_picking_id_fkey"
+            columns: ["picking_id"]
+            isOneToOne: false
+            referencedRelation: "pickingsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movesx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movesx_sales_order_line_id_fkey"
+            columns: ["sales_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "sales_order_linesx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movesx_source_location_id_fkey"
+            columns: ["source_location_id"]
+            isOneToOne: false
+            referencedRelation: "locationsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movesx_uom_id_fkey"
+            columns: ["uom_id"]
+            isOneToOne: false
+            referencedRelation: "uomsx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_quantsx: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string | null
+          product_id: string
+          qty_on_hand: number
+          qty_reserved: number
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          product_id: string
+          qty_on_hand?: number
+          qty_reserved?: number
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          product_id?: string
+          qty_on_hand?: number
+          qty_reserved?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_quantsx_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locationsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_quantsx_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "productsx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_quantsx_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehousesx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_reconciliation: {
         Row: {
           accounting_qty: number | null
@@ -10566,6 +11595,30 @@ export type Database = {
           },
         ]
       }
+      taxesx: {
+        Row: {
+          created_at: string
+          id: string
+          inclusive: boolean
+          name: string
+          rate: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inclusive?: boolean
+          name: string
+          rate: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inclusive?: boolean
+          name?: string
+          rate?: number
+        }
+        Relationships: []
+      }
       transaction_cart: {
         Row: {
           account_code: string | null
@@ -11197,6 +12250,24 @@ export type Database = {
           period_start?: string
           total_credit?: number
           total_debit?: number
+        }
+        Relationships: []
+      }
+      uomsx: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -12102,6 +13173,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      warehousesx: {
+        Row: {
+          address: string | null
+          code: string
+          created_at: string
+          default_currency_id: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          created_at?: string
+          default_currency_id?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          created_at?: string
+          default_currency_id?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehousesx_default_currency_id_fkey"
+            columns: ["default_currency_id"]
+            isOneToOne: false
+            referencedRelation: "currenciesx"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wms_accounting_logs: {
         Row: {
@@ -13442,6 +14548,7 @@ export type Database = {
           sub_category: string
         }[]
       }
+      next_deliveryx_number: { Args: never; Returns: string }
       normalize_account_type: { Args: { input: string }; Returns: string }
       post_journal_bank_mutation: {
         Args: { p_bank_mutation_id: string }
@@ -13488,6 +14595,10 @@ export type Database = {
         Returns: Json
       }
       reverse_journal: { Args: { journal_id: string }; Returns: undefined }
+      route_bank_mutation_after_post: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
       rpc_validate_and_commit_coa: { Args: never; Returns: Json }
       run_monthly_depreciation: { Args: { p_date: string }; Returns: undefined }
       set_app_user: { Args: { uid: string }; Returns: undefined }
@@ -13496,6 +14607,22 @@ export type Database = {
         Returns: undefined
       }
       smart_find_rule: { Args: { p_id: string }; Returns: Json }
+      sync_capital_contribution_from_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
+      sync_cash_and_bank_receipt_from_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
+      sync_cash_disbursement_from_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
+      sync_employee_advance_from_bank_mutation: {
+        Args: { p_bank_mutation_id: string }
+        Returns: undefined
+      }
       text_to_bytea: { Args: { data: string }; Returns: string }
       trial_balance: {
         Args: { report_date: string }

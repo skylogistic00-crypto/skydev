@@ -177,6 +177,36 @@ function JournalGroup({
   );
 }
 
+/* =====================================================
+   JOURNAL STATUS DOT (ICON WARNA)
+===================================================== */
+function JournalStatusDot({ status }: { status?: string | null }) {
+  const color =
+    status === "posted"
+      ? "bg-green-500"
+      : status === "draft"
+        ? "bg-yellow-400"
+        : status === "cancelled"
+          ? "bg-red-500"
+          : "bg-gray-300";
+
+  const title =
+    status === "posted"
+      ? "Journal Posted"
+      : status === "draft"
+        ? "Journal Draft (Saved)"
+        : status === "cancelled"
+          ? "Journal Cancelled"
+          : "Belum diproses";
+
+  return (
+    <span
+      title={title}
+      className={`inline-block h-3 w-3 rounded-full ${color}`}
+    />
+  );
+}
+
 
 /* =====================================================
    COMPONENT
@@ -214,6 +244,7 @@ export default function BankMutationsManagement() {
     defaultLines: JournalDraftLine[];
     bankMutationDate: string | null;
     jenisTransaksi: string | null;
+    bankMutationAmount?: number | null; // ⬅️ TAMBAH
     direction?: "IN" | "OUT" | null;
     buktiUrl?: string | null;
     invoiceUrl?: string | null;
@@ -274,7 +305,7 @@ export default function BankMutationsManagement() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchDesc, setSearchDesc] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("pending");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unposted" | "posted">("unposted");
 
 /* ================= JOURNAL TARGET STATE ================= */
   const [cashDisbursements, setCashDisbursements] = useState<any[]>([]);
@@ -404,6 +435,7 @@ const fetchJournalTargets = useCallback(async () => {
         approved_at,
         created_at,
         ocr_text,
+        amount,
         invoice_number,
         invoice_date,
         tax_invoice_number,
@@ -512,7 +544,22 @@ const fetchJournalTargets = useCallback(async () => {
       };
     });
 
-    setRows(rowsWithJournalStatus);
+    let filteredRows = rowsWithJournalStatus;
+
+    if (statusFilter === "posted") {
+      filteredRows = rowsWithJournalStatus.filter(
+        (r) => r.journal_status === "posted"
+      );
+    }
+
+    if (statusFilter === "unposted") {
+      filteredRows = rowsWithJournalStatus.filter(
+        (r) => r.journal_status !== "posted"
+      );
+    }
+
+    setRows(filteredRows);
+
     setLoading(false);
   }, [dateFrom, dateTo, searchDesc, statusFilter, toast]);
 
@@ -567,7 +614,8 @@ const fetchJournalTargets = useCallback(async () => {
         defaultLines,
         bankMutationDate: (row as any).date ?? null,
         jenisTransaksi: row.transaction_type ?? null,
-
+        bankMutationDescription: row.description ?? null,
+        bankMutationAmount: row.amount ?? null,
         direction: row.transaction_direction ?? null,
         buktiUrl: row.bukti_url ?? null,
         invoiceUrl: row.invoice_url ?? null,
@@ -787,10 +835,10 @@ const fetchJournalTargets = useCallback(async () => {
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "pending" | "approved")}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "unposted" | "posted")}
             >
-              <option value="pending">Belum Approve</option>
-              <option value="approved">Approved</option>
+              <option value="unposted">Belum Posted</option>
+              <option value="posted">Posted</option>
               <option value="all">All</option>
             </select>
             <Button onClick={fetchData}>
@@ -1433,48 +1481,26 @@ const fetchJournalTargets = useCallback(async () => {
                         )}
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
-                            {/* Cancel OCR (wajib). Locked when approved, only allowed when waiting_approval */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={
-                                cancelingOcrId === row.id ||
-                                row.approval_status === "approved" ||
-                                row.approval_status !== "waiting_approval" ||
-                                !row.bukti_url
-                              }
-                              onClick={() => handleCancelOCR(row)}
-                              className="h-8 px-2"
-                              title={
-                                row.approval_status === "approved"
-                                  ? "Tidak bisa cancel: sudah approved"
-                                  : row.approval_status !== "waiting_approval"
-                                    ? "Cancel OCR hanya boleh saat waiting_approval"
-                                    : "Cancel OCR"
-                              }
-                            >
-                              {cancelingOcrId === row.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              )}
-                            </Button>
+
+                            {/* ICON STATUS WARNA */}
+                            <JournalStatusDot status={row.journal_status} />
 
                             <Button
                               size="sm"
                               variant="outline"
                               disabled={
                                 approvingId === row.id ||
-                               row.journal_status === 'posted'
+                                row.journal_status === 'posted'
                               }
                               onClick={() => handleApprove(row)}
                               title={
-                                row.journal_status === 'posted'
-                                  ? 'Jurnal sudah diposting'
-                                  : 'Approve'
+                                row.journal_status === "posted"
+                                  ? "Jurnal sudah diposting"
+                                  : row.journal_status === "draft"
+                                    ? "Lanjutkan draft jurnal"
+                                    : "Approve & buat jurnal"
                               }
                             >
-
                               {approvingId === row.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
@@ -1821,7 +1847,8 @@ const fetchJournalTargets = useCallback(async () => {
         transactionLinkId={journalPreview.transactionLinkId}
         bankMutationDate={journalPreview.bankMutationDate}
         jenisTransaksi={journalPreview.jenisTransaksi}
-
+        bankMutationDescription={journalPreview.bankMutationDescription}
+        bankMutationAmount={journalPreview.bankMutationAmount} // ⬅️ WAJIB
         direction={journalPreview.direction}
         buktiUrl={journalPreview.buktiUrl}
         invoiceUrl={journalPreview.invoiceUrl}

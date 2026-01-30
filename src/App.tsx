@@ -70,6 +70,9 @@ const TrialBalanceView = lazy(() => import("@/components/TrialBalanceView"));
 const BankReconciliation = lazy(() => import("@/pages/BankReconciliation"));
 const BankMutationReview = lazy(() => import("@/pages/BankMutationReview"));
 const MutationSummaryDashboard = lazy(() => import("@/components/MutationSummaryDashboard"));
+const QuotationSystemX = lazy(() => import("@/pages/QuotationSystemX"));
+const SalesOrderSystemX = lazy(() => import("@/pages/SalesOrderSystemX"));
+const DeliverySystemX = lazy(() => import("@/pages/DeliverySystemX"));
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -983,6 +986,45 @@ function AppRoutesContent() {
       <Route path="/bank-mutation-review" element={<BankMutationReview />} />
       <Route path="/bank-mutations-management" element={<BankMutationsManagement />} />
       <Route path="/mutation-summary" element={<MutationSummaryDashboard />} />
+
+      <Route
+        path="/quotationx"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen bg-slate-50">
+              <Header />
+              <Navigation />
+              <QuotationSystemX />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/sales-orderx"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen bg-slate-50">
+              <Header />
+              <Navigation />
+              <SalesOrderSystemX />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/deliveryx"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen bg-slate-50">
+              <Header />
+              <Navigation />
+              <DeliverySystemX />
+            </div>
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

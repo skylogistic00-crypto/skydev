@@ -75,7 +75,7 @@ type Props = {
   fakturPajakUrl?: string | null;
 
   bankMutationDescription?: string | null; // ⬅️ TAMBAHAN
-
+  bankMutationAmount?: number | null;
   defaultLines: JournalDraftLine[];
 
   onSaved?: () => void;
@@ -106,6 +106,7 @@ export function BankMutationJournalPreviewDialog({
   invoiceUrl,
   fakturPajakUrl,
   bankMutationDescription, // ⬅️ WAJIB
+  bankMutationAmount,
   defaultLines,
   onSaved,
   onCancelled,
@@ -329,33 +330,53 @@ export function BankMutationJournalPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <DialogTitle>Preview Posting Journal Entries</DialogTitle>
-              <DialogDescription>
-                Review & edit draft jurnal sebelum disimpan atau diposting.
-              </DialogDescription>
-            </div>
+          <DialogTitle>Preview Posting Journal Entries</DialogTitle>
+          <DialogDescription>
+            Review & edit draft jurnal sebelum disimpan atau diposting.
+          </DialogDescription>
 
-            <div className="w-[420px] rounded-md border bg-muted/20 p-3 text-sm">
-              <div className="grid grid-cols-12 gap-x-3 gap-y-2">
-                <div className="col-span-5 text-muted-foreground">Tanggal</div>
-                <div className="col-span-7 font-medium">
-                  {bankMutationDate ? new Date(bankMutationDate).toLocaleDateString("id-ID") : "-"}
+          {/* HEADER INFO TRANSAKSI – FULL WIDTH */}
+          <div className="mt-4 rounded-lg border bg-muted/20 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+
+              <div>
+                <div className="text-muted-foreground">Tanggal</div>
+                <div className="font-medium">
+                  {bankMutationDate
+                    ? new Date(bankMutationDate).toLocaleDateString("id-ID")
+                    : "-"}
                 </div>
+              </div>
 
-                <div className="col-span-5 text-muted-foreground">Jenis Transaksi</div>
-                <div className="col-span-7 font-medium">{jenisTransaksi ?? "-"}</div>
+              <div>
+                <div className="text-muted-foreground">Amount</div>
+                <div className="font-semibold">
+                  {typeof bankMutationAmount === "number"
+                  ? new Intl.NumberFormat("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                    minimumFractionDigits: 0,
+                  }).format(bankMutationAmount)
+                : "-"}
+                </div>
+              </div>
 
-                <div className="col-span-5 text-muted-foreground">Direction</div>
-                <div className="col-span-7 font-semibold">
+              <div>
+                <div className="text-muted-foreground">Jenis Transaksi</div>
+                <div className="font-medium">{jenisTransaksi ?? "-"}</div>
+              </div>
+
+              <div>
+                <div className="text-muted-foreground">Direction</div>
+                <div className="font-semibold">
                   {direction === "IN" && <span className="text-green-600">IN</span>}
                   {direction === "OUT" && <span className="text-red-600">OUT</span>}
                   {!direction && "-"}
                 </div>
+              </div>
 
-                <div className="col-span-5 text-muted-foreground">Bukti</div>
-                <div className="col-span-7">
+              <div>
+                <div className="text-muted-foreground">Bukti</div>
                   {buktiUrl ? (
                     <a href={buktiUrl} target="_blank" className="text-blue-600 underline">
                       Lihat
@@ -363,10 +384,10 @@ export function BankMutationJournalPreviewDialog({
                   ) : (
                     "-"
                   )}
-                </div>
+              </div>
 
-                <div className="col-span-5 text-muted-foreground">Invoice</div>
-                <div className="col-span-7">
+              <div>
+                <div className="text-muted-foreground">Invoice</div>
                   {invoiceUrl ? (
                     <a href={invoiceUrl} target="_blank" className="text-blue-600 underline">
                       Lihat
@@ -374,10 +395,10 @@ export function BankMutationJournalPreviewDialog({
                   ) : (
                     "-"
                   )}
-                </div>
+              </div>
 
-                <div className="col-span-5 text-muted-foreground">Faktur Pajak</div>
-                <div className="col-span-7">
+              <div>
+                <div className="text-muted-foreground">Faktur Pajak</div>
                   {fakturPajakUrl ? (
                     <a href={fakturPajakUrl} target="_blank" className="text-blue-600 underline">
                       Lihat
@@ -385,7 +406,14 @@ export function BankMutationJournalPreviewDialog({
                   ) : (
                     "-"
                   )}
-                </div>
+              </div>
+            </div>
+
+            {/* DESKRIPSI */}
+            <div className="mt-4">
+              <div className="text-muted-foreground text-sm">Deskripsi</div>
+              <div className="text-sm">
+                {bankMutationDescription ?? "-"}
               </div>
             </div>
           </div>
